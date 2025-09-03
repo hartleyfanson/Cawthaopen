@@ -172,17 +172,19 @@ export default function Dashboard() {
               </Card>
             </Link>
             
-            <Card className="bg-primary card-shadow">
-              <CardContent className="p-6 text-center">
-                <div className="text-4xl mb-4">📊</div>
-                <h4 className="text-xl font-serif font-bold text-accent mb-2">
-                  Your Statistics
-                </h4>
-                <p className="text-muted-foreground">
-                  Track your golf performance
-                </p>
-              </CardContent>
-            </Card>
+            <Link href="/statistics">
+              <Card className="bg-primary card-shadow hover:scale-105 transition-transform cursor-pointer">
+                <CardContent className="p-6 text-center">
+                  <div className="text-4xl mb-4">📊</div>
+                  <h4 className="text-xl font-serif font-bold text-accent mb-2">
+                    Your Statistics
+                  </h4>
+                  <p className="text-muted-foreground">
+                    Track your golf performance
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
           </div>
         </div>
       </section>
