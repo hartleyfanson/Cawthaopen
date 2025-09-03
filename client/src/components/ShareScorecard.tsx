@@ -91,11 +91,11 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
 
-      // Main scorecard background (portrait layout)
+      // Main scorecard background (square layout centered on 9x16 canvas)
       const cardX = 30;
-      const cardY = 30;
       const cardWidth = canvas.width - 60;
-      const cardHeight = canvas.height - 60;
+      const cardHeight = cardWidth; // Make it square
+      const cardY = (canvas.height - cardHeight) / 2; // Center vertically
 
       // Helper function for rounded rectangles
       const roundRect = (x: number, y: number, width: number, height: number, radius: number) => {
@@ -184,7 +184,7 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
       ctx.fillText(`Total: ${totalStrokes}`, canvas.width / 2, playerY + 105);
 
       // Calculate fairway stats (only par 4s and 5s count)
-      const par4And5Holes = holes?.filter((hole: any) => hole.par === 4 || hole.par === 5) || [];
+      const par4And5Holes = Array.isArray(holes) ? holes.filter((hole: any) => hole.par === 4 || hole.par === 5) : [];
       const fairwayDenominator = par4And5Holes.length;
       
       // Stats section (stacked vertically for mobile)
@@ -217,10 +217,10 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
       const holeBoxHeight = 80; // Taller boxes
 
       // Create hole-score map from actual scores data and always include par
-      const holeScoreMap = {};
+      const holeScoreMap: { [key: number]: { strokes: number; par: number; notes: string } } = {};
       
       // Always populate with par values from holes data
-      if (holes) {
+      if (Array.isArray(holes)) {
         holes.forEach((hole: any) => {
           holeScoreMap[hole.holeNumber] = {
             strokes: 0, // Default to 0 if no score submitted
@@ -231,7 +231,7 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
       }
       
       // Overlay actual submitted scores if they exist
-      if (scores && holes) {
+      if (Array.isArray(scores) && Array.isArray(holes)) {
         scores.forEach((score: any) => {
           const hole = holes.find((h: any) => h.id === score.holeId);
           if (hole) {
@@ -354,13 +354,13 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
         }
       }
 
-      // Round Notes section (if any notes exist)
-      const notesY = holesY + 260;
-      const roundNotes = [];
-      if (scores) {
+      // Round Notes section (if any notes exist) - compact for square layout
+      const notesY = holesY + 200;
+      const roundNotes: string[] = [];
+      if (Array.isArray(scores)) {
         scores.forEach((score: any) => {
           if (score.powerupNotes && score.powerupNotes.trim()) {
-            const hole = holes?.find((h: any) => h.id === score.holeId);
+            const hole = Array.isArray(holes) ? holes.find((h: any) => h.id === score.holeId) : null;
             if (hole) {
               roundNotes.push(`Hole ${hole.holeNumber}: "${score.powerupNotes}"`);
             }
@@ -432,6 +432,7 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
     if (!generatedImageUrl || !navigator.share) {
       // Fallback: copy to clipboard
       try {
+        if (!generatedImageUrl) return;
         const response = await fetch(generatedImageUrl);
         const blob = await response.blob();
         await navigator.clipboard.write([
