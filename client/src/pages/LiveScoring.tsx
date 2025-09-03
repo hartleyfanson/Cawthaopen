@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useParams } from "wouter";
+import { useParams, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigation } from "@/components/Navigation";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,6 +26,20 @@ export default function LiveScoring() {
   const [greenInRegulation, setGreenInRegulation] = useState(false);
   const [powerupUsed, setPowerupUsed] = useState(false);
   const [powerupNotes, setPowerupNotes] = useState("");
+  
+  // Cache all hole scores until completion
+  const [cachedScores, setCachedScores] = useState<Array<{
+    holeNumber: number;
+    holeId: string;
+    strokes: number;
+    putts: number;
+    fairwayHit: boolean;
+    greenInRegulation: boolean;
+    powerupUsed: boolean;
+    powerupNotes: string;
+  }>>([]);
+  
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -122,28 +136,90 @@ export default function LiveScoring() {
     }
   }, [currentHoleData]);
 
-  const handleSaveScore = async () => {
-    let roundToUse = currentRound;
+  // Cache current hole score and move to next hole
+  const cacheScoreAndContinue = () => {
+    if (!currentHoleData) return;
     
-    if (!roundToUse) {
-      // Create round first and use the returned data
-      roundToUse = await createRoundMutation.mutateAsync({
-        tournamentId: id,
-        roundNumber: 1,
-      });
-    }
-
-    // Save score with the correct roundId
-    await createScoreMutation.mutateAsync({
-      roundId: roundToUse.id,
-      holeId: currentHoleData?.id,
+    const holeScore = {
+      holeNumber: currentHole,
+      holeId: currentHoleData.id,
       strokes,
       putts,
-      fairwayHit,
-      greenInRegulation,
+      fairwayHit: currentHoleData.par === 3 ? false : fairwayHit, // Always false for par 3s
+      greenInRegulation: currentHoleData.par === 3 ? false : greenInRegulation, // Always false for par 3s
       powerupUsed,
-      powerupNotes: powerupUsed ? powerupNotes : null,
+      powerupNotes: powerupUsed ? powerupNotes : "",
+    };
+    
+    // Update cached scores (replace if hole already exists)
+    setCachedScores(prev => {
+      const filtered = prev.filter(score => score.holeNumber !== currentHole);
+      return [...filtered, holeScore].sort((a, b) => a.holeNumber - b.holeNumber);
     });
+    
+    // Move to next hole if not on 18
+    if (currentHole < 18) {
+      nextHole();
+    }
+  };
+  
+  // Save all cached scores at once
+  const saveCompleteRound = async () => {
+    try {
+      // First cache the current hole (hole 18)
+      cacheScoreAndContinue();
+      
+      let roundToUse = currentRound;
+      
+      if (!roundToUse) {
+        // Create round first
+        roundToUse = await createRoundMutation.mutateAsync({
+          tournamentId: id,
+          roundNumber: 1,
+        });
+      }
+
+      // Save all 18 hole scores
+      const allScores = [...cachedScores, {
+        holeNumber: currentHole,
+        holeId: currentHoleData?.id,
+        strokes,
+        putts,
+        fairwayHit: currentHoleData?.par === 3 ? false : fairwayHit,
+        greenInRegulation: currentHoleData?.par === 3 ? false : greenInRegulation,
+        powerupUsed,
+        powerupNotes: powerupUsed ? powerupNotes : "",
+      }];
+      
+      // Save all scores sequentially
+      for (const score of allScores) {
+        await createScoreMutation.mutateAsync({
+          roundId: roundToUse.id,
+          holeId: score.holeId,
+          strokes: score.strokes,
+          putts: score.putts,
+          fairwayHit: score.fairwayHit,
+          greenInRegulation: score.greenInRegulation,
+          powerupUsed: score.powerupUsed,
+          powerupNotes: score.powerupNotes || null,
+        });
+      }
+      
+      toast({
+        title: "Round Complete!",
+        description: "All scores have been saved successfully. Returning to leaderboard.",
+      });
+      
+      // Navigate back to leaderboard
+      setLocation(`/tournaments/${id}/leaderboard`);
+      
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save round. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const nextHole = () => {
@@ -161,13 +237,27 @@ export default function LiveScoring() {
   };
 
   const resetHoleData = () => {
-    setStrokes(4);
+    const nextHoleData = holes?.find((hole: any) => hole.holeNumber === currentHole + 1);
+    setStrokes(nextHoleData?.par || 4);
     setPutts(2);
     setFairwayHit(false);
     setGreenInRegulation(false);
     setPowerupUsed(false);
     setPowerupNotes("");
   };
+  
+  // Load cached score when navigating back to a previous hole
+  useEffect(() => {
+    const cachedScore = cachedScores.find(score => score.holeNumber === currentHole);
+    if (cachedScore) {
+      setStrokes(cachedScore.strokes);
+      setPutts(cachedScore.putts);
+      setFairwayHit(cachedScore.fairwayHit);
+      setGreenInRegulation(cachedScore.greenInRegulation);
+      setPowerupUsed(cachedScore.powerupUsed);
+      setPowerupNotes(cachedScore.powerupNotes);
+    }
+  }, [currentHole, cachedScores]);
 
   if (isLoading) {
     return (
@@ -280,23 +370,29 @@ export default function LiveScoring() {
                 </div>
                 
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                    <span className="font-medium text-foreground">Fairway Hit</span>
-                    <Switch
-                      checked={fairwayHit}
-                      onCheckedChange={setFairwayHit}
-                      data-testid="switch-fairway-hit"
-                    />
-                  </div>
+                  {/* Hide Fairway Hit for Par 3s */}
+                  {currentHoleData?.par !== 3 && (
+                    <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                      <span className="font-medium text-foreground">Fairway Hit</span>
+                      <Switch
+                        checked={fairwayHit}
+                        onCheckedChange={setFairwayHit}
+                        data-testid="switch-fairway-hit"
+                      />
+                    </div>
+                  )}
                   
-                  <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                    <span className="font-medium text-foreground">Green in Regulation</span>
-                    <Switch
-                      checked={greenInRegulation}
-                      onCheckedChange={setGreenInRegulation}
-                      data-testid="switch-gir"
-                    />
-                  </div>
+                  {/* Hide GIR for Par 3s */}
+                  {currentHoleData?.par !== 3 && (
+                    <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                      <span className="font-medium text-foreground">Green in Regulation</span>
+                      <Switch
+                        checked={greenInRegulation}
+                        onCheckedChange={setGreenInRegulation}
+                        data-testid="switch-gir"
+                      />
+                    </div>
+                  )}
                   
                   <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
                     <span className="font-medium text-foreground">Powerup Used</span>
@@ -341,26 +437,31 @@ export default function LiveScoring() {
                   <span className="sm:hidden">Prev</span>
                 </Button>
                 
-                <Button
-                  onClick={handleSaveScore}
-                  disabled={createScoreMutation.isPending}
-                  className="bg-secondary text-secondary-foreground hover:bg-accent font-semibold"
-                  data-testid="button-save-score"
-                >
-                  {createScoreMutation.isPending ? "Saving..." : "Save & Continue"}
-                </Button>
+                <div className="text-center text-sm text-muted-foreground">
+                  Hole {cachedScores.length}/18 scored
+                </div>
                 
-                <Button
-                  onClick={nextHole}
-                  disabled={currentHole === 18}
-                  size="sm"
-                  className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm bg-primary text-accent hover:bg-primary/80"
-                  data-testid="button-next-hole"
-                >
-                  <span className="hidden sm:inline">Next Hole</span>
-                  <span className="sm:hidden">Next</span>
-                  <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
-                </Button>
+                {currentHole === 18 ? (
+                  <Button
+                    onClick={saveCompleteRound}
+                    disabled={createScoreMutation.isPending}
+                    className="bg-accent text-accent-foreground hover:bg-accent/90 font-semibold"
+                    data-testid="button-save-complete-round"
+                  >
+                    {createScoreMutation.isPending ? "Saving Round..." : "Save & Complete Round"}
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={cacheScoreAndContinue}
+                    size="sm"
+                    className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm bg-secondary text-secondary-foreground hover:bg-accent"
+                    data-testid="button-next-hole"
+                  >
+                    <span className="hidden sm:inline">Next Hole</span>
+                    <span className="sm:hidden">Next</span>
+                    <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
+                  </Button>
+                )}
               </div>
               
               {/* Share Scorecard */}

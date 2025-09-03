@@ -341,10 +341,15 @@ export class DatabaseStorage implements IStorage {
       (score.scores.grossScore || 0) === (score.holes.par || 0) - 1
     ).length;
 
-    // Calculate fairway streak
+    // Calculate fairway streak (excluding par 3s)
     let currentStreak = 0;
     let longestStreak = 0;
     userScores.forEach(score => {
+      // Skip par 3 holes for fairway streak calculation
+      if (score.holes.par === 3) {
+        return;
+      }
+      
       if (score.scores.fairwayHit) {
         currentStreak++;
         longestStreak = Math.max(longestStreak, currentStreak);

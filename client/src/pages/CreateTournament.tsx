@@ -195,7 +195,7 @@ export default function CreateTournament() {
                           </FormControl>
                           <SelectContent>
                             {loadingCourses ? (
-                              <SelectItem value="">Loading courses...</SelectItem>
+                              <SelectItem value="loading" disabled>Loading courses...</SelectItem>
                             ) : courses?.length ? (
                               courses.map((course: any) => (
                                 <SelectItem key={course.id} value={course.id}>
@@ -203,7 +203,7 @@ export default function CreateTournament() {
                                 </SelectItem>
                               ))
                             ) : (
-                              <SelectItem value="">No courses available</SelectItem>
+                              <SelectItem value="no-courses" disabled>No courses available</SelectItem>
                             )}
                           </SelectContent>
                         </Select>

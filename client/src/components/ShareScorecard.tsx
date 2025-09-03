@@ -34,6 +34,16 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
     enabled: !!(tournament as any)?.courseId,
   });
 
+  const { data: holes } = useQuery({
+    queryKey: ["/api/courses", (tournament as any)?.courseId, "holes"],
+    enabled: !!(tournament as any)?.courseId,
+  });
+
+  const { data: scores } = useQuery({
+    queryKey: ["/api/rounds", (roundData as any)?.id, "scores"],
+    enabled: !!(roundData as any)?.id,
+  });
+
   const generateScorecard = async () => {
     if (!canvasRef.current || !roundData || !playerData) return;
 
@@ -173,6 +183,10 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
       ctx.font = '28px sans-serif';
       ctx.fillText(`Total: ${totalStrokes}`, canvas.width / 2, playerY + 105);
 
+      // Calculate fairway stats (only par 4s and 5s count)
+      const par4And5Holes = holes?.filter((hole: any) => hole.par === 4 || hole.par === 5) || [];
+      const fairwayDenominator = par4And5Holes.length;
+      
       // Stats section (stacked vertically for mobile)
       const statsY = playerY + 150;
       ctx.fillStyle = '#1a4a3a';
@@ -181,86 +195,152 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
 
       const stats = [
         `Putts: ${(roundData as any)?.totalPutts || 'N/A'}`,
-        `Fairways: ${(roundData as any)?.fairwaysHit || 0}/${(roundData as any)?.fairwayAttempts || 0}`,
-        `GIR: ${(roundData as any)?.greensInRegulation || 0}/${(roundData as any)?.girAttempts || 0}`,
+        `Fairways: ${(roundData as any)?.fairwaysHit || 0}/${fairwayDenominator}`,
+        `GIR: ${(roundData as any)?.greensInRegulation || 0}/18`,
       ];
 
       stats.forEach((stat, index) => {
         ctx.fillText(stat, canvas.width / 2, statsY + (index * 30));
       });
 
-      // Hole-by-hole scores section (mobile-friendly grid)
+      // Hole-by-hole scores section (mobile-friendly grid with larger elements)
       const holesY = statsY + 120;
       ctx.fillStyle = '#1a4a3a';
-      ctx.font = 'bold 18px sans-serif';
+      ctx.font = 'bold 20px sans-serif';
       ctx.textAlign = 'center';
 
       // Title for holes section
       ctx.fillText('HOLE-BY-HOLE SCORES', canvas.width / 2, holesY);
 
-      // Create 2 rows of 9 holes each for mobile layout
-      const holeBoxWidth = (cardWidth - 80) / 9; // 9 holes per row
-      const holeBoxHeight = 60;
+      // Create 2 rows of 9 holes each for mobile layout - larger boxes
+      const holeBoxWidth = (cardWidth - 60) / 9; // Larger boxes, less padding
+      const holeBoxHeight = 80; // Taller boxes
+
+      // Create hole-score map from actual scores data
+      const holeScoreMap = {};
+      if (scores && holes) {
+        scores.forEach((score: any) => {
+          const hole = holes.find((h: any) => h.id === score.holeId);
+          if (hole) {
+            holeScoreMap[hole.holeNumber] = {
+              strokes: score.strokes,
+              par: hole.par,
+              notes: score.powerupNotes
+            };
+          }
+        });
+      }
 
       // Front 9 (holes 1-9)
       ctx.fillStyle = '#666666';
-      ctx.font = '14px sans-serif';
-      ctx.fillText('Front 9', canvas.width / 2, holesY + 35);
+      ctx.font = '16px sans-serif';
+      ctx.fillText('Front 9', canvas.width / 2, holesY + 40);
       
       for (let i = 1; i <= 9; i++) {
-        const x = cardX + 40 + (i - 1) * holeBoxWidth;
-        const y = holesY + 50;
+        const x = cardX + 30 + (i - 1) * holeBoxWidth;
+        const y = holesY + 60;
         
-        // Hole number
+        const holeData = holeScoreMap[i];
+        const par = holeData?.par || 4;
+        const score = holeData?.strokes || 0;
+        
+        // Hole number (larger)
         ctx.fillStyle = '#1a4a3a';
-        ctx.font = 'bold 14px sans-serif';
+        ctx.font = 'bold 18px sans-serif';
         ctx.fillText(i.toString(), x + holeBoxWidth / 2, y);
         
-        // Par (default 4)
+        // Par (larger)
         ctx.fillStyle = '#666666';
-        ctx.font = '12px sans-serif';
-        ctx.fillText('Par 4', x + holeBoxWidth / 2, y + 15);
+        ctx.font = '14px sans-serif';
+        ctx.fillText(`Par ${par}`, x + holeBoxWidth / 2, y + 20);
         
-        // Score
-        const score = Math.floor(Math.random() * 3) + 3; // Demo scores 3-6
-        ctx.fillStyle = score < 4 ? '#ff4444' : '#1a4a3a';
-        ctx.font = 'bold 16px sans-serif';
-        ctx.fillText(score.toString(), x + holeBoxWidth / 2, y + 35);
+        // Score (larger and color-coded)
+        const isUnder = score > 0 && score < par;
+        const isOver = score > par;
+        ctx.fillStyle = isUnder ? '#00aa00' : isOver ? '#cc4444' : '#1a4a3a';
+        ctx.font = 'bold 24px sans-serif';
+        if (score > 0) {
+          ctx.fillText(score.toString(), x + holeBoxWidth / 2, y + 50);
+        }
       }
 
       // Back 9 (holes 10-18)
       ctx.fillStyle = '#666666';
-      ctx.font = '14px sans-serif';
-      ctx.fillText('Back 9', canvas.width / 2, holesY + 130);
+      ctx.font = '16px sans-serif';
+      ctx.fillText('Back 9', canvas.width / 2, holesY + 160);
       
       for (let i = 10; i <= 18; i++) {
-        const x = cardX + 40 + ((i - 10) * holeBoxWidth);
-        const y = holesY + 145;
+        const x = cardX + 30 + ((i - 10) * holeBoxWidth);
+        const y = holesY + 180;
         
-        // Hole number
+        const holeData = holeScoreMap[i];
+        const par = holeData?.par || 4;
+        const score = holeData?.strokes || 0;
+        
+        // Hole number (larger)
         ctx.fillStyle = '#1a4a3a';
-        ctx.font = 'bold 14px sans-serif';
+        ctx.font = 'bold 18px sans-serif';
         ctx.fillText(i.toString(), x + holeBoxWidth / 2, y);
         
-        // Par (default 4)
+        // Par (larger)
         ctx.fillStyle = '#666666';
-        ctx.font = '12px sans-serif';
-        ctx.fillText('Par 4', x + holeBoxWidth / 2, y + 15);
+        ctx.font = '14px sans-serif';
+        ctx.fillText(`Par ${par}`, x + holeBoxWidth / 2, y + 20);
         
-        // Score
-        const score = Math.floor(Math.random() * 3) + 3; // Demo scores 3-6
-        ctx.fillStyle = score < 4 ? '#ff4444' : '#1a4a3a';
-        ctx.font = 'bold 16px sans-serif';
-        ctx.fillText(score.toString(), x + holeBoxWidth / 2, y + 35);
+        // Score (larger and color-coded)
+        const isUnder = score > 0 && score < par;
+        const isOver = score > par;
+        ctx.fillStyle = isUnder ? '#00aa00' : isOver ? '#cc4444' : '#1a4a3a';
+        ctx.font = 'bold 24px sans-serif';
+        if (score > 0) {
+          ctx.fillText(score.toString(), x + holeBoxWidth / 2, y + 50);
+        }
       }
 
+      // Round Notes section (if any notes exist)
+      const notesY = holesY + 260;
+      const roundNotes = [];
+      if (scores) {
+        scores.forEach((score: any) => {
+          if (score.powerupNotes && score.powerupNotes.trim()) {
+            const hole = holes?.find((h: any) => h.id === score.holeId);
+            if (hole) {
+              roundNotes.push(`Hole ${hole.holeNumber}: "${score.powerupNotes}"`);
+            }
+          }
+        });
+      }
+      
+      if (roundNotes.length > 0) {
+        ctx.fillStyle = '#1a4a3a';
+        ctx.font = 'bold 18px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('ROUND NOTES', canvas.width / 2, notesY);
+        
+        ctx.font = '14px sans-serif';
+        ctx.textAlign = 'left';
+        const maxNotes = Math.min(roundNotes.length, 4); // Limit to 4 notes
+        for (let i = 0; i < maxNotes; i++) {
+          const noteText = roundNotes[i];
+          // Wrap text if too long
+          const maxWidth = cardWidth - 80;
+          if (ctx.measureText(noteText).width > maxWidth) {
+            const truncated = noteText.substring(0, 60) + '...';
+            ctx.fillText(truncated, cardX + 40, notesY + 30 + (i * 25));
+          } else {
+            ctx.fillText(noteText, cardX + 40, notesY + 30 + (i * 25));
+          }
+        }
+      }
+      
       // Footer (positioned at bottom of card)
+      const footerY = roundNotes.length > 0 ? notesY + 140 : cardY + cardHeight - 60;
       ctx.fillStyle = '#666666';
       ctx.font = '14px sans-serif';
       ctx.textAlign = 'center';
       const currentDate = new Date().toLocaleDateString();
-      ctx.fillText(`Generated on ${currentDate}`, canvas.width / 2, cardY + cardHeight - 40);
-      ctx.fillText(`The Cawthra Open App`, canvas.width / 2, cardY + cardHeight - 20);
+      ctx.fillText(`Generated on ${currentDate}`, canvas.width / 2, footerY);
+      ctx.fillText(`The Cawthra Open App`, canvas.width / 2, footerY + 20);
 
       // Convert to image
       const imageUrl = canvas.toDataURL('image/png', 0.9);

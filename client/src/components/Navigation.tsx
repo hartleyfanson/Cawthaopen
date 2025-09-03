@@ -62,7 +62,7 @@ export function Navigation() {
                 }`}
                 data-testid="nav-tournaments"
               >
-                Tournament History
+                Tournaments
               </span>
             </Link>
             <Link href="/tournaments/create">
@@ -182,7 +182,7 @@ export function Navigation() {
                       : "text-primary-foreground hover:bg-primary/50"
                   }`}
                 >
-                  Tournament History
+                  Tournaments
                 </span>
               </Link>
               <Link href="/tournaments/create" onClick={() => setIsMobileMenuOpen(false)}>
