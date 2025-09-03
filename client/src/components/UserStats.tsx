@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 import { TrendingUp, Target, Award, BarChart3 } from "lucide-react";
 
 interface UserStatsProps {
@@ -126,12 +127,14 @@ export function UserStats({ userId }: UserStatsProps) {
           </div>
         </div>
         
-        <Button 
-          className="w-full mt-6 bg-secondary text-secondary-foreground hover:bg-accent transition-colors"
-          data-testid="button-view-full-stats"
-        >
-          View Full Statistics
-        </Button>
+        <Link href="/statistics">
+          <Button 
+            className="w-full mt-6 bg-secondary text-secondary-foreground hover:bg-accent transition-colors"
+            data-testid="button-view-full-stats"
+          >
+            View Full Statistics
+          </Button>
+        </Link>
       </CardContent>
     </Card>
   );
