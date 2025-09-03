@@ -81,9 +81,19 @@ export default function TournamentHistory() {
       {/* Header */}
       <section className="py-12 bg-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl sm:text-4xl font-serif font-bold text-accent mb-8 text-center">
-            Tournaments
-          </h2>
+          <div className="flex flex-col sm:flex-row justify-between items-center mb-8">
+            <h2 className="text-3xl sm:text-4xl font-serif font-bold text-accent mb-4 sm:mb-0">
+              Tournaments
+            </h2>
+            <Link href="/tournaments/create">
+              <Button 
+                className="bg-secondary text-secondary-foreground hover:bg-accent"
+                data-testid="button-create-tournament"
+              >
+                Create Tournament
+              </Button>
+            </Link>
+          </div>
         </div>
       </section>
 

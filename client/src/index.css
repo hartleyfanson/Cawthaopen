@@ -98,6 +98,11 @@
     @apply w-8 h-8 flex items-center justify-center font-semibold;
   }
   
+  .over-par {
+    @apply relative bg-black text-white;
+    @apply w-8 h-8 flex items-center justify-center font-semibold;
+  }
+  
   .strikethrough {
     @apply relative;
   }

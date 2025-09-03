@@ -216,19 +216,29 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
       const holeBoxWidth = (cardWidth - 60) / 9; // Larger boxes, less padding
       const holeBoxHeight = 80; // Taller boxes
 
-      // Create hole-score map from actual scores data
-      // Only show scores if tournament is active or completed
+      // Create hole-score map from actual scores data and always include par
       const holeScoreMap = {};
-      const isUpcoming = (tournament as any)?.status === 'upcoming';
       
-      if (!isUpcoming && scores && holes) {
+      // Always populate with par values from holes data
+      if (holes) {
+        holes.forEach((hole: any) => {
+          holeScoreMap[hole.holeNumber] = {
+            strokes: 0, // Default to 0 if no score submitted
+            par: hole.par,
+            notes: ''
+          };
+        });
+      }
+      
+      // Overlay actual submitted scores if they exist
+      if (scores && holes) {
         scores.forEach((score: any) => {
           const hole = holes.find((h: any) => h.id === score.holeId);
           if (hole) {
             holeScoreMap[hole.holeNumber] = {
               strokes: score.strokes,
               par: hole.par,
-              notes: score.powerupNotes
+              notes: score.powerupNotes || ''
             };
           }
         });
@@ -261,6 +271,7 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
         const isUnder = score > 0 && score < par;
         const isOver = score > par;
         
+        // Always show score if exists, or show blank for future tournaments
         if (score > 0) {
           // Draw black square background for over-par scores
           if (isOver) {
@@ -275,6 +286,16 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
           ctx.fillStyle = isOver ? '#ffffff' : (isUnder ? '#00aa00' : '#1a4a3a');
           ctx.font = 'bold 24px sans-serif';
           ctx.fillText(score.toString(), x + holeBoxWidth / 2, y + 50);
+        } else {
+          // Show blank box for holes without scores (future tournaments)
+          ctx.fillStyle = '#f0f0f0';
+          ctx.strokeStyle = '#cccccc';
+          ctx.lineWidth = 1;
+          const boxSize = 32;
+          const boxX = x + holeBoxWidth / 2 - boxSize / 2;
+          const boxY = y + 50 - boxSize / 2 - 6;
+          ctx.fillRect(boxX, boxY, boxSize, boxSize);
+          ctx.strokeRect(boxX, boxY, boxSize, boxSize);
         }
       }
 
@@ -305,6 +326,7 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
         const isUnder = score > 0 && score < par;
         const isOver = score > par;
         
+        // Always show score if exists, or show blank for future tournaments
         if (score > 0) {
           // Draw black square background for over-par scores
           if (isOver) {
@@ -319,6 +341,16 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
           ctx.fillStyle = isOver ? '#ffffff' : (isUnder ? '#00aa00' : '#1a4a3a');
           ctx.font = 'bold 24px sans-serif';
           ctx.fillText(score.toString(), x + holeBoxWidth / 2, y + 50);
+        } else {
+          // Show blank box for holes without scores (future tournaments)
+          ctx.fillStyle = '#f0f0f0';
+          ctx.strokeStyle = '#cccccc';
+          ctx.lineWidth = 1;
+          const boxSize = 32;
+          const boxX = x + holeBoxWidth / 2 - boxSize / 2;
+          const boxY = y + 50 - boxSize / 2 - 6;
+          ctx.fillRect(boxX, boxY, boxSize, boxSize);
+          ctx.strokeRect(boxX, boxY, boxSize, boxSize);
         }
       }
 

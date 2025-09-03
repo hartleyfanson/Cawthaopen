@@ -23,8 +23,9 @@ export function LeaderboardTable({ leaderboard, courseId }: LeaderboardTableProp
     ? allHoles.slice(0, 9)  // Front 9: holes 1-9
     : allHoles.slice(9, 18); // Back 9: holes 10-18
   
-  // Calculate if a score is under par
+  // Calculate if a score is under par or over par
   const isUnderPar = (score: number, par: number) => score < par;
+  const isOverPar = (score: number, par: number) => score > par;
 
   // Mock hole scores for demonstration - in real app this would come from API
   const getPlayerHoleScores = (playerId: string) => {
@@ -138,6 +139,7 @@ export function LeaderboardTable({ leaderboard, courseId }: LeaderboardTableProp
                 {/* Hole scores */}
                 {holeScores.map((score, holeIndex) => {
                   const isUnder = isUnderPar(score.score, score.par);
+                  const isOver = isOverPar(score.score, score.par);
                   return (
                     <div 
                       key={holeIndex}
@@ -146,6 +148,10 @@ export function LeaderboardTable({ leaderboard, courseId }: LeaderboardTableProp
                     >
                       {isUnder ? (
                         <div className="under-par mx-auto">
+                          {score.score}
+                        </div>
+                      ) : isOver ? (
+                        <div className="over-par mx-auto">
                           {score.score}
                         </div>
                       ) : (
