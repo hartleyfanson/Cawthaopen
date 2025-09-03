@@ -344,16 +344,19 @@ export class DatabaseStorage implements IStorage {
       (current.rounds.totalStrokes || 999) < (best.rounds.totalStrokes || 999) ? current : best
     );
 
-    // Best hole score
-    const bestHoleScore = userScores.reduce((best, current) => {
-      const relativeToPar = (current.scores.grossScore || 0) - (current.holes.par || 0);
-      const bestRelative = best ? ((best.scores.grossScore || 0) - (best.holes.par || 0)) : 999;
-      return relativeToPar < bestRelative ? current : best;
-    }, null);
+    // Best hole score (lowest score relative to par)
+    let bestHoleScore = null;
+    if (userScores.length > 0) {
+      bestHoleScore = userScores.reduce((best, current) => {
+        const relativeToPar = (current.scores.strokes || 0) - (current.holes.par || 0);
+        const bestRelative = best ? ((best.scores.strokes || 0) - (best.holes.par || 0)) : 999;
+        return relativeToPar < bestRelative ? current : best;
+      });
+    }
 
     // Count birdies (scores 1 under par)
     const birdies = userScores.filter(score => 
-      (score.scores.grossScore || 0) === (score.holes.par || 0) - 1
+      (score.scores.strokes || 0) === (score.holes.par || 0) - 1
     ).length;
 
     // Calculate fairway streak (excluding par 3s)
@@ -395,10 +398,10 @@ export class DatabaseStorage implements IStorage {
         date: bestRoundData.rounds.createdAt
       },
       bestHole: bestHoleScore ? {
-        score: bestHoleScore.scores.grossScore,
+        score: bestHoleScore.scores.strokes,
         holeNumber: bestHoleScore.holes.holeNumber,
         par: bestHoleScore.holes.par,
-        relativeToPar: (bestHoleScore.scores.grossScore || 0) - (bestHoleScore.holes.par || 0)
+        relativeToPar: (bestHoleScore.scores.strokes || 0) - (bestHoleScore.holes.par || 0)
       } : null,
       longestFairwayStreak: longestStreak,
       fewestPutts: fewestPutts,
