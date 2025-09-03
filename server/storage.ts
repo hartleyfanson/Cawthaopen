@@ -7,6 +7,7 @@ import {
   rounds,
   scores,
   galleryPhotos,
+  tournamentHoleTees,
   type User,
   type UpsertUser,
   type Course,
@@ -23,6 +24,8 @@ import {
   type InsertScore,
   type GalleryPhoto,
   type InsertGalleryPhoto,
+  type TournamentHoleTee,
+  type InsertTournamentHoleTee,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, asc, and, sql } from "drizzle-orm";
@@ -58,6 +61,9 @@ export interface IStorage {
   // Gallery operations
   createGalleryPhoto(photo: InsertGalleryPhoto): Promise<GalleryPhoto>;
   getTournamentGallery(tournamentId: string): Promise<GalleryPhoto[]>;
+  
+  // Tournament hole tee operations
+  createTournamentHoleTee(holeTee: InsertTournamentHoleTee): Promise<TournamentHoleTee>;
   
   // Stats operations
   getUserStats(userId: string): Promise<any>;
@@ -259,6 +265,12 @@ export class DatabaseStorage implements IStorage {
       .from(galleryPhotos)
       .where(eq(galleryPhotos.tournamentId, tournamentId))
       .orderBy(desc(galleryPhotos.createdAt));
+  }
+
+  // Tournament hole tee operations
+  async createTournamentHoleTee(holeTee: InsertTournamentHoleTee): Promise<TournamentHoleTee> {
+    const [newHoleTee] = await db.insert(tournamentHoleTees).values(holeTee).returning();
+    return newHoleTee;
   }
 
   // Stats operations

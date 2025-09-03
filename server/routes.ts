@@ -210,11 +210,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/tournaments", isAuthenticated, async (req, res) => {
     try {
       const userId = (req.user as any)?.claims?.sub;
+      const { teeSelections, ...restBody } = req.body;
+      
       const tournamentData = insertTournamentSchema.parse({
-        ...req.body,
+        ...restBody,
         createdBy: userId,
       });
+      
       const tournament = await storage.createTournament(tournamentData);
+      
+      // Create tournament hole tee selections if provided
+      if (teeSelections && Array.isArray(teeSelections)) {
+        const courseHoles = await storage.getCourseHoles(tournament.courseId);
+        
+        for (const teeSelection of teeSelections) {
+          const hole = courseHoles.find(h => h.holeNumber === teeSelection.holeNumber);
+          if (hole) {
+            await storage.createTournamentHoleTee({
+              tournamentId: tournament.id,
+              holeId: hole.id,
+              teeColor: teeSelection.teeColor,
+            });
+          }
+        }
+      }
+      
       res.status(201).json(tournament);
     } catch (error) {
       console.error("Error creating tournament:", error);

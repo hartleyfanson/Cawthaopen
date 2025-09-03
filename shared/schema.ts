@@ -70,6 +70,7 @@ export const tournaments = pgTable("tournaments", {
   endDate: timestamp("end_date"),
   status: varchar("status").default("upcoming"), // upcoming, active, completed
   maxPlayers: integer("max_players"),
+  numberOfRounds: integer("number_of_rounds").default(1), // number of rounds to be played
   scoringFormat: varchar("scoring_format").default("stroke_play"), // stroke_play, stableford, handicap, callaway
   handicapAllowance: decimal("handicap_allowance", { precision: 3, scale: 2 }).default("1.00"), // percentage of handicap to apply (0.80 = 80%)
   createdBy: varchar("created_by").references(() => users.id).notNull(),
@@ -126,6 +127,15 @@ export const galleryPhotos = pgTable("gallery_photos", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Tournament hole tee settings
+export const tournamentHoleTees = pgTable("tournament_hole_tees", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tournamentId: varchar("tournament_id").references(() => tournaments.id).notNull(),
+  holeId: varchar("hole_id").references(() => holes.id).notNull(),
+  teeColor: varchar("tee_color").notNull(), // white, blue, red, gold
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   tournaments: many(tournaments),
@@ -145,6 +155,7 @@ export const holesRelations = relations(holes, ({ one, many }) => ({
     references: [courses.id],
   }),
   scores: many(scores),
+  tournamentTees: many(tournamentHoleTees),
 }));
 
 export const tournamentsRelations = relations(tournaments, ({ one, many }) => ({
@@ -163,6 +174,7 @@ export const tournamentsRelations = relations(tournaments, ({ one, many }) => ({
   players: many(tournamentPlayers),
   rounds: many(rounds),
   galleryPhotos: many(galleryPhotos),
+  holeTees: many(tournamentHoleTees),
 }));
 
 export const tournamentPlayersRelations = relations(tournamentPlayers, ({ one }) => ({
@@ -207,6 +219,17 @@ export const galleryPhotosRelations = relations(galleryPhotos, ({ one }) => ({
   uploader: one(users, {
     fields: [galleryPhotos.uploadedBy],
     references: [users.id],
+  }),
+}));
+
+export const tournamentHoleTeesRelations = relations(tournamentHoleTees, ({ one }) => ({
+  tournament: one(tournaments, {
+    fields: [tournamentHoleTees.tournamentId],
+    references: [tournaments.id],
+  }),
+  hole: one(holes, {
+    fields: [tournamentHoleTees.holeId],
+    references: [holes.id],
   }),
 }));
 
@@ -256,6 +279,11 @@ export const insertGalleryPhotoSchema = createInsertSchema(galleryPhotos).omit({
   createdAt: true,
 });
 
+export const insertTournamentHoleTeeSchema = createInsertSchema(tournamentHoleTees).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
@@ -274,3 +302,5 @@ export type Score = typeof scores.$inferSelect;
 export type InsertScore = z.infer<typeof insertScoreSchema>;
 export type GalleryPhoto = typeof galleryPhotos.$inferSelect;
 export type InsertGalleryPhoto = z.infer<typeof insertGalleryPhotoSchema>;
+export type TournamentHoleTee = typeof tournamentHoleTees.$inferSelect;
+export type InsertTournamentHoleTee = z.infer<typeof insertTournamentHoleTeeSchema>;

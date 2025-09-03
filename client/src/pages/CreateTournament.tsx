@@ -21,6 +21,7 @@ import { z } from "zod";
 
 const createTournamentSchema = insertTournamentSchema.extend({
   maxPlayers: z.number().min(1).max(100),
+  numberOfRounds: z.number().min(1).max(4),
 });
 
 export default function CreateTournament() {
@@ -29,6 +30,11 @@ export default function CreateTournament() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const [isCreatingManualCourse, setIsCreatingManualCourse] = useState(false);
+  const [teeSelectionMode, setTeeSelectionMode] = useState<"same" | "mixed">("same");
+  const [singleTeeColor, setSingleTeeColor] = useState("white");
+  const [holeTeeMappings, setHoleTeeMappings] = useState(
+    Array.from({ length: 18 }, (_, i) => ({ holeNumber: i + 1, teeColor: "white" }))
+  );
   const [manualCourseData, setManualCourseData] = useState({
     name: "",
     location: "",
@@ -75,6 +81,7 @@ export default function CreateTournament() {
       maxPlayers: 32,
       scoringFormat: "stroke_play",
       handicapAllowance: "1.00",
+      numberOfRounds: 1,
     },
   });
 
@@ -183,10 +190,16 @@ export default function CreateTournament() {
         console.log("Course created with ID:", courseId);
       }
       
-      // Create the tournament with the course ID
+      // Prepare tee mappings based on selection mode
+      const teeSelections = teeSelectionMode === "same" 
+        ? holeTeeMappings.map(hole => ({ holeNumber: hole.holeNumber, teeColor: singleTeeColor }))
+        : holeTeeMappings;
+
+      // Create the tournament with the course ID and tee selections
       createTournamentMutation.mutate({
         ...data,
         courseId,
+        teeSelections,
       });
     } catch (error) {
       console.error("Error in submission process:", error);
@@ -481,27 +494,137 @@ export default function CreateTournament() {
                     />
                   </div>
 
-                  <FormField
-                    control={form.control}
-                    name="maxPlayers"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-foreground">Maximum Players</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number"
-                            min="1"
-                            max="100"
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="maxPlayers"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-foreground">Maximum Players</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number"
+                              min="1"
+                              max="100"
+                              className="bg-background border-border"
+                              data-testid="input-max-players"
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value))}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="numberOfRounds"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-foreground">Number of Rounds</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number"
+                              min="1"
+                              max="4"
+                              className="bg-background border-border"
+                              data-testid="input-number-of-rounds"
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value))}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="space-y-4 p-4 border border-border rounded-lg bg-card">
+                    <h3 className="text-lg font-semibold text-foreground">Tee Selection</h3>
+                    
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          id="same-tee"
+                          name="tee-selection"
+                          checked={teeSelectionMode === "same"}
+                          onChange={() => setTeeSelectionMode("same")}
+                          className="text-accent"
+                          data-testid="radio-same-tee"
+                        />
+                        <label htmlFor="same-tee" className="text-foreground">All holes use the same tee</label>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          id="mixed-tee"
+                          name="tee-selection"
+                          checked={teeSelectionMode === "mixed"}
+                          onChange={() => setTeeSelectionMode("mixed")}
+                          className="text-accent"
+                          data-testid="radio-mixed-tee"
+                        />
+                        <label htmlFor="mixed-tee" className="text-foreground">Mix and match tees per hole</label>
+                      </div>
+                    </div>
+
+                    {teeSelectionMode === "same" && (
+                      <div className="mt-4">
+                        <label className="text-sm font-medium text-foreground mb-2 block">Select Tee Color</label>
+                        <Select value={singleTeeColor} onValueChange={setSingleTeeColor}>
+                          <SelectTrigger 
                             className="bg-background border-border"
-                            data-testid="input-max-players"
-                            {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value))}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                            data-testid="select-single-tee-color"
+                          >
+                            <SelectValue placeholder="Select tee color" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="white">White Tees</SelectItem>
+                            <SelectItem value="blue">Blue Tees</SelectItem>
+                            <SelectItem value="red">Red Tees</SelectItem>
+                            <SelectItem value="gold">Gold Tees</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     )}
-                  />
+
+                    {teeSelectionMode === "mixed" && (
+                      <div className="mt-4">
+                        <h4 className="text-sm font-medium text-foreground mb-3">Tee Selection per Hole</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 max-h-80 overflow-y-auto">
+                          {holeTeeMappings.map((hole, index) => (
+                            <div key={index} className="space-y-1">
+                              <label className="text-xs font-medium text-foreground">Hole {hole.holeNumber}</label>
+                              <Select 
+                                value={hole.teeColor} 
+                                onValueChange={(color) => {
+                                  const newMappings = [...holeTeeMappings];
+                                  newMappings[index].teeColor = color;
+                                  setHoleTeeMappings(newMappings);
+                                }}
+                              >
+                                <SelectTrigger 
+                                  className="bg-background border-border h-8 text-xs"
+                                  data-testid={`select-hole-${index + 1}-tee`}
+                                >
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="white">White</SelectItem>
+                                  <SelectItem value="blue">Blue</SelectItem>
+                                  <SelectItem value="red">Red</SelectItem>
+                                  <SelectItem value="gold">Gold</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
                   <FormField
                     control={form.control}
