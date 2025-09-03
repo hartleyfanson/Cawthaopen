@@ -112,7 +112,7 @@ export function UserStats({ userId }: UserStatsProps) {
               className="text-accent font-semibold" 
               data-testid="stat-wins"
             >
-              {stats?.wins || 0}
+              {(stats as any)?.wins || 0}
             </span>
           </div>
           
@@ -122,7 +122,7 @@ export function UserStats({ userId }: UserStatsProps) {
               className="text-accent font-semibold" 
               data-testid="stat-rounds"
             >
-              {stats?.totalRounds || 0}
+              {(stats as any)?.totalRounds || 0}
             </span>
           </div>
         </div>
