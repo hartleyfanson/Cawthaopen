@@ -1,0 +1,131 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(156, 100%, 12%);
+  --foreground: hsl(45, 86%, 92%);
+  --card: hsl(156, 60%, 15%);
+  --card-foreground: hsl(45, 86%, 92%);
+  --popover: hsl(156, 100%, 12%);
+  --popover-foreground: hsl(45, 86%, 92%);
+  --primary: hsl(156, 100%, 20%);
+  --primary-foreground: hsl(45, 86%, 92%);
+  --secondary: hsl(45, 65%, 82%);
+  --secondary-foreground: hsl(156, 100%, 12%);
+  --muted: hsl(156, 60%, 15%);
+  --muted-foreground: hsl(45, 50%, 75%);
+  --accent: hsl(45, 86%, 95%);
+  --accent-foreground: hsl(156, 100%, 12%);
+  --destructive: hsl(0, 84%, 60%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --border: hsl(156, 40%, 25%);
+  --input: hsl(156, 40%, 25%);
+  --ring: hsl(156, 100%, 30%);
+  --chart-1: hsl(156, 100%, 20%);
+  --chart-2: hsl(45, 65%, 82%);
+  --chart-3: hsl(0, 84%, 60%);
+  --chart-4: hsl(120, 100%, 25%);
+  --chart-5: hsl(280, 100%, 70%);
+  --sidebar: hsl(156, 60%, 15%);
+  --sidebar-foreground: hsl(45, 86%, 92%);
+  --sidebar-primary: hsl(156, 100%, 20%);
+  --sidebar-primary-foreground: hsl(45, 86%, 92%);
+  --sidebar-accent: hsl(156, 40%, 25%);
+  --sidebar-accent-foreground: hsl(45, 86%, 92%);
+  --sidebar-border: hsl(156, 40%, 25%);
+  --sidebar-ring: hsl(156, 100%, 30%);
+  --font-sans: 'Inter', sans-serif;
+  --font-serif: 'Playfair Display', serif;
+  --font-mono: 'Fira Code', monospace;
+  --radius: 0.5rem;
+  --shadow-2xs: 0px 1px 2px 0px rgba(0, 0, 0, 0.05);
+  --shadow-xs: 0px 1px 2px 0px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0px 1px 3px 0px rgba(0, 0, 0, 0.1), 0px 1px 2px 0px rgba(0, 0, 0, 0.06);
+  --shadow: 0px 1px 3px 0px rgba(0, 0, 0, 0.1), 0px 1px 2px 0px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0px 4px 6px -1px rgba(0, 0, 0, 0.1), 0px 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0px 10px 15px -3px rgba(0, 0, 0, 0.1), 0px 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0px 20px 25px -5px rgba(0, 0, 0, 0.1), 0px 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-2xl: 0px 25px 50px -12px rgba(0, 0, 0, 0.25);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+}
+
+.dark {
+  --background: hsl(156, 100%, 8%);
+  --foreground: hsl(45, 86%, 92%);
+  --card: hsl(156, 60%, 10%);
+  --card-foreground: hsl(45, 86%, 92%);
+  --popover: hsl(156, 100%, 8%);
+  --popover-foreground: hsl(45, 86%, 92%);
+  --primary: hsl(156, 100%, 15%);
+  --primary-foreground: hsl(45, 86%, 92%);
+  --secondary: hsl(45, 65%, 75%);
+  --secondary-foreground: hsl(156, 100%, 8%);
+  --muted: hsl(156, 60%, 10%);
+  --muted-foreground: hsl(45, 50%, 65%);
+  --accent: hsl(45, 86%, 90%);
+  --accent-foreground: hsl(156, 100%, 8%);
+  --destructive: hsl(0, 84%, 60%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --border: hsl(156, 40%, 20%);
+  --input: hsl(156, 40%, 20%);
+  --ring: hsl(156, 100%, 25%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
+  }
+}
+
+@layer components {
+  .under-par {
+    @apply relative;
+    background: radial-gradient(circle, rgba(239, 68, 68, 0.2) 0%, transparent 70%);
+    border: 2px solid #ef4444;
+    border-radius: 50%;
+    @apply w-8 h-8 flex items-center justify-center font-semibold;
+  }
+  
+  .strikethrough {
+    @apply relative;
+  }
+  
+  .strikethrough::after {
+    content: '';
+    @apply absolute top-1/2 left-0 right-0 h-0.5 bg-red-500 transform -translate-y-1/2;
+  }
+  
+  .hero-gradient {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--background) 100%);
+  }
+  
+  .card-shadow {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  }
+
+  .tco-logo {
+    @apply w-12 h-12 bg-secondary rounded-lg flex items-center justify-center;
+  }
+
+  .tco-logo span {
+    @apply text-secondary-foreground font-serif font-bold text-lg;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
