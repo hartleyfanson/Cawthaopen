@@ -73,6 +73,8 @@ export default function CreateTournament() {
       endDate: new Date(),
       status: "upcoming",
       maxPlayers: 32,
+      scoringFormat: "stroke_play",
+      handicapAllowance: "1.00",
     },
   });
 
@@ -118,7 +120,7 @@ export default function CreateTournament() {
         description: "Your tournament has been created successfully",
       });
       // Redirect to tournaments page
-      setLocation(`/tournaments`);
+      setLocation(`/tournaments/history`);
     },
     onError: (error) => {
       console.error("Tournament creation error:", error);
@@ -177,7 +179,7 @@ export default function CreateTournament() {
           holes: manualCourseData.holes,
         });
         
-        courseId = courseResult.id;
+        courseId = (courseResult as any).id;
         console.log("Course created with ID:", courseId);
       }
       
@@ -495,6 +497,63 @@ export default function CreateTournament() {
                             {...field}
                             onChange={(e) => field.onChange(parseInt(e.target.value))}
                           />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="scoringFormat"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-foreground">Tournament Format</FormLabel>
+                        <FormControl>
+                          <Select 
+                            value={field.value} 
+                            onValueChange={field.onChange}
+                            data-testid="select-scoring-format"
+                          >
+                            <SelectTrigger className="bg-background border-border">
+                              <SelectValue placeholder="Select scoring format" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="stroke_play">Stroke Play</SelectItem>
+                              <SelectItem value="stableford">Stableford Points</SelectItem>
+                              <SelectItem value="handicap">Handicap Net Scoring</SelectItem>
+                              <SelectItem value="callaway">Callaway System</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="handicapAllowance"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-foreground">Handicap Allowance</FormLabel>
+                        <FormControl>
+                          <Select 
+                            value={field.value} 
+                            onValueChange={field.onChange}
+                            data-testid="select-handicap-allowance"
+                          >
+                            <SelectTrigger className="bg-background border-border">
+                              <SelectValue placeholder="Select handicap allowance" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="1.00">100% (Full Handicap)</SelectItem>
+                              <SelectItem value="0.90">90% Handicap</SelectItem>
+                              <SelectItem value="0.80">80% Handicap</SelectItem>
+                              <SelectItem value="0.75">75% Handicap</SelectItem>
+                              <SelectItem value="0.70">70% Handicap</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </FormControl>
                         <FormMessage />
                       </FormItem>

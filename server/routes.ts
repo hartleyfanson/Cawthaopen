@@ -405,6 +405,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Object Storage API endpoints
+  app.post("/api/objects/upload", isAuthenticated, async (req, res) => {
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      res.json({ uploadURL });
+    } catch (error) {
+      console.error("Error creating upload URL:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.put("/api/profile-images", isAuthenticated, async (req, res) => {
+    if (!req.body.profileImageURL) {
+      return res.status(400).json({ error: "profileImageURL is required" });
+    }
+
+    const userId = (req.user as any)?.claims?.sub;
+
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
+        req.body.profileImageURL,
+        {
+          owner: userId,
+          visibility: "public", // Profile images are publicly viewable
+        },
+      );
+
+      res.status(200).json({
+        objectPath: objectPath,
+      });
+    } catch (error) {
+      console.error("Error setting profile image:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

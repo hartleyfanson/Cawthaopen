@@ -10,8 +10,10 @@ import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { useEffect } from "react";
-import { Camera, Save } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Camera, Save, Upload } from "lucide-react";
+import { ObjectUploader } from "@/components/ObjectUploader";
+import type { UploadResult } from "@uppy/core";
 
 const profileSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -26,6 +28,7 @@ export default function Profile() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const form = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
@@ -51,10 +54,7 @@ export default function Profile() {
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileForm) => {
-      return apiRequest(`/api/users/${(user as any)?.id}/profile`, {
-        method: "PUT",
-        body: JSON.stringify(data)
-      });
+      return await apiRequest("PUT", `/api/users/${(user as any)?.id}/profile`, data);
     },
     onSuccess: () => {
       toast({
@@ -75,6 +75,45 @@ export default function Profile() {
 
   const onSubmit = (data: ProfileForm) => {
     updateProfileMutation.mutate(data);
+  };
+
+  const handleGetUploadParameters = async () => {
+    const response = await apiRequest("POST", "/api/objects/upload", {});
+    return {
+      method: "PUT" as const,
+      url: response.uploadURL,
+    };
+  };
+
+  const handleUploadComplete = async (result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
+    if (result.successful && result.successful.length > 0) {
+      const uploadedFile = result.successful[0];
+      const imageURL = uploadedFile.uploadURL;
+      
+      try {
+        setUploadingImage(true);
+        // Update the ACL policy and get the normalized path
+        const response = await apiRequest("PUT", "/api/profile-images", {
+          profileImageURL: imageURL
+        });
+        
+        // Update the form with the normalized path
+        form.setValue("profileImageUrl", response.objectPath);
+        
+        toast({
+          title: "Image Uploaded",
+          description: "Your profile image has been uploaded successfully.",
+        });
+      } catch (error) {
+        toast({
+          title: "Upload Failed",
+          description: "Failed to process the uploaded image. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setUploadingImage(false);
+      }
+    }
   };
 
   if (isLoading) {
@@ -121,9 +160,24 @@ export default function Profile() {
                   data-testid="img-profile-large"
                 />
                 <div className="w-full space-y-2">
-                  <Label htmlFor="profileImageUrl">Profile Image URL</Label>
+                  <ObjectUploader
+                    maxNumberOfFiles={1}
+                    maxFileSize={5242880} // 5MB
+                    onGetUploadParameters={handleGetUploadParameters}
+                    onComplete={handleUploadComplete}
+                    buttonClassName="w-full bg-accent text-accent-foreground hover:bg-accent/90"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Upload className="h-4 w-4" />
+                      {uploadingImage ? "Processing..." : "Upload Profile Image"}
+                    </div>
+                  </ObjectUploader>
+                  
+                  <div className="text-center text-sm text-muted-foreground">
+                    Or enter image URL manually:
+                  </div>
+                  
                   <Input
-                    id="profileImageUrl"
                     placeholder="https://example.com/your-image.jpg"
                     {...form.register("profileImageUrl")}
                     data-testid="input-profile-image-url"

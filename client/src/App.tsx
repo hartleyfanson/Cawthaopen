@@ -28,6 +28,7 @@ function Router() {
           <Route path="/" component={Dashboard} />
           <Route path="/tournaments/:id/leaderboard" component={TournamentLeaderboard} />
           <Route path="/tournaments/:id/scoring" component={LiveScoring} />
+          <Route path="/tournaments" component={TournamentHistory} />
           <Route path="/tournaments/history" component={TournamentHistory} />
           <Route path="/tournaments/:id/gallery" component={Gallery} />
           <Route path="/tournaments/create" component={CreateTournament} />

@@ -70,6 +70,8 @@ export const tournaments = pgTable("tournaments", {
   endDate: timestamp("end_date"),
   status: varchar("status").default("upcoming"), // upcoming, active, completed
   maxPlayers: integer("max_players"),
+  scoringFormat: varchar("scoring_format").default("stroke_play"), // stroke_play, stableford, handicap, callaway
+  handicapAllowance: decimal("handicap_allowance", { precision: 3, scale: 2 }).default("1.00"), // percentage of handicap to apply (0.80 = 80%)
   createdBy: varchar("created_by").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   winnerId: varchar("winner_id").references(() => users.id),
