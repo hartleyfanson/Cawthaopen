@@ -10,6 +10,7 @@ import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import logoImage from "@assets/IMG_4006_1756925482771.png";
+import dashboardImage from "@assets/350289255_818733789210084_3091965385777029372_n_1756931761308.jpeg";
 
 export default function Dashboard() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -62,7 +63,7 @@ export default function Dashboard() {
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-30"
           style={{
-            backgroundImage: "url('https://images.unsplash.com/photo-1535131749006-b7f58c99034b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&h=800')"
+            backgroundImage: `url('${dashboardImage}')`
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-r from-primary/80 to-background/60" />
