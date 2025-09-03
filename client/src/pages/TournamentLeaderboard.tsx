@@ -3,6 +3,7 @@ import { useParams } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigation } from "@/components/Navigation";
 import { LeaderboardTable } from "@/components/LeaderboardTable";
+import { ShareScorecard } from "@/components/ShareScorecard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
@@ -43,6 +44,11 @@ export default function TournamentLeaderboard() {
     enabled: !!user && !!id,
   });
 
+  const { data: currentRound } = useQuery({
+    queryKey: ["/api/rounds", id, "1"],
+    enabled: !!user && !!id,
+  });
+
   if (isLoading || loadingTournament) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -71,7 +77,7 @@ export default function TournamentLeaderboard() {
             </p>
           </div>
           
-          <div className="flex justify-center gap-4">
+          <div className="flex justify-center gap-4 flex-wrap">
             <Link href={`/tournaments/${id}/scoring`}>
               <Button 
                 className="bg-secondary text-secondary-foreground hover:bg-accent"
@@ -89,6 +95,11 @@ export default function TournamentLeaderboard() {
                 Gallery
               </Button>
             </Link>
+            <ShareScorecard 
+              tournamentId={id || ''}
+              roundData={currentRound}
+              playerData={user}
+            />
           </div>
         </div>
       </section>

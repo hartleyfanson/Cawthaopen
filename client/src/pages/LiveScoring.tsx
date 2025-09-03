@@ -11,6 +11,7 @@ import { Plus, Minus, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { ShareScorecard } from "@/components/ShareScorecard";
 
 export default function LiveScoring() {
   const { id } = useParams();
@@ -354,6 +355,15 @@ export default function LiveScoring() {
                   <span>Next Hole</span>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
+              </div>
+              
+              {/* Share Scorecard */}
+              <div className="mt-6 text-center">
+                <ShareScorecard 
+                  tournamentId={id || ''}
+                  roundData={currentRound}
+                  playerData={user}
+                />
               </div>
             </CardContent>
           </Card>
