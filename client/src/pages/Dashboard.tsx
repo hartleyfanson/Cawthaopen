@@ -9,6 +9,7 @@ import { Link } from "wouter";
 import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import logoImage from "@assets/IMG_4006_1756925482771.png";
 
 export default function Dashboard() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -66,13 +67,13 @@ export default function Dashboard() {
         />
         <div className="absolute inset-0 bg-gradient-to-r from-primary/80 to-background/60" />
         
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center">
-          <h2 className="text-4xl sm:text-6xl font-serif font-bold text-accent mb-4">
-            THE CAWTHRA OPEN
-          </h2>
-          <p className="text-xl sm:text-2xl text-secondary mb-2">
-            A Weekend of Competition in Sport
-          </p>
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center items-center text-center">
+          <img 
+            src={logoImage} 
+            alt="The Cawthra Open" 
+            className="h-32 sm:h-40 w-auto object-contain mb-6"
+            data-testid="logo-hero"
+          />
           <p className="text-lg text-muted-foreground max-w-2xl">
             Welcome back, {(user as any)?.firstName || 'Golfer'}! Ready for your next round?
           </p>

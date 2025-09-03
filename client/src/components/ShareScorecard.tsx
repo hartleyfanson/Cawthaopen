@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Share2, Download, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import logoImage from "@assets/IMG_4006_1756925482771.png";
 
 interface ShareScorecardProps {
   tournamentId: string;
@@ -114,21 +115,34 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
 
       // Header section
       ctx.fillStyle = '#1a4a3a';
-      roundRect(cardX + 20, cardY + 20, cardWidth - 40, 100, 10);
+      roundRect(cardX + 20, cardY + 20, cardWidth - 40, 120, 10);
       ctx.fill();
 
-      // Tournament title
-      ctx.fillStyle = '#D4AF37';
-      ctx.font = 'bold 36px serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('THE CAWTHRA OPEN', canvas.width / 2, cardY + 65);
+      // Load and draw the logo
+      const logo = new Image();
+      logo.crossOrigin = "anonymous";
+      
+      await new Promise((resolve, reject) => {
+        logo.onload = resolve;
+        logo.onerror = reject;
+        logo.src = logoImage;
+      });
+
+      // Draw logo in header
+      const logoHeight = 60;
+      const logoWidth = (logo.width / logo.height) * logoHeight;
+      const logoX = (canvas.width - logoWidth) / 2;
+      const logoY = cardY + 40;
+      
+      ctx.drawImage(logo, logoX, logoY, logoWidth, logoHeight);
 
       // Course and date
       ctx.fillStyle = '#ffffff';
-      ctx.font = '20px sans-serif';
+      ctx.font = '18px sans-serif';
+      ctx.textAlign = 'center';
       const courseName = (course as any)?.name || 'Championship Course';
       const tournamentName = (tournament as any)?.name || 'Tournament';
-      ctx.fillText(`${courseName} • ${tournamentName}`, canvas.width / 2, cardY + 95);
+      ctx.fillText(`${courseName} • ${tournamentName}`, canvas.width / 2, cardY + 120);
 
       // Player section
       const playerY = cardY + 160;

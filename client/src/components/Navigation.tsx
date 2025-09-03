@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
+import logoImage from "@assets/IMG_4006_1756925482771.png";
 
 export function Navigation() {
   const { user } = useAuth();
@@ -19,16 +20,16 @@ export function Navigation() {
     <nav className="sticky top-0 z-50 bg-primary border-b border-border">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center">
             <Link href="/">
-              <div className="flex items-center space-x-3 cursor-pointer">
-                <div className="tco-logo">
-                  <span>TCO</span>
-                </div>
-                <h1 className="text-xl font-serif font-bold text-primary-foreground hidden sm:block">
-                  The Cawthra Open
-                </h1>
-              </div>
+              <button className="flex items-center cursor-pointer hover:opacity-80 transition-opacity">
+                <img 
+                  src={logoImage} 
+                  alt="The Cawthra Open" 
+                  className="h-12 w-auto object-contain"
+                  data-testid="logo-header"
+                />
+              </button>
             </Link>
           </div>
           
