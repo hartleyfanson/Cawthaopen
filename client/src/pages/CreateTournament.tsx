@@ -28,6 +28,21 @@ export default function CreateTournament() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
+  const [isCreatingManualCourse, setIsCreatingManualCourse] = useState(false);
+  const [manualCourseData, setManualCourseData] = useState({
+    name: "",
+    location: "",
+    description: "",
+    holes: Array.from({ length: 18 }, (_, i) => ({
+      holeNumber: i + 1,
+      par: 4,
+      yardageWhite: 350,
+      yardageBlue: 370,
+      yardageRed: 300,
+      yardageGold: 390,
+      handicap: i + 1
+    }))
+  });
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -61,20 +76,13 @@ export default function CreateTournament() {
     },
   });
 
-  const createTournamentMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return await apiRequest("POST", "/api/tournaments", data);
-    },
-    onSuccess: (response) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
-      toast({
-        title: "Tournament Created",
-        description: "Your tournament has been created successfully",
-      });
-      // Redirect to tournaments page
-      setLocation(`/tournaments`);
+  const createCourseMutation = useMutation({
+    mutationFn: async (courseData: any) => {
+      console.log("Creating course with data:", courseData);
+      return await apiRequest("POST", "/api/courses", courseData);
     },
     onError: (error) => {
+      console.error("Course creation error:", error);
       if (isUnauthorizedError(error)) {
         toast({
           title: "Unauthorized",
@@ -88,14 +96,99 @@ export default function CreateTournament() {
       }
       toast({
         title: "Error",
-        description: "Failed to create tournament",
+        description: `Failed to create course: ${error.message}`,
         variant: "destructive",
       });
     },
   });
 
-  const onSubmit = (data: any) => {
-    createTournamentMutation.mutate(data);
+  const createTournamentMutation = useMutation({
+    mutationFn: async (data: any) => {
+      console.log("Creating tournament with data:", data);
+      return await apiRequest("POST", "/api/tournaments", data);
+    },
+    onSuccess: (response) => {
+      console.log("Tournament created successfully:", response);
+      queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tournaments/status/upcoming"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tournaments/status/active"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/courses"] });
+      toast({
+        title: "Tournament Created",
+        description: "Your tournament has been created successfully",
+      });
+      // Redirect to tournaments page
+      setLocation(`/tournaments`);
+    },
+    onError: (error) => {
+      console.error("Tournament creation error:", error);
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: `Failed to create tournament: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmit = async (data: any) => {
+    console.log("Form submitted with data:", data);
+    console.log("Form errors:", form.formState.errors);
+    
+    // Validate dates are in the future
+    const now = new Date();
+    if (data.startDate <= now) {
+      form.setError("startDate", { message: "Start date must be in the future" });
+      return;
+    }
+    if (data.endDate <= data.startDate) {
+      form.setError("endDate", { message: "End date must be after start date" });
+      return;
+    }
+    
+    try {
+      let courseId = data.courseId;
+      
+      // If creating a manual course, create it first
+      if (isCreatingManualCourse && data.courseId === "add-manually") {
+        if (!manualCourseData.name || !manualCourseData.location) {
+          toast({
+            title: "Error",
+            description: "Please fill in course name and location",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        const courseResult = await createCourseMutation.mutateAsync({
+          name: manualCourseData.name,
+          location: manualCourseData.location,
+          description: manualCourseData.description,
+          holes: manualCourseData.holes,
+        });
+        
+        courseId = courseResult.id;
+        console.log("Course created with ID:", courseId);
+      }
+      
+      // Create the tournament with the course ID
+      createTournamentMutation.mutate({
+        ...data,
+        courseId,
+      });
+    } catch (error) {
+      console.error("Error in submission process:", error);
+    }
   };
 
   if (isLoading) {
@@ -182,7 +275,14 @@ export default function CreateTournament() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-foreground">Golf Course</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={(value) => {
+                          field.onChange(value);
+                          if (value === "add-manually") {
+                            setIsCreatingManualCourse(true);
+                          } else {
+                            setIsCreatingManualCourse(false);
+                          }
+                        }} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger 
                               className="bg-background border-border"
@@ -192,6 +292,7 @@ export default function CreateTournament() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
+                            <SelectItem value="add-manually">+ Add Manually</SelectItem>
                             {loadingCourses ? (
                               <SelectItem value="loading" disabled>Loading courses...</SelectItem>
                             ) : Array.isArray(courses) && courses.length ? (
@@ -209,6 +310,130 @@ export default function CreateTournament() {
                       </FormItem>
                     )}
                   />
+
+                  {isCreatingManualCourse && (
+                    <div className="space-y-4 p-4 border border-border rounded-lg bg-card">
+                      <h3 className="text-lg font-semibold text-foreground">Create New Course</h3>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm font-medium text-foreground">Course Name</label>
+                          <Input
+                            value={manualCourseData.name}
+                            onChange={(e) => setManualCourseData(prev => ({ ...prev, name: e.target.value }))}
+                            placeholder="Enter course name"
+                            className="bg-background border-border"
+                            data-testid="input-course-name"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-foreground">Location</label>
+                          <Input
+                            value={manualCourseData.location}
+                            onChange={(e) => setManualCourseData(prev => ({ ...prev, location: e.target.value }))}
+                            placeholder="Enter location"
+                            className="bg-background border-border"
+                            data-testid="input-course-location"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <label className="text-sm font-medium text-foreground">Description</label>
+                        <Textarea
+                          value={manualCourseData.description}
+                          onChange={(e) => setManualCourseData(prev => ({ ...prev, description: e.target.value }))}
+                          placeholder="Course description"
+                          className="bg-background border-border"
+                          rows={2}
+                          data-testid="textarea-course-description"
+                        />
+                      </div>
+
+                      <div className="space-y-4">
+                        <h4 className="text-md font-medium text-foreground">Course Layout</h4>
+                        <div className="grid gap-2 max-h-96 overflow-y-auto">
+                          {manualCourseData.holes.map((hole, index) => (
+                            <div key={index} className="grid grid-cols-6 gap-2 items-center p-2 border border-border rounded bg-background">
+                              <span className="text-sm font-medium text-foreground">Hole {hole.holeNumber}</span>
+                              <div>
+                                <label className="text-xs text-muted-foreground">Par</label>
+                                <Input
+                                  type="number"
+                                  min="3"
+                                  max="5"
+                                  value={hole.par}
+                                  onChange={(e) => {
+                                    const newHoles = [...manualCourseData.holes];
+                                    newHoles[index].par = parseInt(e.target.value) || 3;
+                                    setManualCourseData(prev => ({ ...prev, holes: newHoles }));
+                                  }}
+                                  className="h-8 text-xs"
+                                  data-testid={`input-hole-${index + 1}-par`}
+                                />
+                              </div>
+                              <div>
+                                <label className="text-xs text-muted-foreground">White</label>
+                                <Input
+                                  type="number"
+                                  value={hole.yardageWhite}
+                                  onChange={(e) => {
+                                    const newHoles = [...manualCourseData.holes];
+                                    newHoles[index].yardageWhite = parseInt(e.target.value) || 0;
+                                    setManualCourseData(prev => ({ ...prev, holes: newHoles }));
+                                  }}
+                                  className="h-8 text-xs"
+                                  data-testid={`input-hole-${index + 1}-white`}
+                                />
+                              </div>
+                              <div>
+                                <label className="text-xs text-muted-foreground">Blue</label>
+                                <Input
+                                  type="number"
+                                  value={hole.yardageBlue}
+                                  onChange={(e) => {
+                                    const newHoles = [...manualCourseData.holes];
+                                    newHoles[index].yardageBlue = parseInt(e.target.value) || 0;
+                                    setManualCourseData(prev => ({ ...prev, holes: newHoles }));
+                                  }}
+                                  className="h-8 text-xs"
+                                  data-testid={`input-hole-${index + 1}-blue`}
+                                />
+                              </div>
+                              <div>
+                                <label className="text-xs text-muted-foreground">Red</label>
+                                <Input
+                                  type="number"
+                                  value={hole.yardageRed}
+                                  onChange={(e) => {
+                                    const newHoles = [...manualCourseData.holes];
+                                    newHoles[index].yardageRed = parseInt(e.target.value) || 0;
+                                    setManualCourseData(prev => ({ ...prev, holes: newHoles }));
+                                  }}
+                                  className="h-8 text-xs"
+                                  data-testid={`input-hole-${index + 1}-red`}
+                                />
+                              </div>
+                              <div>
+                                <label className="text-xs text-muted-foreground">Gold</label>
+                                <Input
+                                  type="number"
+                                  value={hole.yardageGold}
+                                  onChange={(e) => {
+                                    const newHoles = [...manualCourseData.holes];
+                                    newHoles[index].yardageGold = parseInt(e.target.value) || 0;
+                                    setManualCourseData(prev => ({ ...prev, holes: newHoles }));
+                                  }}
+                                  className="h-8 text-xs"
+                                  data-testid={`input-hole-${index + 1}-gold`}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
@@ -288,11 +513,15 @@ export default function CreateTournament() {
                     </Button>
                     <Button
                       type="submit"
-                      disabled={createTournamentMutation.isPending}
+                      disabled={createTournamentMutation.isPending || createCourseMutation.isPending}
                       className="flex-1 bg-secondary text-secondary-foreground hover:bg-accent"
                       data-testid="button-create-tournament"
                     >
-                      {createTournamentMutation.isPending ? "Creating..." : "Create Tournament"}
+                      {createCourseMutation.isPending 
+                        ? "Creating Course..." 
+                        : createTournamentMutation.isPending 
+                        ? "Creating Tournament..." 
+                        : "Create Tournament"}
                     </Button>
                   </div>
                 </form>

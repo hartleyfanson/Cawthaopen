@@ -153,6 +153,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const courseData = insertCourseSchema.parse(req.body);
       const course = await storage.createCourse(courseData);
+      
+      // Create holes if provided
+      if (req.body.holes && Array.isArray(req.body.holes)) {
+        for (const holeData of req.body.holes) {
+          const hole = insertHoleSchema.parse({
+            ...holeData,
+            courseId: course.id,
+          });
+          await storage.createHole(hole);
+        }
+      }
+      
       res.status(201).json(course);
     } catch (error) {
       console.error("Error creating course:", error);
@@ -160,16 +172,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/holes", isAuthenticated, async (req, res) => {
-    try {
-      const holeData = insertHoleSchema.parse(req.body);
-      const hole = await storage.createHole(holeData);
-      res.status(201).json(hole);
-    } catch (error) {
-      console.error("Error creating hole:", error);
-      res.status(500).json({ message: "Failed to create hole" });
-    }
-  });
 
   // Tournament routes
   app.get("/api/tournaments", async (req, res) => {
