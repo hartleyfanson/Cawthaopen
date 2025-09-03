@@ -10,7 +10,7 @@ import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import logoImage from "@assets/IMG_4006_1756925482771.png";
-import dashboardImage from "@assets/350289255_818733789210084_3091965385777029372_n_1756931761308.jpeg";
+import dashboardImage from "@assets/350289255_818733789210084_3091965385777029372_n_1756932156175.JPG?url";
 
 export default function Dashboard() {
   const { user, isAuthenticated, isLoading } = useAuth();
