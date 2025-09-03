@@ -37,6 +37,14 @@ export function LeaderboardTable({ leaderboard, courseId }: LeaderboardTableProp
     });
   };
 
+  // Get all 18 holes scores for calculating totals
+  const getAllPlayerHoleScores = (playerId: string) => {
+    return allHoles.map((hole: any) => {
+      const score = Math.floor(Math.random() * 3) + hole.par - 1;
+      return { holeId: hole.id, score, par: hole.par, holeNumber: hole.holeNumber };
+    });
+  };
+
   return (
     <Card className="bg-background overflow-hidden card-shadow">
       {/* Toggle buttons for Front/Back Nine */}
@@ -73,21 +81,27 @@ export function LeaderboardTable({ leaderboard, courseId }: LeaderboardTableProp
       
       {/* Header with hole numbers */}
       <div className="bg-muted p-4 border-b border-border">
-        <div className="grid grid-cols-12 gap-1 text-center text-sm font-medium text-muted-foreground">
-          <div className="col-span-3 text-left">PLAYER</div>
+        <div className="grid gap-1 text-center text-sm font-medium text-muted-foreground" style={{gridTemplateColumns: "2fr " + "1fr ".repeat(9) + " 1fr 1fr 1fr"}}>
+          <div className="text-left">PLAYER</div>
           {displayHoles.map((hole: any, index: number) => (
             <div key={hole.id} data-testid={`header-hole-${hole.holeNumber}`}>
               {hole.holeNumber}
             </div>
           ))}
+          <div className="font-bold text-accent">{showingFrontNine ? 'OUT' : 'IN'}</div>
+          {!showingFrontNine && <div className="font-bold text-accent">OUT</div>}
+          <div className="font-bold text-accent">TOTAL</div>
         </div>
-        <div className="grid grid-cols-12 gap-1 text-center text-sm text-muted-foreground mt-1">
-          <div className="col-span-3 text-left">PAR</div>
+        <div className="grid gap-1 text-center text-sm text-muted-foreground mt-1" style={{gridTemplateColumns: "2fr " + "1fr ".repeat(9) + " 1fr 1fr 1fr"}}>
+          <div className="text-left">PAR</div>
           {displayHoles.map((hole: any) => (
             <div key={`par-${hole.id}`} data-testid={`header-par-${hole.holeNumber}`}>
               {hole.par}
             </div>
           ))}
+          <div className="font-bold">{showingFrontNine ? allHoles.slice(9, 18).reduce((sum: number, hole: any) => sum + hole.par, 0) : allHoles.slice(0, 9).reduce((sum: number, hole: any) => sum + hole.par, 0)}</div>
+          {!showingFrontNine && <div className="font-bold">{allHoles.slice(9, 18).reduce((sum: number, hole: any) => sum + hole.par, 0)}</div>}
+          <div className="font-bold">{allHoles.reduce((sum: number, hole: any) => sum + hole.par, 0)}</div>
         </div>
       </div>
       
@@ -95,9 +109,18 @@ export function LeaderboardTable({ leaderboard, courseId }: LeaderboardTableProp
       <div className="divide-y divide-border">
         {leaderboard.map((player: any, index: number) => {
           const holeScores = getPlayerHoleScores(player.playerId);
-          const totalPar = displayHoles.reduce((sum: any, hole: any) => sum + hole.par, 0);
-          const playerScore = holeScores.reduce((sum: any, score: any) => sum + score.score, 0);
-          const scoreToPar = playerScore - totalPar;
+          const allHoleScores = getAllPlayerHoleScores(player.playerId);
+          
+          // Calculate scores for front 9, back 9, and total
+          const frontNineScores = allHoleScores.filter(score => score.holeNumber <= 9);
+          const backNineScores = allHoleScores.filter(score => score.holeNumber > 9);
+          
+          const frontNineTotal = frontNineScores.reduce((sum: number, score: any) => sum + score.score, 0);
+          const backNineTotal = backNineScores.reduce((sum: number, score: any) => sum + score.score, 0);
+          const totalScore = frontNineTotal + backNineTotal;
+          
+          const totalPar = allHoles.reduce((sum: number, hole: any) => sum + hole.par, 0);
+          const scoreToPar = totalScore - totalPar;
           const isLeader = index === 0;
           
           return (
@@ -108,8 +131,8 @@ export function LeaderboardTable({ leaderboard, courseId }: LeaderboardTableProp
               }`}
               data-testid={`row-player-${player.playerId}`}
             >
-              <div className="grid grid-cols-12 gap-1 items-center">
-                <div className="col-span-3 flex items-center space-x-3">
+              <div className="grid gap-1 items-center" style={{gridTemplateColumns: "2fr " + "1fr ".repeat(9) + " 1fr 1fr 1fr"}}>
+                <div className="flex items-center space-x-3">
                   <div className={`text-xl font-bold ${
                     isLeader ? 'text-accent' : 'text-muted-foreground'
                   }`}>
@@ -131,7 +154,7 @@ export function LeaderboardTable({ leaderboard, courseId }: LeaderboardTableProp
                       {player.playerName}
                     </div>
                     <div className="text-sm text-secondary">
-                      {scoreToPar === 0 ? 'E' : scoreToPar > 0 ? `+${scoreToPar}` : scoreToPar} ({playerScore})
+                      {scoreToPar === 0 ? 'E' : scoreToPar > 0 ? `+${scoreToPar}` : scoreToPar} ({totalScore})
                     </div>
                   </div>
                 </div>
@@ -162,6 +185,21 @@ export function LeaderboardTable({ leaderboard, courseId }: LeaderboardTableProp
                     </div>
                   );
                 })}
+                
+                {/* IN/OUT totals */}
+                <div className={`text-center font-bold ${isLeader ? 'text-accent' : 'text-foreground'}`} data-testid={`total-${showingFrontNine ? 'out' : 'in'}-${player.playerId}`}>
+                  {showingFrontNine ? backNineTotal : frontNineTotal}
+                </div>
+                {!showingFrontNine && (
+                  <div className={`text-center font-bold ${isLeader ? 'text-accent' : 'text-foreground'}`} data-testid={`total-out-${player.playerId}`}>
+                    {backNineTotal}
+                  </div>
+                )}
+                
+                {/* Total score */}
+                <div className={`text-center font-bold ${isLeader ? 'text-accent' : 'text-foreground'}`} data-testid={`total-score-${player.playerId}`}>
+                  {totalScore}
+                </div>
               </div>
             </div>
           );
