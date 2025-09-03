@@ -68,7 +68,7 @@ export function UserStats({ userId }: UserStatsProps) {
             >
               {(stats as any)?.handicap || 'N/A'}
             </div>
-            <div className="text-sm text-muted-foreground">Handicap</div>
+            <div className="text-sm text-muted-foreground">Estimated Handicap</div>
           </div>
         </div>
         
