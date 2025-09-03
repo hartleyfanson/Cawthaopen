@@ -123,17 +123,19 @@ export default function LiveScoring() {
   }, [currentHoleData]);
 
   const handleSaveScore = async () => {
-    if (!currentRound) {
-      // Create round first
-      await createRoundMutation.mutateAsync({
+    let roundToUse = currentRound;
+    
+    if (!roundToUse) {
+      // Create round first and use the returned data
+      roundToUse = await createRoundMutation.mutateAsync({
         tournamentId: id,
         roundNumber: 1,
       });
     }
 
-    // Save score
+    // Save score with the correct roundId
     await createScoreMutation.mutateAsync({
-      roundId: currentRound?.id,
+      roundId: roundToUse.id,
       holeId: currentHoleData?.id,
       strokes,
       putts,
@@ -330,11 +332,13 @@ export default function LiveScoring() {
                   onClick={previousHole}
                   disabled={currentHole === 1}
                   variant="outline"
-                  className="flex items-center space-x-2"
+                  size="sm"
+                  className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm"
                   data-testid="button-previous-hole"
                 >
-                  <ChevronLeft className="h-4 w-4" />
-                  <span>Previous Hole</span>
+                  <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">Previous Hole</span>
+                  <span className="sm:hidden">Prev</span>
                 </Button>
                 
                 <Button
@@ -349,11 +353,13 @@ export default function LiveScoring() {
                 <Button
                   onClick={nextHole}
                   disabled={currentHole === 18}
-                  className="flex items-center space-x-2 bg-primary text-accent hover:bg-primary/80"
+                  size="sm"
+                  className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm bg-primary text-accent hover:bg-primary/80"
                   data-testid="button-next-hole"
                 >
-                  <span>Next Hole</span>
-                  <ChevronRight className="h-4 w-4" />
+                  <span className="hidden sm:inline">Next Hole</span>
+                  <span className="sm:hidden">Next</span>
+                  <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
                 </Button>
               </div>
               

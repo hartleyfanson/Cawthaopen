@@ -61,6 +61,13 @@ export interface IStorage {
   
   // Stats operations
   getUserStats(userId: string): Promise<any>;
+  getUserDetailedStats(userId: string): Promise<any>;
+  
+  // Profile operations
+  updateUserProfile(id: string, profile: { firstName?: string; lastName?: string; email?: string; profileImageUrl?: string }): Promise<User>;
+  
+  // Admin operations
+  updateTournamentAdmin(id: string, updates: { championsMeal?: string; headerImageUrl?: string }): Promise<Tournament>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -81,6 +88,18 @@ export class DatabaseStorage implements IStorage {
           updatedAt: new Date(),
         },
       })
+      .returning();
+    return user;
+  }
+
+  async updateUserProfile(id: string, profile: { firstName?: string; lastName?: string; email?: string; profileImageUrl?: string }): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        ...profile,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, id))
       .returning();
     return user;
   }
@@ -269,6 +288,117 @@ export class DatabaseStorage implements IStorage {
       ...(stats[0] || {}),
       wins: wins[0]?.wins || 0,
     };
+  }
+
+  // Get detailed user statistics
+  async getUserDetailedStats(userId: string): Promise<any> {
+    const userRounds = await db
+      .select()
+      .from(rounds)
+      .innerJoin(tournaments, eq(rounds.tournamentId, tournaments.id))
+      .innerJoin(courses, eq(tournaments.courseId, courses.id))
+      .where(eq(rounds.playerId, userId));
+
+    const userScores = await db
+      .select()
+      .from(scores)
+      .innerJoin(rounds, eq(scores.roundId, rounds.id))
+      .innerJoin(holes, eq(scores.holeId, holes.id))
+      .where(eq(rounds.playerId, userId));
+
+    if (userRounds.length === 0) {
+      return {
+        totalRounds: 0,
+        averageScore: null,
+        bestRound: null,
+        bestHole: null,
+        longestFairwayStreak: 0,
+        fewestPutts: null,
+        totalBirdies: 0,
+        greensInRegulation: null,
+        fairwaysHit: null,
+        puttsPerRound: null,
+        birdiePercentage: null
+      };
+    }
+
+    // Basic round stats
+    const totalScore = userRounds.reduce((sum, round) => sum + (round.rounds.totalStrokes || 0), 0);
+    const averageScore = totalScore / userRounds.length;
+    const bestRoundData = userRounds.reduce((best, current) => 
+      (current.rounds.totalStrokes || 999) < (best.rounds.totalStrokes || 999) ? current : best
+    );
+
+    // Best hole score
+    const bestHoleScore = userScores.reduce((best, current) => {
+      const relativeToPar = (current.scores.grossScore || 0) - (current.holes.par || 0);
+      const bestRelative = best ? ((best.scores.grossScore || 0) - (best.holes.par || 0)) : 999;
+      return relativeToPar < bestRelative ? current : best;
+    }, null);
+
+    // Count birdies (scores 1 under par)
+    const birdies = userScores.filter(score => 
+      (score.scores.grossScore || 0) === (score.holes.par || 0) - 1
+    ).length;
+
+    // Calculate fairway streak
+    let currentStreak = 0;
+    let longestStreak = 0;
+    userScores.forEach(score => {
+      if (score.scores.fairwayHit) {
+        currentStreak++;
+        longestStreak = Math.max(longestStreak, currentStreak);
+      } else {
+        currentStreak = 0;
+      }
+    });
+
+    // Fewest putts in a round
+    const roundPutts = userRounds.map(round => {
+      const roundScores = userScores.filter(score => score.scores.roundId === round.rounds.id);
+      return roundScores.reduce((total, score) => total + (score.scores.putts || 0), 0);
+    });
+    const fewestPutts = roundPutts.length > 0 ? Math.min(...roundPutts) : null;
+
+    // Performance percentages
+    const totalHoles = userScores.length;
+    const girCount = userScores.filter(score => score.scores.greenInRegulation).length;
+    const fairwaysCount = userScores.filter(score => score.scores.fairwayHit).length;
+    const totalPutts = userScores.reduce((total, score) => total + (score.scores.putts || 0), 0);
+
+    return {
+      totalRounds: userRounds.length,
+      averageScore: averageScore.toFixed(1),
+      bestRound: {
+        score: bestRoundData.rounds.totalStrokes,
+        courseName: bestRoundData.courses.name,
+        date: bestRoundData.rounds.createdAt
+      },
+      bestHole: bestHoleScore ? {
+        score: bestHoleScore.scores.grossScore,
+        holeNumber: bestHoleScore.holes.holeNumber,
+        par: bestHoleScore.holes.par,
+        relativeToPar: (bestHoleScore.scores.grossScore || 0) - (bestHoleScore.holes.par || 0)
+      } : null,
+      longestFairwayStreak: longestStreak,
+      fewestPutts: fewestPutts,
+      fewestPuttsDate: userRounds[0]?.rounds.createdAt, // Simplified for now
+      totalBirdies: birdies,
+      greensInRegulation: totalHoles > 0 ? ((girCount / totalHoles) * 100).toFixed(1) : null,
+      fairwaysHit: totalHoles > 0 ? ((fairwaysCount / totalHoles) * 100).toFixed(1) : null,
+      puttsPerRound: userRounds.length > 0 ? (totalPutts / userRounds.length).toFixed(1) : null,
+      birdiePercentage: totalHoles > 0 ? ((birdies / totalHoles) * 100).toFixed(1) : null
+    };
+  }
+
+  // Admin operations
+  async updateTournamentAdmin(id: string, updates: { championsMeal?: string; headerImageUrl?: string }): Promise<Tournament> {
+    const [tournament] = await db
+      .update(tournaments)
+      .set(updates)
+      .where(eq(tournaments.id, id))
+      .returning();
+    return tournament;
   }
 }
 

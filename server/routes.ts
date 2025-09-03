@@ -37,6 +37,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Profile update route
+  app.put('/api/users/:userId/profile', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.params.userId;
+      const authUserId = (req.user as any)?.claims?.sub;
+      
+      // Users can only update their own profile
+      if (userId !== authUserId) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const { firstName, lastName, email, profileImageUrl } = req.body;
+      
+      const updatedUser = await storage.updateUserProfile(userId, {
+        firstName,
+        lastName,
+        email,
+        profileImageUrl
+      });
+      
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
+  // Detailed statistics route
+  app.get('/api/users/:userId/detailed-stats', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.params.userId;
+      const authUserId = (req.user as any)?.claims?.sub;
+      
+      // Users can only view their own detailed stats
+      if (userId !== authUserId) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const stats = await storage.getUserDetailedStats(userId);
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching detailed stats:", error);
+      res.status(500).json({ message: "Failed to fetch detailed stats" });
+    }
+  });
+
   // Object storage routes for protected uploads
   app.get("/objects/:objectPath(*)", isAuthenticated, async (req, res) => {
     const userId = (req.user as any)?.claims?.sub;
@@ -329,6 +375,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user stats:", error);
       res.status(500).json({ message: "Failed to fetch user stats" });
+    }
+  });
+
+  // Admin route: Update tournament details (champions dinner, header image)
+  app.put("/api/tournaments/:id/admin", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const tournamentId = req.params.id;
+      const updateData = req.body;
+      
+      await storage.updateTournamentAdmin(tournamentId, updateData);
+      res.json({ message: "Tournament updated successfully" });
+    } catch (error) {
+      console.error("Error updating tournament admin details:", error);
+      res.status(500).json({ message: "Failed to update tournament" });
     }
   });
 

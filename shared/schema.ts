@@ -32,6 +32,7 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   handicap: decimal("handicap", { precision: 4, scale: 1 }),
+  isAdmin: boolean("is_admin").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -73,6 +74,7 @@ export const tournaments = pgTable("tournaments", {
   createdAt: timestamp("created_at").defaultNow(),
   winnerId: varchar("winner_id").references(() => users.id),
   championsMeal: text("champions_meal"),
+  headerImageUrl: varchar("header_image_url"),
 });
 
 // Tournament players

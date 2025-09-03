@@ -44,9 +44,9 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
-      // Set canvas size for high quality
-      canvas.width = 1200;
-      canvas.height = 630;
+      // Set canvas size for 9:16 aspect ratio (mobile-optimized)
+      canvas.width = 720;
+      canvas.height = 1280;
 
       // Get random background image from gallery
       let backgroundImageUrl = null;
@@ -81,11 +81,11 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
 
-      // Main scorecard background
-      const cardX = 60;
-      const cardY = 60;
-      const cardWidth = canvas.width - 120;
-      const cardHeight = canvas.height - 120;
+      // Main scorecard background (portrait layout)
+      const cardX = 30;
+      const cardY = 30;
+      const cardWidth = canvas.width - 60;
+      const cardHeight = canvas.height - 60;
 
       // Helper function for rounded rectangles
       const roundRect = (x: number, y: number, width: number, height: number, radius: number) => {
@@ -113,9 +113,9 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
       roundRect(cardX, cardY, cardWidth, cardHeight, 20);
       ctx.stroke();
 
-      // Header section
+      // Header section (taller for mobile)
       ctx.fillStyle = '#1a4a3a';
-      roundRect(cardX + 20, cardY + 20, cardWidth - 40, 120, 10);
+      roundRect(cardX + 20, cardY + 20, cardWidth - 40, 160, 10);
       ctx.fill();
 
       // Load and draw the logo
@@ -128,33 +128,34 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
         logo.src = logoImage;
       });
 
-      // Draw logo in header
-      const logoHeight = 60;
+      // Draw logo in header (larger for mobile)
+      const logoHeight = 80;
       const logoWidth = (logo.width / logo.height) * logoHeight;
       const logoX = (canvas.width - logoWidth) / 2;
-      const logoY = cardY + 40;
+      const logoY = cardY + 35;
       
       ctx.drawImage(logo, logoX, logoY, logoWidth, logoHeight);
 
-      // Course and date
+      // Course and tournament name (multi-line for mobile)
       ctx.fillStyle = '#ffffff';
-      ctx.font = '18px sans-serif';
+      ctx.font = 'bold 16px sans-serif';
       ctx.textAlign = 'center';
       const courseName = (course as any)?.name || 'Championship Course';
       const tournamentName = (tournament as any)?.name || 'Tournament';
-      ctx.fillText(`${courseName} • ${tournamentName}`, canvas.width / 2, cardY + 120);
+      ctx.fillText(courseName, canvas.width / 2, cardY + 135);
+      ctx.fillText(tournamentName, canvas.width / 2, cardY + 155);
 
-      // Player section
-      const playerY = cardY + 160;
+      // Player section (adjusted for mobile)
+      const playerY = cardY + 220;
       
-      // Player name
+      // Player name (centered for mobile)
       ctx.fillStyle = '#1a4a3a';
-      ctx.font = 'bold 28px sans-serif';
-      ctx.textAlign = 'left';
+      ctx.font = 'bold 32px sans-serif';
+      ctx.textAlign = 'center';
       const playerName = `${(playerData as any)?.firstName || 'Player'} ${(playerData as any)?.lastName || ''}`.trim();
-      ctx.fillText(playerName, cardX + 40, playerY);
+      ctx.fillText(playerName, canvas.width / 2, playerY);
 
-      // Score summary
+      // Score summary (large centered display)
       const totalStrokes = (roundData as any)?.totalStrokes || 0;
       const coursePar = 72; // Default par
       const scoreToPar = totalStrokes - coursePar;
@@ -163,20 +164,20 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
                        `${scoreToPar}`;
 
       ctx.fillStyle = '#D4AF37';
-      ctx.font = 'bold 48px sans-serif';
-      ctx.textAlign = 'right';
-      ctx.fillText(scoreText, cardX + cardWidth - 40, playerY);
+      ctx.font = 'bold 64px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(scoreText, canvas.width / 2, playerY + 70);
 
-      // Total score
+      // Total score (centered below main score)
       ctx.fillStyle = '#666666';
-      ctx.font = '24px sans-serif';
-      ctx.fillText(`Total: ${totalStrokes}`, cardX + cardWidth - 40, playerY + 35);
+      ctx.font = '28px sans-serif';
+      ctx.fillText(`Total: ${totalStrokes}`, canvas.width / 2, playerY + 105);
 
-      // Stats section
-      const statsY = playerY + 80;
+      // Stats section (stacked vertically for mobile)
+      const statsY = playerY + 150;
       ctx.fillStyle = '#1a4a3a';
-      ctx.font = '18px sans-serif';
-      ctx.textAlign = 'left';
+      ctx.font = '20px sans-serif';
+      ctx.textAlign = 'center';
 
       const stats = [
         `Putts: ${(roundData as any)?.totalPutts || 'N/A'}`,
@@ -185,57 +186,81 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
       ];
 
       stats.forEach((stat, index) => {
-        ctx.fillText(stat, cardX + 40 + (index * 200), statsY);
+        ctx.fillText(stat, canvas.width / 2, statsY + (index * 30));
       });
 
-      // Hole-by-hole scores section
-      const holesY = statsY + 60;
+      // Hole-by-hole scores section (mobile-friendly grid)
+      const holesY = statsY + 120;
       ctx.fillStyle = '#1a4a3a';
-      ctx.font = 'bold 16px sans-serif';
+      ctx.font = 'bold 18px sans-serif';
       ctx.textAlign = 'center';
 
-      // Holes header
-      const holeWidth = (cardWidth - 80) / 18;
-      for (let i = 1; i <= 18; i++) {
-        const x = cardX + 40 + (i - 1) * holeWidth;
-        ctx.fillText(i.toString(), x + holeWidth / 2, holesY);
-      }
+      // Title for holes section
+      ctx.fillText('HOLE-BY-HOLE SCORES', canvas.width / 2, holesY);
 
-      // Par row
+      // Create 2 rows of 9 holes each for mobile layout
+      const holeBoxWidth = (cardWidth - 80) / 9; // 9 holes per row
+      const holeBoxHeight = 60;
+
+      // Front 9 (holes 1-9)
       ctx.fillStyle = '#666666';
       ctx.font = '14px sans-serif';
-      for (let i = 1; i <= 18; i++) {
-        const x = cardX + 40 + (i - 1) * holeWidth;
-        ctx.fillText('4', x + holeWidth / 2, holesY + 25); // Default par 4
-      }
-
-      // Score row
-      ctx.fillStyle = '#1a4a3a';
-      ctx.font = 'bold 16px sans-serif';
-      for (let i = 1; i <= 18; i++) {
-        const x = cardX + 40 + (i - 1) * holeWidth;
+      ctx.fillText('Front 9', canvas.width / 2, holesY + 35);
+      
+      for (let i = 1; i <= 9; i++) {
+        const x = cardX + 40 + (i - 1) * holeBoxWidth;
+        const y = holesY + 50;
+        
+        // Hole number
+        ctx.fillStyle = '#1a4a3a';
+        ctx.font = 'bold 14px sans-serif';
+        ctx.fillText(i.toString(), x + holeBoxWidth / 2, y);
+        
+        // Par (default 4)
+        ctx.fillStyle = '#666666';
+        ctx.font = '12px sans-serif';
+        ctx.fillText('Par 4', x + holeBoxWidth / 2, y + 15);
+        
+        // Score
         const score = Math.floor(Math.random() * 3) + 3; // Demo scores 3-6
-        
-        // Highlight under par scores
-        if (score < 4) {
-          ctx.fillStyle = '#ff4444';
-          ctx.beginPath();
-          ctx.arc(x + holeWidth / 2, holesY + 45, 15, 0, 2 * Math.PI);
-          ctx.stroke();
-          ctx.fillStyle = '#ff4444';
-        } else {
-          ctx.fillStyle = '#1a4a3a';
-        }
-        
-        ctx.fillText(score.toString(), x + holeWidth / 2, holesY + 50);
+        ctx.fillStyle = score < 4 ? '#ff4444' : '#1a4a3a';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.fillText(score.toString(), x + holeBoxWidth / 2, y + 35);
       }
 
-      // Footer
+      // Back 9 (holes 10-18)
+      ctx.fillStyle = '#666666';
+      ctx.font = '14px sans-serif';
+      ctx.fillText('Back 9', canvas.width / 2, holesY + 130);
+      
+      for (let i = 10; i <= 18; i++) {
+        const x = cardX + 40 + ((i - 10) * holeBoxWidth);
+        const y = holesY + 145;
+        
+        // Hole number
+        ctx.fillStyle = '#1a4a3a';
+        ctx.font = 'bold 14px sans-serif';
+        ctx.fillText(i.toString(), x + holeBoxWidth / 2, y);
+        
+        // Par (default 4)
+        ctx.fillStyle = '#666666';
+        ctx.font = '12px sans-serif';
+        ctx.fillText('Par 4', x + holeBoxWidth / 2, y + 15);
+        
+        // Score
+        const score = Math.floor(Math.random() * 3) + 3; // Demo scores 3-6
+        ctx.fillStyle = score < 4 ? '#ff4444' : '#1a4a3a';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.fillText(score.toString(), x + holeBoxWidth / 2, y + 35);
+      }
+
+      // Footer (positioned at bottom of card)
       ctx.fillStyle = '#666666';
       ctx.font = '14px sans-serif';
       ctx.textAlign = 'center';
       const currentDate = new Date().toLocaleDateString();
-      ctx.fillText(`Generated on ${currentDate} • The Cawthra Open App`, canvas.width / 2, cardY + cardHeight - 20);
+      ctx.fillText(`Generated on ${currentDate}`, canvas.width / 2, cardY + cardHeight - 40);
+      ctx.fillText(`The Cawthra Open App`, canvas.width / 2, cardY + cardHeight - 20);
 
       // Convert to image
       const imageUrl = canvas.toDataURL('image/png', 0.9);

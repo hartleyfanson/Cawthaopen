@@ -2,8 +2,15 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
+import { Menu, X, User, BarChart3, Settings } from "lucide-react";
 import logoImage from "@assets/IMG_4006_1756925482771.png";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function Navigation() {
   const { user } = useAuth();
@@ -35,8 +42,8 @@ export function Navigation() {
           
           <div className="hidden md:flex items-center space-x-8">
             <Link href="/">
-              <a 
-                className={`transition-colors ${
+              <span 
+                className={`transition-colors cursor-pointer ${
                   isActive("/") && location === "/"
                     ? "text-secondary" 
                     : "text-primary-foreground hover:text-secondary"
@@ -44,11 +51,11 @@ export function Navigation() {
                 data-testid="nav-dashboard"
               >
                 Dashboard
-              </a>
+              </span>
             </Link>
             <Link href="/tournaments/history">
-              <a 
-                className={`transition-colors ${
+              <span 
+                className={`transition-colors cursor-pointer ${
                   isActive("/tournaments/history")
                     ? "text-secondary" 
                     : "text-primary-foreground hover:text-secondary"
@@ -56,11 +63,11 @@ export function Navigation() {
                 data-testid="nav-tournaments"
               >
                 Tournament History
-              </a>
+              </span>
             </Link>
             <Link href="/tournaments/create">
-              <a 
-                className={`transition-colors ${
+              <span 
+                className={`transition-colors cursor-pointer ${
                   isActive("/tournaments/create")
                     ? "text-secondary" 
                     : "text-primary-foreground hover:text-secondary"
@@ -68,33 +75,78 @@ export function Navigation() {
                 data-testid="nav-create"
               >
                 Create Tournament
-              </a>
+              </span>
             </Link>
           </div>
           
           <div className="flex items-center space-x-4">
             {user && (
-              <div className="flex items-center space-x-2">
-                <img
-                  src={(user as any)?.profileImageUrl || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&h=100"}
-                  alt="Profile"
-                  className="w-8 h-8 rounded-full object-cover"
-                  data-testid="img-profile-avatar"
-                />
-                <span className="text-primary-foreground text-sm hidden sm:block">
-                  {(user as any)?.firstName || 'User'} {(user as any)?.lastName || ''}
-                </span>
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="flex items-center space-x-2 hover:bg-primary/20" data-testid="dropdown-profile">
+                    <img
+                      src={(user as any)?.profileImageUrl || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&h=100"}
+                      alt="Profile"
+                      className="w-8 h-8 rounded-full object-cover"
+                      data-testid="img-profile-avatar"
+                    />
+                    <span className="text-primary-foreground text-sm hidden sm:block">
+                      {(user as any)?.firstName || 'User'} {(user as any)?.lastName || ''}
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <div className="flex items-center space-x-2 p-2">
+                    <img
+                      src={(user as any)?.profileImageUrl || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&h=100"}
+                      alt="Profile"
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                    <div>
+                      <p className="text-sm font-medium">
+                        {(user as any)?.firstName || 'User'} {(user as any)?.lastName || ''}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {(user as any)?.email || 'user@example.com'}
+                      </p>
+                    </div>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <Link href="/profile">
+                    <DropdownMenuItem className="cursor-pointer" data-testid="menu-edit-profile">
+                      <User className="mr-2 h-4 w-4" />
+                      Edit Profile
+                    </DropdownMenuItem>
+                  </Link>
+                  <Link href="/statistics">
+                    <DropdownMenuItem className="cursor-pointer" data-testid="menu-view-statistics">
+                      <BarChart3 className="mr-2 h-4 w-4" />
+                      View Full Statistics
+                    </DropdownMenuItem>
+                  </Link>
+                  {(user as any)?.isAdmin && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <Link href="/admin">
+                        <DropdownMenuItem className="cursor-pointer" data-testid="menu-admin-panel">
+                          <Settings className="mr-2 h-4 w-4" />
+                          Admin Panel
+                        </DropdownMenuItem>
+                      </Link>
+                    </>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={() => window.location.href = "/api/logout"}
+                    className="cursor-pointer text-red-600"
+                    data-testid="menu-logout"
+                  >
+                    <Settings className="mr-2 h-4 w-4" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => window.location.href = "/api/logout"}
-              className="hidden md:block border-secondary text-secondary hover:bg-secondary hover:text-secondary-foreground"
-              data-testid="button-logout"
-            >
-              Logout
-            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -111,41 +163,38 @@ export function Navigation() {
         {isMobileMenuOpen && (
           <div className="md:hidden border-t border-border">
             <div className="px-2 pt-2 pb-3 space-y-1">
-              <Link href="/">
-                <a 
-                  className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
+              <Link href="/" onClick={() => setIsMobileMenuOpen(false)}>
+                <span 
+                  className={`block px-3 py-2 rounded-md text-base font-medium transition-colors cursor-pointer ${
                     isActive("/") && location === "/"
                       ? "bg-secondary text-secondary-foreground" 
                       : "text-primary-foreground hover:bg-primary/50"
                   }`}
-                  onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Dashboard
-                </a>
+                </span>
               </Link>
-              <Link href="/tournaments/history">
-                <a 
-                  className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
+              <Link href="/tournaments/history" onClick={() => setIsMobileMenuOpen(false)}>
+                <span 
+                  className={`block px-3 py-2 rounded-md text-base font-medium transition-colors cursor-pointer ${
                     isActive("/tournaments/history")
                       ? "bg-secondary text-secondary-foreground" 
                       : "text-primary-foreground hover:bg-primary/50"
                   }`}
-                  onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Tournament History
-                </a>
+                </span>
               </Link>
-              <Link href="/tournaments/create">
-                <a 
-                  className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
+              <Link href="/tournaments/create" onClick={() => setIsMobileMenuOpen(false)}>
+                <span 
+                  className={`block px-3 py-2 rounded-md text-base font-medium transition-colors cursor-pointer ${
                     isActive("/tournaments/create")
                       ? "bg-secondary text-secondary-foreground" 
                       : "text-primary-foreground hover:bg-primary/50"
                   }`}
-                  onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Create Tournament
-                </a>
+                </span>
               </Link>
               <button
                 onClick={() => {

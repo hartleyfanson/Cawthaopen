@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
 interface LeaderboardTableProps {
   leaderboard: any[];
@@ -8,13 +10,18 @@ interface LeaderboardTableProps {
 }
 
 export function LeaderboardTable({ leaderboard, courseId }: LeaderboardTableProps) {
+  const [showingFrontNine, setShowingFrontNine] = useState(true);
+
   const { data: holes } = useQuery({
     queryKey: ["/api/courses", courseId, "holes"],
     enabled: !!courseId,
   });
 
-  // Calculate par for each hole (first 9 holes for display)
-  const frontNineHoles = Array.isArray(holes) ? holes.slice(0, 9) : [];
+  // Calculate which holes to display based on current view
+  const allHoles = Array.isArray(holes) ? holes : [];
+  const displayHoles = showingFrontNine 
+    ? allHoles.slice(0, 9)  // Front 9: holes 1-9
+    : allHoles.slice(9, 18); // Back 9: holes 10-18
   
   // Calculate if a score is under par
   const isUnderPar = (score: number, par: number) => score < par;
@@ -22,7 +29,7 @@ export function LeaderboardTable({ leaderboard, courseId }: LeaderboardTableProp
   // Mock hole scores for demonstration - in real app this would come from API
   const getPlayerHoleScores = (playerId: string) => {
     // This would be replaced with actual API call to get player's round scores
-    return frontNineHoles.map((hole: any) => {
+    return displayHoles.map((hole: any) => {
       // Random scores for demo - replace with actual data
       const score = Math.floor(Math.random() * 3) + hole.par - 1;
       return { holeId: hole.id, score, par: hole.par };
@@ -31,11 +38,43 @@ export function LeaderboardTable({ leaderboard, courseId }: LeaderboardTableProp
 
   return (
     <Card className="bg-background overflow-hidden card-shadow">
+      {/* Toggle buttons for Front/Back Nine */}
+      <div className="bg-muted/50 p-3 border-b border-border flex justify-center">
+        <div className="flex bg-background rounded-lg p-1 shadow-sm">
+          <Button
+            onClick={() => setShowingFrontNine(true)}
+            variant={showingFrontNine ? "default" : "ghost"}
+            size="sm"
+            className={`px-4 py-2 text-sm transition-all ${
+              showingFrontNine 
+                ? "bg-primary text-primary-foreground shadow-sm" 
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+            }`}
+            data-testid="button-front-nine"
+          >
+            Front 9
+          </Button>
+          <Button
+            onClick={() => setShowingFrontNine(false)}
+            variant={!showingFrontNine ? "default" : "ghost"}
+            size="sm"
+            className={`px-4 py-2 text-sm transition-all ${
+              !showingFrontNine 
+                ? "bg-primary text-primary-foreground shadow-sm" 
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+            }`}
+            data-testid="button-back-nine"
+          >
+            Back 9
+          </Button>
+        </div>
+      </div>
+      
       {/* Header with hole numbers */}
       <div className="bg-muted p-4 border-b border-border">
         <div className="grid grid-cols-12 gap-1 text-center text-sm font-medium text-muted-foreground">
           <div className="col-span-3 text-left">PLAYER</div>
-          {frontNineHoles.map((hole: any, index: number) => (
+          {displayHoles.map((hole: any, index: number) => (
             <div key={hole.id} data-testid={`header-hole-${hole.holeNumber}`}>
               {hole.holeNumber}
             </div>
@@ -43,7 +82,7 @@ export function LeaderboardTable({ leaderboard, courseId }: LeaderboardTableProp
         </div>
         <div className="grid grid-cols-12 gap-1 text-center text-sm text-muted-foreground mt-1">
           <div className="col-span-3 text-left">PAR</div>
-          {frontNineHoles.map((hole: any) => (
+          {displayHoles.map((hole: any) => (
             <div key={`par-${hole.id}`} data-testid={`header-par-${hole.holeNumber}`}>
               {hole.par}
             </div>
@@ -55,7 +94,7 @@ export function LeaderboardTable({ leaderboard, courseId }: LeaderboardTableProp
       <div className="divide-y divide-border">
         {leaderboard.map((player: any, index: number) => {
           const holeScores = getPlayerHoleScores(player.playerId);
-          const totalPar = frontNineHoles.reduce((sum: any, hole: any) => sum + hole.par, 0);
+          const totalPar = displayHoles.reduce((sum: any, hole: any) => sum + hole.par, 0);
           const playerScore = holeScores.reduce((sum: any, score: any) => sum + score.score, 0);
           const scoreToPar = playerScore - totalPar;
           const isLeader = index === 0;
