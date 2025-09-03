@@ -194,7 +194,7 @@ export default function CreateTournament() {
                           <SelectContent>
                             {loadingCourses ? (
                               <SelectItem value="loading" disabled>Loading courses...</SelectItem>
-                            ) : courses?.length ? (
+                            ) : Array.isArray(courses) && courses.length ? (
                               courses.map((course: any) => (
                                 <SelectItem key={course.id} value={course.id}>
                                   {course.name} - {course.location}
