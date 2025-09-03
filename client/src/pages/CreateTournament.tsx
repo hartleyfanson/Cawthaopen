@@ -71,10 +71,8 @@ export default function CreateTournament() {
         title: "Tournament Created",
         description: "Your tournament has been created successfully",
       });
-      // Redirect to tournament page
-      response.json().then((tournament) => {
-        setLocation(`/tournaments/${tournament.id}/leaderboard`);
-      });
+      // Redirect to tournaments page
+      setLocation(`/tournaments`);
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {

@@ -25,9 +25,41 @@ export default function TournamentHistory() {
     }
   }, [isAuthenticated, isLoading, toast]);
 
+  const { data: upcomingTournaments } = useQuery({
+    queryKey: ["/api/tournaments/status/upcoming"],
+    enabled: !!user,
+  });
+
+  const { data: activeTournaments } = useQuery({
+    queryKey: ["/api/tournaments/status/active"],
+    enabled: !!user,
+  });
+
   const { data: completedTournaments, isLoading: loadingTournaments } = useQuery({
     queryKey: ["/api/tournaments/status/completed"],
     enabled: !!user,
+  });
+
+  // Combine and sort all tournaments chronologically
+  const allTournaments = [
+    ...(upcomingTournaments || []),
+    ...(activeTournaments || []),
+    ...(completedTournaments || [])
+  ].sort((a, b) => {
+    const dateA = new Date(a.startDate);
+    const dateB = new Date(b.startDate);
+    const now = new Date();
+    
+    // Upcoming tournaments first (soonest first)
+    if (dateA >= now && dateB >= now) {
+      return dateA.getTime() - dateB.getTime();
+    }
+    // Then past tournaments (most recent first)
+    if (dateA < now && dateB < now) {
+      return dateB.getTime() - dateA.getTime();
+    }
+    // Mixed: upcoming before past
+    return dateA >= now ? -1 : 1;
   });
 
   if (isLoading) {
@@ -50,7 +82,7 @@ export default function TournamentHistory() {
       <section className="py-12 bg-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl sm:text-4xl font-serif font-bold text-accent mb-8 text-center">
-            Tournament History
+            Tournaments
           </h2>
         </div>
       </section>
@@ -60,9 +92,9 @@ export default function TournamentHistory() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {loadingTournaments ? (
             <div className="text-center text-muted-foreground">Loading tournaments...</div>
-          ) : completedTournaments?.length ? (
+          ) : allTournaments?.length ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {completedTournaments.map((tournament: any) => (
+              {allTournaments.map((tournament: any) => (
                 <Card 
                   key={tournament.id} 
                   className="bg-muted overflow-hidden card-shadow hover:scale-105 transition-transform"
@@ -115,11 +147,25 @@ export default function TournamentHistory() {
                       </div>
                     )}
                     
-                    <Link href={`/tournaments/${tournament.id}/leaderboard`}>
-                      <Button className="w-full bg-secondary text-secondary-foreground hover:bg-accent">
-                        View Full Results
-                      </Button>
-                    </Link>
+                    {tournament.status === 'upcoming' ? (
+                      <Link href={`/tournaments/${tournament.id}/leaderboard`}>
+                        <Button className="w-full bg-secondary text-secondary-foreground hover:bg-accent">
+                          Register
+                        </Button>
+                      </Link>
+                    ) : tournament.status === 'active' ? (
+                      <Link href={`/tournaments/${tournament.id}/leaderboard`}>
+                        <Button className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
+                          Join
+                        </Button>
+                      </Link>
+                    ) : (
+                      <Link href={`/tournaments/${tournament.id}/leaderboard`}>
+                        <Button className="w-full bg-secondary text-secondary-foreground hover:bg-accent">
+                          View Full Results
+                        </Button>
+                      </Link>
+                    )}
                   </CardContent>
                 </Card>
               ))}

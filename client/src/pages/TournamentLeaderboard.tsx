@@ -51,6 +51,14 @@ export default function TournamentLeaderboard() {
     enabled: !!user && !!id,
   });
 
+  const { data: currentRoundScores } = useQuery({
+    queryKey: ["/api/rounds", (currentRound as any)?.id, "scores"],
+    enabled: !!(currentRound as any)?.id,
+  });
+
+  // Check if user has submitted scores for this tournament
+  const hasSubmittedScores = Array.isArray(currentRoundScores) && currentRoundScores.length > 0;
+
   const { data: tournamentPlayers } = useQuery({
     queryKey: ["/api/tournaments", id, "players"],
     enabled: !!user && !!id,
@@ -123,14 +131,14 @@ export default function TournamentLeaderboard() {
           </div>
           
           <div className="flex justify-center gap-4 flex-wrap">
-            {/* Show Live Scoring button only for active tournaments */}
+            {/* Show Live Scoring/Edit Score button only for active tournaments */}
             {(tournament as any)?.status === "active" && (
               <Link href={`/tournaments/${id}/scoring`}>
                 <Button 
                   className="bg-secondary text-secondary-foreground hover:bg-accent"
-                  data-testid="button-live-scoring"
+                  data-testid={hasSubmittedScores ? "button-edit-score" : "button-live-scoring"}
                 >
-                  Live Scoring
+                  {hasSubmittedScores ? "Edit Score" : "Live Scoring"}
                 </Button>
               </Link>
             )}

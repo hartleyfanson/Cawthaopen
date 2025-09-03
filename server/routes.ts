@@ -275,10 +275,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/rounds/:tournamentId/:roundNumber", isAuthenticated, async (req, res) => {
     try {
       const userId = (req.user as any)?.claims?.sub;
+      const roundNumber = parseInt(req.params.roundNumber);
+      if (isNaN(roundNumber)) {
+        return res.status(400).json({ message: "Invalid round number" });
+      }
       const round = await storage.getRound(
         req.params.tournamentId,
         userId,
-        parseInt(req.params.roundNumber)
+        roundNumber
       );
       res.json(round);
     } catch (error) {

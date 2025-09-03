@@ -70,6 +70,11 @@ export default function LiveScoring() {
     enabled: !!user && !!id,
   });
 
+  const { data: existingScores } = useQuery({
+    queryKey: ["/api/rounds", (currentRound as any)?.id, "scores"],
+    enabled: !!(currentRound as any)?.id,
+  });
+
   const createRoundMutation = useMutation({
     mutationFn: async (data: any) => {
       return await apiRequest("POST", "/api/rounds", data);
@@ -136,6 +141,27 @@ export default function LiveScoring() {
     }
   }, [currentHoleData]);
 
+  // Load existing scores into cache when component mounts (for editing mode)
+  useEffect(() => {
+    if (existingScores && holes && existingScores.length > 0) {
+      const loadedScores = existingScores.map((score: any) => {
+        const hole = holes.find((h: any) => h.id === score.holeId);
+        return {
+          holeNumber: hole?.holeNumber || 1,
+          holeId: score.holeId,
+          strokes: score.strokes,
+          putts: score.putts,
+          fairwayHit: score.fairwayHit,
+          greenInRegulation: score.greenInRegulation,
+          powerupUsed: score.powerupUsed,
+          powerupNotes: score.powerupNotes || "",
+        };
+      }).filter(score => score.holeNumber).sort((a, b) => a.holeNumber - b.holeNumber);
+      
+      setCachedScores(loadedScores);
+    }
+  }, [existingScores, holes]);
+
   // Cache current hole score and move to next hole
   const cacheScoreAndContinue = () => {
     if (!currentHoleData) return;
@@ -146,7 +172,7 @@ export default function LiveScoring() {
       strokes,
       putts,
       fairwayHit: currentHoleData.par === 3 ? false : fairwayHit, // Always false for par 3s
-      greenInRegulation: currentHoleData.par === 3 ? false : greenInRegulation, // Always false for par 3s
+      greenInRegulation: greenInRegulation, // Now allowed for par 3s
       powerupUsed,
       powerupNotes: powerupUsed ? powerupNotes : "",
     };
@@ -186,7 +212,7 @@ export default function LiveScoring() {
         strokes,
         putts,
         fairwayHit: currentHoleData?.par === 3 ? false : fairwayHit,
-        greenInRegulation: currentHoleData?.par === 3 ? false : greenInRegulation,
+        greenInRegulation: greenInRegulation, // Now allowed for par 3s
         powerupUsed,
         powerupNotes: powerupUsed ? powerupNotes : "",
       }];
@@ -382,17 +408,15 @@ export default function LiveScoring() {
                     </div>
                   )}
                   
-                  {/* Hide GIR for Par 3s */}
-                  {currentHoleData?.par !== 3 && (
-                    <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                      <span className="font-medium text-foreground">Green in Regulation</span>
-                      <Switch
-                        checked={greenInRegulation}
-                        onCheckedChange={setGreenInRegulation}
-                        data-testid="switch-gir"
-                      />
-                    </div>
-                  )}
+                  {/* GIR toggle now available for all holes including par 3s */}
+                  <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                    <span className="font-medium text-foreground">Green in Regulation</span>
+                    <Switch
+                      checked={greenInRegulation}
+                      onCheckedChange={setGreenInRegulation}
+                      data-testid="switch-gir"
+                    />
+                  </div>
                   
                   <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
                     <span className="font-medium text-foreground">Powerup Used</span>
@@ -438,7 +462,7 @@ export default function LiveScoring() {
                 </Button>
                 
                 <div className="text-center text-sm text-muted-foreground">
-                  Hole {cachedScores.length}/18 scored
+                  {existingScores?.length > 0 ? 'Editing Mode' : `Hole ${cachedScores.length}/18 scored`}
                 </div>
                 
                 {currentHole === 18 ? (

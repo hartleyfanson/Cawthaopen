@@ -217,8 +217,11 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
       const holeBoxHeight = 80; // Taller boxes
 
       // Create hole-score map from actual scores data
+      // Only show scores if tournament is active or completed
       const holeScoreMap = {};
-      if (scores && holes) {
+      const isUpcoming = (tournament as any)?.status === 'upcoming';
+      
+      if (!isUpcoming && scores && holes) {
         scores.forEach((score: any) => {
           const hole = holes.find((h: any) => h.id === score.holeId);
           if (hole) {
@@ -254,12 +257,23 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
         ctx.font = '14px sans-serif';
         ctx.fillText(`Par ${par}`, x + holeBoxWidth / 2, y + 20);
         
-        // Score (larger and color-coded)
+        // Score (larger and color-coded with black square for over-par)
         const isUnder = score > 0 && score < par;
         const isOver = score > par;
-        ctx.fillStyle = isUnder ? '#00aa00' : isOver ? '#cc4444' : '#1a4a3a';
-        ctx.font = 'bold 24px sans-serif';
+        
         if (score > 0) {
+          // Draw black square background for over-par scores
+          if (isOver) {
+            ctx.fillStyle = '#000000';
+            const squareSize = 32;
+            const squareX = x + holeBoxWidth / 2 - squareSize / 2;
+            const squareY = y + 50 - squareSize / 2 - 6; // Offset for text baseline
+            ctx.fillRect(squareX, squareY, squareSize, squareSize);
+          }
+          
+          // Score text
+          ctx.fillStyle = isOver ? '#ffffff' : (isUnder ? '#00aa00' : '#1a4a3a');
+          ctx.font = 'bold 24px sans-serif';
           ctx.fillText(score.toString(), x + holeBoxWidth / 2, y + 50);
         }
       }
@@ -287,12 +301,23 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
         ctx.font = '14px sans-serif';
         ctx.fillText(`Par ${par}`, x + holeBoxWidth / 2, y + 20);
         
-        // Score (larger and color-coded)
+        // Score (larger and color-coded with black square for over-par)
         const isUnder = score > 0 && score < par;
         const isOver = score > par;
-        ctx.fillStyle = isUnder ? '#00aa00' : isOver ? '#cc4444' : '#1a4a3a';
-        ctx.font = 'bold 24px sans-serif';
+        
         if (score > 0) {
+          // Draw black square background for over-par scores
+          if (isOver) {
+            ctx.fillStyle = '#000000';
+            const squareSize = 32;
+            const squareX = x + holeBoxWidth / 2 - squareSize / 2;
+            const squareY = y + 50 - squareSize / 2 - 6; // Offset for text baseline
+            ctx.fillRect(squareX, squareY, squareSize, squareSize);
+          }
+          
+          // Score text
+          ctx.fillStyle = isOver ? '#ffffff' : (isUnder ? '#00aa00' : '#1a4a3a');
+          ctx.font = 'bold 24px sans-serif';
           ctx.fillText(score.toString(), x + holeBoxWidth / 2, y + 50);
         }
       }

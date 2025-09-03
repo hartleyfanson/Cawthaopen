@@ -284,9 +284,24 @@ export class DatabaseStorage implements IStorage {
       .from(tournaments)
       .where(eq(tournaments.winnerId, userId));
 
+    // Calculate handicap from available rounds (remove 20-round requirement)
+    let calculatedHandicap = null;
+    if (stats[0]?.totalRounds && stats[0].totalRounds > 0) {
+      const averageScore = stats[0].averageScore || 72;
+      const courseRating = 72.0; // Standard course rating
+      const slopeRating = 113; // Standard slope rating
+      
+      // Simple handicap calculation: (Average Score - Course Rating) * 113 / Slope Rating
+      calculatedHandicap = Math.round(((averageScore - courseRating) * 113 / slopeRating) * 10) / 10;
+      
+      // Cap handicap at reasonable limits
+      calculatedHandicap = Math.max(-5, Math.min(36, calculatedHandicap));
+    }
+
     return {
       ...(stats[0] || {}),
       wins: wins[0]?.wins || 0,
+      handicap: calculatedHandicap,
     };
   }
 
