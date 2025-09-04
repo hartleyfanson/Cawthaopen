@@ -274,6 +274,16 @@ export const insertHoleSchema = createInsertSchema(holes).omit({
 export const insertTournamentSchema = createInsertSchema(tournaments).omit({
   id: true,
   createdAt: true,
+}).extend({
+  // Override date fields to accept strings and convert to Date objects
+  startDate: z.preprocess(
+    (val) => val ? new Date(String(val)) : val,
+    z.date().optional()
+  ),
+  endDate: z.preprocess(
+    (val) => val ? new Date(String(val)) : val,
+    z.date().optional()
+  ),
 });
 
 export const insertTournamentPlayerSchema = createInsertSchema(tournamentPlayers).omit({
