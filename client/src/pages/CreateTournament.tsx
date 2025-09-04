@@ -595,120 +595,268 @@ export default function CreateTournament() {
                     />
                   </div>
 
-                  <FormField
-                    control={form.control}
-                    name="courseId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-foreground">
-                          Golf Course
-                        </FormLabel>
-                        <FormControl>
-                          <div className="space-y-4">
-                            {selectedCourse ? (
-                              <div className="p-4 bg-green-50 dark:bg-green-950 rounded-lg border border-green-200 dark:border-green-800">
-                                <div className="flex items-start justify-between">
-                                  <div className="space-y-1">
-                                    <p className="font-semibold text-green-800 dark:text-green-200">
-                                      {selectedCourse.name}
-                                    </p>
-                                    <p className="text-sm text-green-600 dark:text-green-300">
-                                      {selectedCourse.city},{" "}
-                                      {selectedCourse.state}{" "}
-                                      {selectedCourse.country}
-                                    </p>
-                                    <p className="text-xs text-green-600 dark:text-green-400">
-                                      {selectedCourse.holes?.length ||
-                                        selectedCourse.holes ||
-                                        18}{" "}
-                                      holes • Par{" "}
-                                      {selectedCourse.holes?.reduce?.(
-                                        (sum: number, hole: any) =>
-                                          sum + hole.par,
-                                        0,
-                                      ) || "TBD"}
-                                    </p>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <Button 
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => {
-                                        setSelectedCourse(null);
-                                        form.setValue("courseId", "", {
-                                          shouldValidate: false,
-                                          shouldDirty: true,
-                                        });
-                                      }}
-                                      data-testid="button-change-course"
-                                    >
-                                      Change Course
-                                    </Button>
-                                    <div className="h-8 w-8 bg-green-600 rounded-full flex items-center justify-center">
-                                      <span className="text-white text-xs">
-                                        ✓
-                                      </span>
+                  {/* Single Round Configuration */}
+                  {numberOfRounds === 1 && (
+                    <div className="space-y-6">
+                      <FormField
+                        control={form.control}
+                        name="courseId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-foreground">
+                              Golf Course
+                            </FormLabel>
+                            <FormControl>
+                              <div className="space-y-4">
+                                {selectedCourse ? (
+                                  <div className="p-4 bg-green-50 dark:bg-green-950 rounded-lg border border-green-200 dark:border-green-800">
+                                    <div className="flex items-start justify-between">
+                                      <div className="space-y-1">
+                                        <p className="font-semibold text-green-800 dark:text-green-200">
+                                          {selectedCourse.name}
+                                        </p>
+                                        <p className="text-sm text-green-600 dark:text-green-300">
+                                          {selectedCourse.city},{" "}
+                                          {selectedCourse.state}{" "}
+                                          {selectedCourse.country}
+                                        </p>
+                                        <p className="text-xs text-green-600 dark:text-green-400">
+                                          {selectedCourse.holes?.length ||
+                                            selectedCourse.holes ||
+                                            18}{" "}
+                                          holes • Par{" "}
+                                          {selectedCourse.holes?.reduce?.(
+                                            (sum: number, hole: any) =>
+                                              sum + hole.par,
+                                            0,
+                                          ) || "TBD"}
+                                        </p>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <Button 
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => {
+                                            setSelectedCourse(null);
+                                            form.setValue("courseId", "", {
+                                              shouldValidate: false,
+                                              shouldDirty: true,
+                                            });
+                                          }}
+                                          data-testid="button-change-course"
+                                        >
+                                          Change Course
+                                        </Button>
+                                        <div className="h-8 w-8 bg-green-600 rounded-full flex items-center justify-center">
+                                          <span className="text-white text-xs">
+                                            ✓
+                                          </span>
+                                        </div>
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
+                                ) : (
+                                  <p className="text-sm text-muted-foreground">
+                                    Search for a golf course below
+                                  </p>
+                                )}
                               </div>
-                            ) : (
-                              <p className="text-sm text-muted-foreground">
-                                Search for a golf course below
-                              </p>
-                            )}
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                  {/* Course Search Section */}
-                  <div className="space-y-4">
-                    <CourseSearch
-                      onCourseSelect={async (course, holes) => {
-                        try {
-                          // Import the course to the database
-                          const importResponse = await apiRequest("POST", "/api/courses/import", {
-                            course,
-                            holes,
-                          });
+                      {/* Course Search Section */}
+                      <div className="space-y-4">
+                        <CourseSearch
+                          onCourseSelect={async (course, holes) => {
+                            try {
+                              // Import the course to the database
+                              const importResponse = await apiRequest("POST", "/api/courses/import", {
+                                course,
+                                holes,
+                              });
+                              
+                              if (!importResponse.ok) {
+                                throw new Error("Failed to import course");
+                              }
+                              
+                              const importData = await importResponse.json();
+                              
+                              // Use the course ID from the import response (the actual database ID)
+                              const actualCourseId = importData.course.id;
+                              
+                              form.setValue("courseId", actualCourseId, {
+                                shouldValidate: true,
+                                shouldDirty: true,
+                              });
+                              // Clear any existing errors
+                              form.clearErrors("courseId");
+                              setSelectedCourse({ ...course, holes });
+                              
+                              // Initialize tee configuration for single round
+                              setRoundTeeConfigs([{
+                                roundNumber: 1,
+                                teeSelectionMode: "same",
+                                singleTeeColor: "white",
+                                holeTeeMappings: Array.from({ length: 18 }, (_, h) => ({holeNumber: h + 1, teeColor: "white"}))
+                              }]);
+                              
+                              toast({
+                                title: "Course selected",
+                                description: importData.imported 
+                                  ? `${course.name} imported and set for this tournament.`
+                                  : `${course.name} set for this tournament.`,
+                              });
+                            } catch (error) {
+                              console.error("Error importing course:", error);
+                              toast({
+                                title: "Error",
+                                description: "Failed to import course. Please try again.",
+                                variant: "destructive",
+                              });
+                            }
+                          }}
+                        />
+                      </div>
+                      
+                      {/* Single Round Tee Configuration */}
+                      {selectedCourse && (
+                        <div className="p-4 border border-border rounded-lg bg-card">
+                          <h4 className="text-lg font-semibold text-foreground mb-3">
+                            Tee Configuration
+                          </h4>
                           
-                          if (!importResponse.ok) {
-                            throw new Error("Failed to import course");
-                          }
-                          
-                          const importData = await importResponse.json();
-                          
-                          // Use the course ID from the import response (the actual database ID)
-                          const actualCourseId = importData.course.id;
-                          
-                          form.setValue("courseId", actualCourseId, {
-                            shouldValidate: true,
-                            shouldDirty: true,
-                          });
-                          // Clear any existing errors
-                          form.clearErrors("courseId");
-                          setSelectedCourse({ ...course, holes });
-                          toast({
-                            title: "Course selected",
-                            description: importData.imported 
-                              ? `${course.name} imported and set for this tournament.`
-                              : `${course.name} set for this tournament.`,
-                          });
-                        } catch (error) {
-                          console.error("Error importing course:", error);
-                          toast({
-                            title: "Error",
-                            description: "Failed to import course. Please try again.",
-                            variant: "destructive",
-                          });
-                        }
-                      }}
-                    />
-                  </div>
+                          <div className="space-y-3">
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="radio"
+                                id="same-tee-single"
+                                name="tee-selection-single"
+                                checked={!roundTeeConfigs[0] || roundTeeConfigs[0]?.teeSelectionMode === "same"}
+                                onChange={() => {
+                                  const newConfigs = [...roundTeeConfigs];
+                                  newConfigs[0] = {
+                                    roundNumber: 1,
+                                    teeSelectionMode: "same",
+                                    singleTeeColor: "white",
+                                    holeTeeMappings: Array.from({ length: 18 }, (_, h) => ({holeNumber: h + 1, teeColor: "white"}))
+                                  };
+                                  setRoundTeeConfigs(newConfigs);
+                                }}
+                                className="text-accent"
+                              />
+                              <label htmlFor="same-tee-single" className="text-sm text-foreground">
+                                All holes use same tee
+                              </label>
+                            </div>
+
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="radio"
+                                id="mixed-tee-single"
+                                name="tee-selection-single"
+                                checked={roundTeeConfigs[0]?.teeSelectionMode === "mixed"}
+                                onChange={() => {
+                                  const newConfigs = [...roundTeeConfigs];
+                                  newConfigs[0] = {
+                                    roundNumber: 1,
+                                    teeSelectionMode: "mixed",
+                                    singleTeeColor: "white",
+                                    holeTeeMappings: Array.from({ length: 18 }, (_, h) => ({holeNumber: h + 1, teeColor: "white"}))
+                                  };
+                                  setRoundTeeConfigs(newConfigs);
+                                }}
+                                className="text-accent"
+                              />
+                              <label htmlFor="mixed-tee-single" className="text-sm text-foreground">
+                                Mix and match per hole
+                              </label>
+                            </div>
+                          </div>
+
+                          {(!roundTeeConfigs[0] || roundTeeConfigs[0]?.teeSelectionMode === "same") && (
+                            <div className="mt-3">
+                              <label className="text-xs font-medium text-foreground mb-2 block">
+                                Select Tee Color for All Holes
+                              </label>
+                              <Select
+                                value={roundTeeConfigs[0]?.singleTeeColor || "white"}
+                                onValueChange={(color) => {
+                                  const newConfigs = [...roundTeeConfigs];
+                                  newConfigs[0] = {
+                                    roundNumber: 1,
+                                    teeSelectionMode: "same",
+                                    singleTeeColor: color,
+                                    holeTeeMappings: Array.from({ length: 18 }, (_, h) => ({holeNumber: h + 1, teeColor: color}))
+                                  };
+                                  setRoundTeeConfigs(newConfigs);
+                                }}
+                              >
+                                <SelectTrigger className="bg-background border-border">
+                                  <SelectValue placeholder="Select tee color" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="white">White Tees</SelectItem>
+                                  <SelectItem value="blue">Blue Tees</SelectItem>
+                                  <SelectItem value="red">Red Tees</SelectItem>
+                                  <SelectItem value="gold">Gold Tees</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+
+                          {roundTeeConfigs[0]?.teeSelectionMode === "mixed" && (
+                            <div className="mt-3">
+                              <h6 className="text-xs font-medium text-foreground mb-2">
+                                Tee Selection per Hole
+                              </h6>
+                              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 max-h-32 overflow-y-auto">
+                                {Array.from({ length: 18 }, (_, holeIndex) => (
+                                  <div key={holeIndex} className="space-y-1">
+                                    <label className="text-xs text-foreground block text-center">
+                                      #{holeIndex + 1}
+                                    </label>
+                                    <Select
+                                      value={roundTeeConfigs[0]?.holeTeeMappings?.[holeIndex]?.teeColor || "white"}
+                                      onValueChange={(color) => {
+                                        const newConfigs = [...roundTeeConfigs];
+                                        if (!newConfigs[0]) {
+                                          newConfigs[0] = {
+                                            roundNumber: 1,
+                                            teeSelectionMode: "mixed",
+                                            singleTeeColor: "white",
+                                            holeTeeMappings: Array.from({ length: 18 }, (_, h) => ({holeNumber: h + 1, teeColor: "white"}))
+                                          };
+                                        }
+                                        if (!newConfigs[0].holeTeeMappings) {
+                                          newConfigs[0].holeTeeMappings = Array.from({ length: 18 }, (_, h) => ({holeNumber: h + 1, teeColor: "white"}));
+                                        }
+                                        newConfigs[0].holeTeeMappings[holeIndex] = { holeNumber: holeIndex + 1, teeColor: color };
+                                        setRoundTeeConfigs(newConfigs);
+                                      }}
+                                    >
+                                      <SelectTrigger className="h-8 text-xs">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="white">W</SelectItem>
+                                        <SelectItem value="blue">B</SelectItem>
+                                        <SelectItem value="red">R</SelectItem>
+                                        <SelectItem value="gold">G</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Round Dates and Configuration Section */}
                   {numberOfRounds > 1 && (
@@ -727,33 +875,36 @@ export default function CreateTournament() {
                               Round {i + 1} Configuration
                             </h4>
                             
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div>
-                                <label className="text-sm font-medium text-foreground mb-2 block">
-                                  Round {i + 1} Date
-                                </label>
-                                <Input
-                                  type="date"
-                                  value={
-                                    roundDates[i]?.toISOString().slice(0, 10) || ""
-                                  }
-                                  onChange={(e) => {
-                                    const newDates = [...roundDates];
-                                    newDates[i] = new Date(e.target.value);
-                                    setRoundDates(newDates);
-                                  }}
-                                  className="bg-background border-border"
-                                  data-testid={`input-round-${i + 1}-date`}
-                                />
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                  <label className="text-sm font-medium text-foreground mb-2 block">
+                                    Round {i + 1} Date
+                                  </label>
+                                  <Input
+                                    type="date"
+                                    value={
+                                      roundDates[i]?.toISOString().slice(0, 10) || ""
+                                    }
+                                    onChange={(e) => {
+                                      const newDates = [...roundDates];
+                                      newDates[i] = new Date(e.target.value);
+                                      setRoundDates(newDates);
+                                    }}
+                                    className="bg-background border-border"
+                                    data-testid={`input-round-${i + 1}-date`}
+                                  />
+                                </div>
                               </div>
                               
-                              <div>
+                              {/* Full-width Course Selection */}
+                              <div className="w-full">
                                 <label className="text-sm font-medium text-foreground mb-2 block">
                                   Course for Round {i + 1}
                                 </label>
-                                <div className="space-y-2">
+                                <div className="space-y-2 w-full">
                                   {roundCourses[i] ? (
-                                    <div className="p-3 bg-green-50 dark:bg-green-950 rounded border border-green-200 dark:border-green-800">
+                                    <div className="p-3 bg-green-50 dark:bg-green-950 rounded border border-green-200 dark:border-green-800 w-full">
                                       <div className="flex justify-between items-center">
                                         <div>
                                           <p className="font-medium text-green-800 dark:text-green-200">
@@ -778,43 +929,45 @@ export default function CreateTournament() {
                                       </div>
                                     </div>
                                   ) : (
-                                    <div className="space-y-2">
-                                      <CourseSearch
-                                        onCourseSelect={async (course, holes) => {
-                                          try {
-                                            // Import the course to the database
-                                            const importResponse = await apiRequest("POST", "/api/courses/import", {
-                                              course,
-                                              holes,
-                                            });
-                                            
-                                            if (!importResponse.ok) {
-                                              throw new Error("Failed to import course");
+                                    <div className="space-y-2 w-full">
+                                      <div className="w-full">
+                                        <CourseSearch
+                                          onCourseSelect={async (course, holes) => {
+                                            try {
+                                              // Import the course to the database
+                                              const importResponse = await apiRequest("POST", "/api/courses/import", {
+                                                course,
+                                                holes,
+                                              });
+                                              
+                                              if (!importResponse.ok) {
+                                                throw new Error("Failed to import course");
+                                              }
+                                              
+                                              const importData = await importResponse.json();
+                                              
+                                              // Store the course for this round
+                                              const newCourses = [...roundCourses];
+                                              newCourses[i] = { ...course, holes, id: importData.course.id };
+                                              setRoundCourses(newCourses);
+                                              
+                                              toast({
+                                                title: "Course selected",
+                                                description: importData.imported 
+                                                  ? `${course.name} imported and set for round ${i + 1}.`
+                                                  : `${course.name} set for round ${i + 1}.`,
+                                              });
+                                            } catch (error) {
+                                              console.error("Error importing course:", error);
+                                              toast({
+                                                title: "Error",
+                                                description: "Failed to import course. Please try again.",
+                                                variant: "destructive",
+                                              });
                                             }
-                                            
-                                            const importData = await importResponse.json();
-                                            
-                                            // Store the course for this round
-                                            const newCourses = [...roundCourses];
-                                            newCourses[i] = { ...course, holes, id: importData.course.id };
-                                            setRoundCourses(newCourses);
-                                            
-                                            toast({
-                                              title: "Course selected",
-                                              description: importData.imported 
-                                                ? `${course.name} imported and set for round ${i + 1}.`
-                                                : `${course.name} set for round ${i + 1}.`,
-                                            });
-                                          } catch (error) {
-                                            console.error("Error importing course:", error);
-                                            toast({
-                                              title: "Error",
-                                              description: "Failed to import course. Please try again.",
-                                              variant: "destructive",
-                                            });
-                                          }
-                                        }}
-                                      />
+                                          }}
+                                        />
+                                      </div>
                                       <p className="text-xs text-muted-foreground">
                                         Choose a different course for this round, or use the same as round 1
                                       </p>

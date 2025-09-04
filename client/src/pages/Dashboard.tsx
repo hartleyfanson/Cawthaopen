@@ -104,35 +104,37 @@ export default function Dashboard() {
                 </Link>
               </CardHeader>
               
-              <CardContent>
+              <CardContent className="p-0">
                 {loadingTournaments || loadingUpcoming ? (
-                  <div className="text-muted-foreground">Loading tournaments...</div>
+                  <div className="text-muted-foreground p-6">Loading tournaments...</div>
                 ) : (
-                  <div className="space-y-4">
-                    {Array.isArray(activeTournaments) && activeTournaments.map((tournament: any) => (
-                      <TournamentCard 
-                        key={tournament.id} 
-                        tournament={tournament} 
-                        status="active"
-                      />
-                    ))}
-                    {Array.isArray(upcomingTournaments) && upcomingTournaments.map((tournament: any) => (
-                      <TournamentCard 
-                        key={tournament.id} 
-                        tournament={tournament} 
-                        status="upcoming"
-                      />
-                    ))}
-                    {(!Array.isArray(activeTournaments) || !activeTournaments.length) && (!Array.isArray(upcomingTournaments) || !upcomingTournaments.length) && (
-                      <div className="text-center py-8">
-                        <p className="text-muted-foreground mb-4">No active tournaments</p>
-                        <Link href="/tournaments/create">
-                          <Button className="bg-secondary text-secondary-foreground hover:bg-accent">
-                            Create Your First Tournament
-                          </Button>
-                        </Link>
-                      </div>
-                    )}
+                  <div className="max-h-96 overflow-y-auto">
+                    <div className="space-y-4 p-6">
+                      {Array.isArray(activeTournaments) && activeTournaments.map((tournament: any) => (
+                        <TournamentCard 
+                          key={tournament.id} 
+                          tournament={tournament} 
+                          status="active"
+                        />
+                      ))}
+                      {Array.isArray(upcomingTournaments) && upcomingTournaments.map((tournament: any) => (
+                        <TournamentCard 
+                          key={tournament.id} 
+                          tournament={tournament} 
+                          status="upcoming"
+                        />
+                      ))}
+                      {(!Array.isArray(activeTournaments) || !activeTournaments.length) && (!Array.isArray(upcomingTournaments) || !upcomingTournaments.length) && (
+                        <div className="text-center py-8">
+                          <p className="text-muted-foreground mb-4">No active tournaments</p>
+                          <Link href="/tournaments/create">
+                            <Button className="bg-secondary text-secondary-foreground hover:bg-accent">
+                              Create Your First Tournament
+                            </Button>
+                          </Link>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </CardContent>
