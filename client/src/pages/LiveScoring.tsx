@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useParams, useLocation } from "wouter";
+import { useParams, useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigation } from "@/components/Navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Minus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Minus, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -362,7 +362,21 @@ export default function LiveScoring() {
       <section className="py-12 bg-muted">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-serif font-bold text-accent mb-2">Live Scoring</h2>
+            <div className="flex items-center justify-center mb-4 relative">
+              <Link href={`/tournaments/${id}/leaderboard`}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="absolute left-0 flex items-center gap-2"
+                  data-testid="button-back-to-leaderboard"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  <span className="hidden sm:inline">Back to Leaderboard</span>
+                  <span className="sm:hidden">Back</span>
+                </Button>
+              </Link>
+              <h2 className="text-3xl font-serif font-bold text-accent">Live Scoring</h2>
+            </div>
             <p className="text-xl text-muted-foreground">
               {(tournament as any)?.name} • Round {selectedRound}
             </p>
