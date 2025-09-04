@@ -79,9 +79,10 @@ export default function Profile() {
 
   const handleGetUploadParameters = async () => {
     const response = await apiRequest("POST", "/api/objects/upload", {});
+    const data = await response.json();
     return {
       method: "PUT" as const,
-      url: response.uploadURL,
+      url: data.uploadURL,
     };
   };
 
@@ -96,9 +97,10 @@ export default function Profile() {
         const response = await apiRequest("PUT", "/api/profile-images", {
           profileImageURL: imageURL
         });
+        const data = await response.json();
         
         // Update the form with the normalized path
-        form.setValue("profileImageUrl", response.objectPath);
+        form.setValue("profileImageUrl", data.objectPath);
         
         toast({
           title: "Image Uploaded",
