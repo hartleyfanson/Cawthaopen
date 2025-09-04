@@ -67,6 +67,7 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
           playerId: score.playerId,
           playerName: score.playerName,
           profileImageUrl: score.profileImageUrl,
+          handicap: score.handicap || 0, // Include player handicap
           scores: {},
           frontNineTotal: 0,
           backNineTotal: 0,
@@ -117,23 +118,40 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
 
   // Calculate NET score based on tournament scoring system
   const calculateNetScore = (totalScore: number, playerId: string) => {
-    if (!tournament?.scoringSystem || totalScore === 0) return null;
+    if (!(tournament as any)?.scoringFormat || totalScore === 0) return null;
     
-    // For now, using a simple handicap calculation
-    // In a real system, you'd fetch the player's official handicap
-    const estimatedHandicap = 18; // Placeholder - should be fetched from player data
+    const playerData = processedPlayerData[playerId];
+    const playerHandicap = playerData?.handicap || 0;
     
-    switch (tournament.scoringSystem) {
-      case 'stroke-play':
-        return totalScore - estimatedHandicap;
-      case 'stableford':
-        // Stableford scoring logic would go here
-        return totalScore;
+    switch ((tournament as any).scoringFormat) {
+      case 'stroke_play':
+        return Math.round(totalScore - playerHandicap);
       case 'handicap':
-        return totalScore - estimatedHandicap;
+        return Math.round(totalScore - playerHandicap);
+      case 'stableford':
+        // Stableford points system - calculate points based on score relative to par + handicap
+        return calculateStablefordPoints(totalScore, playerHandicap);
+      case 'callaway':
+        // Callaway system - deduct worst holes based on handicap
+        return calculateCallawayScore(totalScore, playerHandicap, playerId);
       default:
         return totalScore;
     }
+  };
+
+  // Calculate Stableford points
+  const calculateStablefordPoints = (totalScore: number, handicap: number) => {
+    // Simplified stableford calculation - in real system would calculate per hole
+    const totalPar = allHoles.reduce((sum: number, hole: any) => sum + hole.par, 0);
+    const netScore = totalScore - handicap;
+    const diff = totalPar - netScore;
+    return Math.max(0, 36 + diff); // 36 points for playing to handicap
+  };
+
+  // Calculate Callaway score
+  const calculateCallawayScore = (totalScore: number, handicap: number, playerId: string) => {
+    // Simplified callaway - deduct handicap strokes from total
+    return Math.round(totalScore - handicap);
   };
 
   // Calculate if a score is under par or over par

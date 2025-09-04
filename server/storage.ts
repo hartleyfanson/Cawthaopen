@@ -426,6 +426,7 @@ export class DatabaseStorage implements IStorage {
         playerId: rounds.playerId,
         playerName: sql<string>`${users.firstName} || ' ' || ${users.lastName}`.as('playerName'),
         profileImageUrl: users.profileImageUrl,
+        handicap: users.handicap,
         roundId: rounds.id,
         roundNumber: rounds.roundNumber,
         holeId: scores.holeId,
