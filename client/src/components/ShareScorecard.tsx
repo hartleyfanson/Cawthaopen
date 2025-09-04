@@ -60,12 +60,19 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
     staleTime: 0,
   });
 
-  // Filter scores by selected round and current player
+  // Filter scores by selected round and current player, ensure we have a complete round
   const roundSpecificScores = Array.isArray(tournamentPlayerScores) 
     ? tournamentPlayerScores.filter((score: any) => 
-        score.roundNumber === selectedScorecardRound && score.playerId === playerData?.id
-      )
+        score.roundNumber === selectedScorecardRound && 
+        score.playerId === playerData?.id &&
+        score.strokes > 0 // Only include actual scored holes
+      ).sort((a, b) => a.holeNumber - b.holeNumber) // Sort by hole number
     : null;
+
+  // Debug: log the filtering
+  console.log('Tournament player scores:', tournamentPlayerScores);
+  console.log('Filtering for round:', selectedScorecardRound, 'player:', playerData?.id);
+  console.log('Filtered round scores:', roundSpecificScores);
 
   const generateScorecard = async () => {
     console.log('Debug scorecard generation:', {
@@ -84,6 +91,18 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
       // Use round-specific scores
       const currentScores = roundSpecificScores;
       console.log('Using scores for Round', selectedScorecardRound, ':', currentScores);
+      
+      // Additional validation - ensure we have enough holes for a valid scorecard
+      if (!currentScores || currentScores.length < 9) {
+        console.warn('Insufficient score data for scorecard:', currentScores?.length, 'holes');
+        toast({
+          title: "Insufficient Data",
+          description: `Only ${currentScores?.length || 0} holes found for Round ${selectedScorecardRound}. Need at least 9 holes.`,
+          variant: "destructive",
+        });
+        setIsGenerating(false);
+        return;
+      }
       const totalStrokes = Array.isArray(currentScores) ? currentScores.reduce((sum: number, score: any) => sum + (score.strokes || score.scores?.strokes), 0) : 0;
       const totalPutts = Array.isArray(currentScores) ? currentScores.reduce((sum: number, score: any) => sum + (score.putts || score.scores?.putts), 0) : 0;
       const fairwaysHit = Array.isArray(currentScores) ? currentScores.filter((score: any) => score.fairwayHit || score.scores?.fairwayHit).length : 0;
