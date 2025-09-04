@@ -11,6 +11,19 @@ interface LeaderboardTableProps {
   tournament?: any;
 }
 
+// Helper function to format player name as "first initial. last name"
+function formatPlayerName(playerName: string): string {
+  if (!playerName) return "";
+  
+  const parts = playerName.trim().split(" ");
+  if (parts.length < 2) return playerName;
+  
+  const firstName = parts[0];
+  const lastName = parts.slice(1).join(" ");
+  
+  return `${firstName.charAt(0).toLowerCase()}. ${lastName}`;
+}
+
 export function LeaderboardTable({ leaderboard, courseId, tournamentId, tournament }: LeaderboardTableProps) {
   const [showingFrontNine, setShowingFrontNine] = useState(true);
 
@@ -206,7 +219,7 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
                     </div>
                     <div>
                       <div className={`font-semibold text-sm ${isLeader ? 'text-primary' : 'text-foreground'}`}>
-                        {player.playerName}
+                        {formatPlayerName(player.playerName)}
                       </div>
                       {totalScore > 0 && (
                         <div className="text-xs text-muted-foreground">
@@ -303,7 +316,7 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
                       <div className={`font-semibold ${
                         isLeader ? 'text-primary' : 'text-foreground'
                       }`} data-testid={`text-player-name-${player.playerId}`}>
-                        {player.playerName}
+                        {formatPlayerName(player.playerName)}
                       </div>
                       {totalScore > 0 && (
                         <div className="text-sm text-muted-foreground">

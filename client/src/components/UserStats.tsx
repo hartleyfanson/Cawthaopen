@@ -127,7 +127,7 @@ export function UserStats({ userId }: UserStatsProps) {
           </div>
         </div>
         
-        <Link href="/statistics">
+        <Link href="/achievements?tab=stats">
           <Button 
             className="w-full mt-6 bg-secondary text-secondary-foreground hover:bg-accent transition-colors"
             data-testid="button-view-full-stats"
