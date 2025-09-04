@@ -35,6 +35,7 @@ function Router() {
           <Route path="/profile" component={Profile} />
           <Route path="/players/:playerId" component={PlayerProfile} />
           <Route path="/achievements" component={PlayerProfile} />
+          <Route path="/statistics" component={PlayerProfile} />
           <Route path="/admin" component={Admin} />
         </>
       )}

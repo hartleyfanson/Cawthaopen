@@ -143,7 +143,7 @@ export default function Dashboard() {
           </div>
 
           {/* Quick Actions */}
-          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6">
             <Link href="/tournaments/history">
               <Card className="bg-primary card-shadow hover:scale-105 transition-transform cursor-pointer">
                 <CardContent className="p-6 text-center">
@@ -172,19 +172,6 @@ export default function Dashboard() {
               </Card>
             </Link>
             
-            <Link href="/statistics">
-              <Card className="bg-primary card-shadow hover:scale-105 transition-transform cursor-pointer">
-                <CardContent className="p-6 text-center">
-                  <div className="text-4xl mb-4">📊</div>
-                  <h4 className="text-xl font-serif font-bold text-accent mb-2">
-                    Your Statistics
-                  </h4>
-                  <p className="text-muted-foreground">
-                    Track your golf performance
-                  </p>
-                </CardContent>
-              </Card>
-            </Link>
           </div>
         </div>
       </section>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useParams, useSearch } from "wouter";
+import { useParams, useSearch, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,8 +8,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { AchievementBadge } from "@/components/AchievementBadge";
-import { Trophy, Award, Target, TrendingUp, Calendar, BarChart3, Star, ArrowLeft } from "lucide-react";
+import { Trophy, Award, Target, TrendingUp, Calendar, BarChart3, Star, ArrowLeft, Users } from "lucide-react";
 import { Link } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
+import { Navigation } from "@/components/Navigation";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { Achievement, PlayerAchievement, PlayerStats, User } from "@shared/schema";
 
 interface PlayerAchievementWithDetails extends PlayerAchievement {
@@ -19,21 +28,47 @@ interface PlayerAchievementWithDetails extends PlayerAchievement {
 function PlayerProfile() {
   const { playerId } = useParams();
   const searchParams = useSearch();
+  const [location] = useLocation();
+  const { user: currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string>("");
 
-  // Check for tab parameter in URL and set active tab
+  // Determine default tab based on route
   useEffect(() => {
-    const urlParams = new URLSearchParams(searchParams);
-    const tabParam = urlParams.get('tab');
-    if (tabParam && ['overview', 'achievements', 'stats'].includes(tabParam)) {
-      setActiveTab(tabParam);
+    if (location === "/achievements") {
+      setActiveTab("achievements");
+    } else if (location === "/statistics") {
+      setActiveTab("stats");
+    } else {
+      const urlParams = new URLSearchParams(searchParams);
+      const tabParam = urlParams.get('tab');
+      if (tabParam && ['overview', 'achievements', 'stats'].includes(tabParam)) {
+        setActiveTab(tabParam);
+      }
     }
-  }, [searchParams]);
+  }, [searchParams, location]);
 
-  // Fetch player data
-  const { data: player, isLoading: playerLoading } = useQuery<User>({
-    queryKey: ["/api/auth/user"], // For now, showing current user
+  // Set initial selected player
+  useEffect(() => {
+    if (playerId) {
+      setSelectedPlayerId(playerId);
+    } else if (currentUser?.id) {
+      setSelectedPlayerId(currentUser.id);
+    }
+  }, [playerId, currentUser]);
+
+  // Fetch all users for player selector
+  const { data: allUsers = [], isLoading: usersLoading } = useQuery<User[]>({
+    queryKey: ["/api/users"],
   });
+
+  // Fetch selected player data
+  const { data: player, isLoading: playerLoading } = useQuery<User>({
+    queryKey: ["/api/auth/user"], // Still get current user for auth context
+  });
+
+  // Get the selected player from all users
+  const selectedPlayer = allUsers.find(user => user.id === selectedPlayerId) || player;
 
   // Fetch achievements data
   const { data: achievements = [], isLoading: achievementsLoading } = useQuery<Achievement[]>({
@@ -41,36 +76,42 @@ function PlayerProfile() {
   });
 
   const { data: playerAchievements = [], isLoading: playerAchievementsLoading } = useQuery<PlayerAchievementWithDetails[]>({
-    queryKey: ["/api/players", playerId || player?.id, "achievements"],
-    enabled: !!(playerId || player?.id),
+    queryKey: ["/api/players", selectedPlayerId, "achievements"],
+    enabled: !!selectedPlayerId,
   });
 
   const { data: playerStats, isLoading: statsLoading } = useQuery<PlayerStats>({
-    queryKey: ["/api/players", playerId || player?.id, "stats"],
-    enabled: !!(playerId || player?.id),
+    queryKey: ["/api/players", selectedPlayerId, "stats"],
+    enabled: !!selectedPlayerId,
   });
 
   const { data: detailedStats, isLoading: detailedStatsLoading } = useQuery<any>({
-    queryKey: ["/api/users", playerId || player?.id, "stats"],
-    enabled: !!(playerId || player?.id),
+    queryKey: ["/api/users", selectedPlayerId, "stats"],
+    enabled: !!selectedPlayerId,
   });
 
-  if (playerLoading || achievementsLoading || playerAchievementsLoading || statsLoading) {
+  if (playerLoading || achievementsLoading || playerAchievementsLoading || statsLoading || usersLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
-        <div className="text-center">
-          <Trophy className="h-12 w-12 mx-auto text-secondary animate-bounce mb-4" />
-          <p className="text-lg font-medium text-muted-foreground">Loading player profile...</p>
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <Trophy className="h-12 w-12 mx-auto text-secondary animate-bounce mb-4" />
+            <p className="text-lg font-medium text-muted-foreground">Loading player profile...</p>
+          </div>
         </div>
       </div>
     );
   }
 
-  if (!player) {
+  if (!selectedPlayer) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-lg font-medium text-muted-foreground">Player not found</p>
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <p className="text-lg font-medium text-muted-foreground">Player not found</p>
+          </div>
         </div>
       </div>
     );
@@ -95,10 +136,11 @@ function PlayerProfile() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100">
+    <div className="min-h-screen bg-background">
+      <Navigation />
       <div className="container mx-auto px-4 py-8">
-        {/* Back Button */}
-        <div className="mb-6">
+        {/* Back Button and Player Selector */}
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <Link href="/">
             <Button
               variant="outline"
@@ -111,6 +153,26 @@ function PlayerProfile() {
               <span className="sm:hidden">Back</span>
             </Button>
           </Link>
+          
+          {/* Player Selector */}
+          <div className="flex items-center gap-3">
+            <Users className="h-5 w-5 text-muted-foreground" />
+            <Select
+              value={selectedPlayerId}
+              onValueChange={setSelectedPlayerId}
+            >
+              <SelectTrigger className="w-[200px]" data-testid="select-player">
+                <SelectValue placeholder="Select player" />
+              </SelectTrigger>
+              <SelectContent>
+                {allUsers.map((user) => (
+                  <SelectItem key={user.id} value={user.id} data-testid={`select-option-${user.id}`}>
+                    {user.firstName} {user.lastName} {user.id === currentUser?.id ? "(You)" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         
         {/* Player Header */}
@@ -118,17 +180,17 @@ function PlayerProfile() {
           <CardContent className="pt-6">
             <div className="flex items-center gap-6">
               <Avatar className="h-24 w-24 border-4 border-secondary">
-                <AvatarImage src={player.profileImageUrl || undefined} />
+                <AvatarImage src={selectedPlayer.profileImageUrl || undefined} />
                 <AvatarFallback className="bg-secondary text-secondary-foreground text-2xl font-bold">
-                  {getInitials(player.firstName || undefined, player.lastName || undefined)}
+                  {getInitials(selectedPlayer.firstName || undefined, selectedPlayer.lastName || undefined)}
                 </AvatarFallback>
               </Avatar>
               
               <div className="flex-1">
                 <h1 className="text-3xl font-bold text-foreground mb-2">
-                  {player.firstName && player.lastName 
-                    ? `${player.firstName} ${player.lastName}`
-                    : player.email?.split('@')[0] || 'Player'
+                  {selectedPlayer.firstName && selectedPlayer.lastName 
+                    ? `${selectedPlayer.firstName} ${selectedPlayer.lastName}`
+                    : selectedPlayer.email?.split('@')[0] || 'Player'
                   }
                 </h1>
                 
@@ -137,9 +199,9 @@ function PlayerProfile() {
                     <Award className="h-4 w-4" />
                     {totalAchievements} Achievements
                   </Badge>
-                  {player.handicap && (
+                  {(selectedPlayer as any).handicap && (
                     <Badge variant="outline">
-                      Handicap: {player.handicap}
+                      Handicap: {(selectedPlayer as any).handicap}
                     </Badge>
                   )}
                 </div>

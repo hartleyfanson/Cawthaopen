@@ -45,6 +45,7 @@ import { eq, desc, asc, and, sql } from "drizzle-orm";
 export interface IStorage {
   // User operations (required for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
+  getAllUsers(): Promise<User[]>;
   upsertUser(user: UpsertUser): Promise<User>;
   
   // Course operations
@@ -86,6 +87,7 @@ export interface IStorage {
   // Stats operations
   getUserStats(userId: string): Promise<any>;
   getUserDetailedStats(userId: string): Promise<any>;
+  getPlayerTournamentPlacements(playerId: string): Promise<any[]>;
   
   // Profile operations
   updateUserProfile(id: string, profile: { firstName?: string; lastName?: string; email?: string; profileImageUrl?: string }): Promise<User>;
@@ -107,6 +109,21 @@ export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db
+      .select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+        profileImageUrl: users.profileImageUrl,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+      })
+      .from(users)
+      .orderBy(asc(users.firstName), asc(users.lastName));
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
@@ -415,6 +432,54 @@ export class DatabaseStorage implements IStorage {
       .orderBy(asc(tournamentRounds.roundNumber));
   }
 
+  // Get tournament placements for a player
+  async getPlayerTournamentPlacements(playerId: string): Promise<any[]> {
+    // Get all tournaments the player has participated in
+    const playerTournaments = await db
+      .select({
+        tournamentId: rounds.tournamentId,
+        tournamentName: tournaments.name,
+        totalStrokes: sql<number>`SUM(${rounds.totalStrokes})`.as('totalStrokes'),
+        startDate: tournaments.startDate,
+      })
+      .from(rounds)
+      .innerJoin(tournaments, eq(rounds.tournamentId, tournaments.id))
+      .where(eq(rounds.playerId, playerId))
+      .groupBy(rounds.tournamentId, tournaments.name, tournaments.startDate)
+      .orderBy(desc(tournaments.startDate));
+
+    // For each tournament, calculate the player's placement
+    const tournamentPlacements = [];
+    
+    for (const tournament of playerTournaments) {
+      // Get the leaderboard for this tournament
+      const leaderboard = await db
+        .select({
+          playerId: rounds.playerId,
+          totalStrokes: sql<number>`SUM(${rounds.totalStrokes})`.as('totalStrokes'),
+        })
+        .from(rounds)
+        .where(eq(rounds.tournamentId, tournament.tournamentId))
+        .groupBy(rounds.playerId)
+        .orderBy(asc(sql`SUM(${rounds.totalStrokes})`));
+
+      // Find player's position in leaderboard
+      const playerPosition = leaderboard.findIndex(p => p.playerId === playerId) + 1;
+      const totalPlayers = leaderboard.length;
+
+      tournamentPlacements.push({
+        tournamentId: tournament.tournamentId,
+        tournamentName: tournament.tournamentName,
+        placement: playerPosition,
+        totalPlayers: totalPlayers,
+        totalStrokes: tournament.totalStrokes,
+        startDate: tournament.startDate,
+      });
+    }
+
+    return tournamentPlacements;
+  }
+
   // Stats operations
   async getUserStats(userId: string): Promise<any> {
     const stats = await db
@@ -452,10 +517,31 @@ export class DatabaseStorage implements IStorage {
       calculatedHandicap = Math.max(-5, Math.min(36, calculatedHandicap));
     }
 
+    // Get tournament placements for summary stats
+    const placements = await this.getPlayerTournamentPlacements(userId);
+    const tournamentCount = placements.length;
+    
+    let bestFinish = null;
+    let averagePlacement = null;
+    let top10Finishes = 0;
+    let top5Finishes = 0;
+    
+    if (placements.length > 0) {
+      bestFinish = Math.min(...placements.map(p => p.placement));
+      averagePlacement = Math.round(placements.reduce((sum, p) => sum + p.placement, 0) / placements.length);
+      top10Finishes = placements.filter(p => p.placement <= 10).length;
+      top5Finishes = placements.filter(p => p.placement <= 5).length;
+    }
+
     return {
       ...(stats[0] || {}),
       wins: wins[0]?.wins || 0,
       handicap: calculatedHandicap,
+      tournamentsPlayed: tournamentCount,
+      bestFinish,
+      averagePlacement,
+      top10Finishes,
+      top5Finishes,
     };
   }
 
