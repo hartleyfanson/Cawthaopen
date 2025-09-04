@@ -9,6 +9,9 @@ import {
   galleryPhotos,
   tournamentHoleTees,
   tournamentRounds,
+  achievements,
+  playerAchievements,
+  playerStats,
   type User,
   type UpsertUser,
   type Course,
@@ -29,6 +32,12 @@ import {
   type InsertTournamentHoleTee,
   type TournamentRound,
   type InsertTournamentRound,
+  type Achievement,
+  type InsertAchievement,
+  type PlayerAchievement,
+  type InsertPlayerAchievement,
+  type PlayerStats,
+  type InsertPlayerStats,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, asc, and, sql } from "drizzle-orm";
@@ -83,6 +92,14 @@ export interface IStorage {
   
   // Admin operations
   updateTournamentAdmin(id: string, updates: { championsMeal?: string; headerImageUrl?: string }): Promise<Tournament>;
+  
+  // Achievement operations
+  getAchievements(): Promise<Achievement[]>;
+  getPlayerAchievements(playerId: string): Promise<(PlayerAchievement & { achievement: Achievement })[]>;
+  awardAchievement(data: InsertPlayerAchievement): Promise<PlayerAchievement>;
+  getPlayerStats(playerId: string): Promise<PlayerStats | undefined>;
+  upsertPlayerStats(playerId: string, updates: Partial<PlayerStats>): Promise<PlayerStats>;
+  checkAndAwardAchievements(playerId: string, context: { scoreData?: any; tournamentData?: any; roundData?: any }): Promise<PlayerAchievement[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -505,6 +522,164 @@ export class DatabaseStorage implements IStorage {
       .where(eq(tournaments.id, id))
       .returning();
     return tournament;
+  }
+
+  // Achievement operations
+  async getAchievements(): Promise<Achievement[]> {
+    return await db
+      .select()
+      .from(achievements)
+      .where(eq(achievements.isActive, true))
+      .orderBy(asc(achievements.category), asc(achievements.name));
+  }
+
+  async getPlayerAchievements(playerId: string): Promise<(PlayerAchievement & { achievement: Achievement })[]> {
+    const results = await db
+      .select()
+      .from(playerAchievements)
+      .innerJoin(achievements, eq(playerAchievements.achievementId, achievements.id))
+      .where(eq(playerAchievements.playerId, playerId))
+      .orderBy(desc(playerAchievements.unlockedAt));
+    
+    return results.map(result => ({
+      ...result.player_achievements,
+      achievement: result.achievements
+    }));
+  }
+
+  async awardAchievement(data: InsertPlayerAchievement): Promise<PlayerAchievement> {
+    // Check if player already has this achievement
+    const existing = await db
+      .select()
+      .from(playerAchievements)
+      .where(
+        and(
+          eq(playerAchievements.playerId, data.playerId),
+          eq(playerAchievements.achievementId, data.achievementId)
+        )
+      );
+
+    if (existing.length > 0) {
+      return existing[0];
+    }
+
+    const [newAchievement] = await db
+      .insert(playerAchievements)
+      .values(data)
+      .returning();
+
+    // Update player stats
+    const achievement = await db
+      .select()
+      .from(achievements)
+      .where(eq(achievements.id, data.achievementId));
+
+    if (achievement.length > 0) {
+      await this.upsertPlayerStats(data.playerId, {
+        totalAchievements: sql`total_achievements + 1`,
+        achievementPoints: sql`achievement_points + ${achievement[0].points}`,
+      } as any);
+    }
+
+    return newAchievement;
+  }
+
+  async getPlayerStats(playerId: string): Promise<PlayerStats | undefined> {
+    const [stats] = await db
+      .select()
+      .from(playerStats)
+      .where(eq(playerStats.playerId, playerId));
+    return stats;
+  }
+
+  async upsertPlayerStats(playerId: string, updates: Partial<PlayerStats>): Promise<PlayerStats> {
+    const [stats] = await db
+      .insert(playerStats)
+      .values({
+        playerId,
+        ...updates,
+      } as any)
+      .onConflictDoUpdate({
+        target: playerStats.playerId,
+        set: {
+          ...updates,
+          lastUpdated: new Date(),
+        },
+      })
+      .returning();
+    return stats;
+  }
+
+  async checkAndAwardAchievements(playerId: string, context: { scoreData?: any; tournamentData?: any; roundData?: any }): Promise<PlayerAchievement[]> {
+    const awardedAchievements: PlayerAchievement[] = [];
+    const allAchievements = await this.getAchievements();
+    const playerAchievements = await this.getPlayerAchievements(playerId);
+    const unlockedAchievementIds = new Set(playerAchievements.map(pa => pa.achievementId));
+
+    for (const achievement of allAchievements) {
+      if (unlockedAchievementIds.has(achievement.id)) {
+        continue; // Already unlocked
+      }
+
+      let shouldAward = false;
+
+      switch (achievement.condition) {
+        case 'first_tournament':
+          if (context.tournamentData && context.tournamentData.isFirstTournament) {
+            shouldAward = true;
+          }
+          break;
+        
+        case 'hole_in_one':
+          if (context.scoreData && context.scoreData.strokes === 1 && context.scoreData.holePar > 1) {
+            shouldAward = true;
+          }
+          break;
+        
+        case 'eagle':
+          if (context.scoreData && context.scoreData.strokes <= (context.scoreData.holePar - 2)) {
+            shouldAward = true;
+          }
+          break;
+        
+        case 'birdie':
+          if (context.scoreData && context.scoreData.strokes === (context.scoreData.holePar - 1)) {
+            shouldAward = true;
+          }
+          break;
+        
+        case 'under_par_round':
+          if (context.roundData && context.roundData.totalStrokes < context.roundData.coursePar) {
+            shouldAward = true;
+          }
+          break;
+        
+        case 'tournament_win':
+          if (context.tournamentData && context.tournamentData.isWinner) {
+            shouldAward = true;
+          }
+          break;
+        
+        case 'score_under_threshold':
+          if (context.roundData && achievement.value && context.roundData.totalStrokes < achievement.value) {
+            shouldAward = true;
+          }
+          break;
+      }
+
+      if (shouldAward) {
+        const awarded = await this.awardAchievement({
+          playerId,
+          achievementId: achievement.id,
+          tournamentId: context.tournamentData?.tournamentId,
+          roundId: context.roundData?.roundId,
+          metadata: context,
+        });
+        awardedAchievements.push(awarded);
+      }
+    }
+
+    return awardedAchievements;
   }
 }
 

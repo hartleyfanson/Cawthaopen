@@ -77,6 +77,18 @@ export function Navigation() {
                 Create Tournament
               </span>
             </Link>
+            <Link href="/achievements">
+              <span 
+                className={`transition-colors cursor-pointer ${
+                  isActive("/achievements")
+                    ? "text-secondary" 
+                    : "text-primary-foreground hover:text-secondary"
+                }`}
+                data-testid="nav-achievements"
+              >
+                Achievements
+              </span>
+            </Link>
           </div>
           
           <div className="flex items-center space-x-4">
@@ -194,6 +206,17 @@ export function Navigation() {
                   }`}
                 >
                   Create Tournament
+                </span>
+              </Link>
+              <Link href="/achievements" onClick={() => setIsMobileMenuOpen(false)}>
+                <span 
+                  className={`block px-3 py-2 rounded-md text-base font-medium transition-colors cursor-pointer ${
+                    isActive("/achievements")
+                      ? "bg-secondary text-secondary-foreground" 
+                      : "text-primary-foreground hover:bg-primary/50"
+                  }`}
+                >
+                  Achievements
                 </span>
               </Link>
               <button

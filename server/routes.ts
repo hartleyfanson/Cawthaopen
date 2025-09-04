@@ -511,6 +511,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Achievement routes
+  app.get("/api/achievements", async (req, res) => {
+    try {
+      const achievements = await storage.getAchievements();
+      res.json(achievements);
+    } catch (error) {
+      console.error("Error fetching achievements:", error);
+      res.status(500).json({ message: "Failed to fetch achievements" });
+    }
+  });
+
+  app.get("/api/players/:playerId/achievements", async (req, res) => {
+    try {
+      const playerAchievements = await storage.getPlayerAchievements(req.params.playerId);
+      res.json(playerAchievements);
+    } catch (error) {
+      console.error("Error fetching player achievements:", error);
+      res.status(500).json({ message: "Failed to fetch player achievements" });
+    }
+  });
+
+  app.get("/api/players/:playerId/stats", async (req, res) => {
+    try {
+      const stats = await storage.getPlayerStats(req.params.playerId);
+      res.json(stats || {
+        playerId: req.params.playerId,
+        totalAchievements: 0,
+        achievementPoints: 0,
+        holesInOne: 0,
+        eaglesCount: 0,
+        birdiesCount: 0,
+        parsCount: 0,
+        tournamentsWon: 0,
+        tournamentsPlayed: 0,
+        bestScore: null,
+        averageScore: null
+      });
+    } catch (error) {
+      console.error("Error fetching player stats:", error);
+      res.status(500).json({ message: "Failed to fetch player stats" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

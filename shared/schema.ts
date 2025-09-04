@@ -306,6 +306,80 @@ export const insertTournamentRoundSchema = createInsertSchema(tournamentRounds).
   createdAt: true,
 });
 
+// Achievement system tables
+export const achievements = pgTable("achievements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description").notNull(),
+  badgeIcon: varchar("badge_icon").notNull(), // lucide icon name
+  badgeColor: varchar("badge_color").default("gold"), // gold, silver, bronze, blue, green, purple
+  category: varchar("category").notNull(), // scoring, tournament, special, milestone
+  condition: varchar("condition").notNull(), // hole_in_one, first_tournament, under_par, etc.
+  value: integer("value"), // threshold value if applicable (e.g., score under 80)
+  rarity: varchar("rarity").default("common"), // common, rare, epic, legendary
+  points: integer("points").default(10), // achievement points awarded
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const playerAchievements = pgTable("player_achievements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").references(() => users.id).notNull(),
+  achievementId: varchar("achievement_id").references(() => achievements.id).notNull(),
+  unlockedAt: timestamp("unlocked_at").defaultNow(),
+  tournamentId: varchar("tournament_id").references(() => tournaments.id), // if earned in a specific tournament
+  roundId: varchar("round_id").references(() => rounds.id), // if earned in a specific round
+  metadata: jsonb("metadata"), // additional context like score, hole number, etc.
+});
+
+export const playerStats = pgTable("player_stats", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").references(() => users.id).notNull(),
+  totalAchievements: integer("total_achievements").default(0),
+  achievementPoints: integer("achievement_points").default(0),
+  holesInOne: integer("holes_in_one").default(0),
+  eaglesCount: integer("eagles_count").default(0),
+  birdiesCount: integer("birdies_count").default(0),
+  parsCount: integer("pars_count").default(0),
+  tournamentsWon: integer("tournaments_won").default(0),
+  tournamentsPlayed: integer("tournaments_played").default(0),
+  bestScore: integer("best_score"),
+  averageScore: decimal("average_score", { precision: 5, scale: 2 }),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+});
+
+// Achievement relations
+export const achievementsRelations = relations(achievements, ({ many }) => ({
+  playerAchievements: many(playerAchievements),
+}));
+
+export const playerAchievementsRelations = relations(playerAchievements, ({ one }) => ({
+  player: one(users, { fields: [playerAchievements.playerId], references: [users.id] }),
+  achievement: one(achievements, { fields: [playerAchievements.achievementId], references: [achievements.id] }),
+  tournament: one(tournaments, { fields: [playerAchievements.tournamentId], references: [tournaments.id] }),
+  round: one(rounds, { fields: [playerAchievements.roundId], references: [rounds.id] }),
+}));
+
+export const playerStatsRelations = relations(playerStats, ({ one }) => ({
+  player: one(users, { fields: [playerStats.playerId], references: [users.id] }),
+}));
+
+// Insert schemas for achievement system
+export const insertAchievementSchema = createInsertSchema(achievements).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPlayerAchievementSchema = createInsertSchema(playerAchievements).omit({
+  id: true,
+  unlockedAt: true,
+});
+
+export const insertPlayerStatsSchema = createInsertSchema(playerStats).omit({
+  id: true,
+  lastUpdated: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
@@ -327,4 +401,10 @@ export type InsertGalleryPhoto = z.infer<typeof insertGalleryPhotoSchema>;
 export type TournamentHoleTee = typeof tournamentHoleTees.$inferSelect;
 export type InsertTournamentHoleTee = z.infer<typeof insertTournamentHoleTeeSchema>;
 export type TournamentRound = typeof tournamentRounds.$inferSelect;
+export type Achievement = typeof achievements.$inferSelect;
+export type InsertAchievement = z.infer<typeof insertAchievementSchema>;
+export type PlayerAchievement = typeof playerAchievements.$inferSelect;
+export type InsertPlayerAchievement = z.infer<typeof insertPlayerAchievementSchema>;
+export type PlayerStats = typeof playerStats.$inferSelect;
+export type InsertPlayerStats = z.infer<typeof insertPlayerStatsSchema>;
 export type InsertTournamentRound = z.infer<typeof insertTournamentRoundSchema>;
