@@ -73,7 +73,7 @@ export function AchievementBadge({
         onClick={() => setIsModalOpen(true)}
         data-testid={`achievement-badge-${achievement.id}`}
       >
-        <CardContent className="p-2 flex flex-col items-center justify-center h-full relative">
+        <CardContent className="p-1.5 flex flex-col items-center justify-center h-full relative overflow-hidden">
           {/* Rarity indicator */}
           {(achievement.rarity || 'common') !== 'common' && (
             <Badge 
@@ -98,12 +98,12 @@ export function AchievementBadge({
           </div>
           
           {/* Achievement name */}
-          <div className="text-center">
-            <p className={`font-semibold text-xs leading-tight ${size === 'sm' ? 'text-xs' : 'text-sm'}`}>
+          <div className="text-center w-full px-1">
+            <p className={`font-semibold leading-tight text-center overflow-hidden ${size === 'sm' ? 'text-xs line-clamp-2' : 'text-sm line-clamp-2'}`}>
               {achievement.name}
             </p>
             {unlockedAt && size !== 'sm' && (
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-muted-foreground mt-1 truncate">
                 {new Date(unlockedAt).toLocaleDateString()}
               </p>
             )}
