@@ -51,15 +51,8 @@ const createTournamentSchema = insertTournamentSchema
       z.date(),
     ),
 
-    // courseId must be a positive integer, handle undefined/null values
-    courseId: z.preprocess(
-      (val) => {
-        if (val === null || val === undefined || val === '') return undefined;
-        const num = Number(val);
-        return isNaN(num) ? undefined : num;
-      },
-      z.number().int().positive("Please select a course")
-    ),
+    // courseId must be a positive integer
+    courseId: z.number().int().positive("Please select a course"),
 
     handicapAllowance: z.coerce.string(),
     headerImageUrl: z.string().optional(), // optional = image not required
@@ -150,7 +143,7 @@ export default function CreateTournament() {
     defaultValues: {
       name: "",
       description: "",
-      courseId: null as unknown as number,
+      courseId: "" as unknown as number,
       startDate: new Date(Date.now() + 60 * 60 * 1000), // +1 hour
       endDate: new Date(Date.now() + 3 * 60 * 60 * 1000), // +3 hours
       status: "upcoming",
@@ -251,11 +244,7 @@ export default function CreateTournament() {
     }
 
     // Validate course selection (must be a positive number)
-    if (
-      !data.courseId ||
-      Number.isNaN(Number(data.courseId)) ||
-      Number(data.courseId) <= 0
-    ) {
+    if (!data.courseId || data.courseId <= 0) {
       form.setError("courseId", { message: "Please select a course" });
       return;
     }
@@ -458,10 +447,13 @@ export default function CreateTournament() {
                   <div className="space-y-4">
                     <CourseSearch
                       onCourseSelect={(course, holes) => {
-                        form.setValue("courseId", Number(course.id), {
+                        const courseIdNumber = Number(course.id);
+                        form.setValue("courseId", courseIdNumber, {
                           shouldValidate: true,
                           shouldDirty: true,
                         });
+                        // Clear any existing errors
+                        form.clearErrors("courseId");
                         setSelectedCourse({ ...course, holes });
                         toast({
                           title: "Course selected",
