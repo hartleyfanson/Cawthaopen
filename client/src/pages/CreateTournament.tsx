@@ -51,8 +51,8 @@ const createTournamentSchema = insertTournamentSchema
       z.date(),
     ),
 
-    // courseId must be a positive integer
-    courseId: z.number().int().positive("Please select a course"),
+    // courseId must be a non-empty string
+    courseId: z.string().min(1, "Please select a course"),
 
     handicapAllowance: z.coerce.string(),
     headerImageUrl: z.string().optional(), // optional = image not required
@@ -143,7 +143,7 @@ export default function CreateTournament() {
     defaultValues: {
       name: "",
       description: "",
-      courseId: "" as unknown as number,
+      courseId: "",
       startDate: new Date(Date.now() + 60 * 60 * 1000), // +1 hour
       endDate: new Date(Date.now() + 3 * 60 * 60 * 1000), // +3 hours
       status: "upcoming",
@@ -243,14 +243,13 @@ export default function CreateTournament() {
       return;
     }
 
-    // Validate course selection (must be a positive number)
-    if (!data.courseId || data.courseId <= 0) {
+    // Validate course selection (must be a non-empty string)
+    if (!data.courseId || data.courseId.trim() === "") {
       form.setError("courseId", { message: "Please select a course" });
       return;
     }
 
     try {
-      const courseId = Number(data.courseId);
 
       // Prepare tee mappings based on selection mode
       const teeSelections =
@@ -265,7 +264,7 @@ export default function CreateTournament() {
       const tournamentData = {
         name: data.name,
         description: data.description,
-        courseId,
+        courseId: data.courseId,
         startDate: data.startDate.toISOString(),
         endDate: data.endDate.toISOString(),
         status: data.status,
@@ -447,8 +446,7 @@ export default function CreateTournament() {
                   <div className="space-y-4">
                     <CourseSearch
                       onCourseSelect={(course, holes) => {
-                        const courseIdNumber = Number(course.id);
-                        form.setValue("courseId", courseIdNumber, {
+                        form.setValue("courseId", course.id, {
                           shouldValidate: true,
                           shouldDirty: true,
                         });
