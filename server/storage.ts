@@ -467,8 +467,20 @@ export class DatabaseStorage implements IStorage {
     return newHoleTee;
   }
 
-  async getTournamentHoleTees(tournamentId: string): Promise<TournamentHoleTee[]> {
-    return await db.select().from(tournamentHoleTees).where(eq(tournamentHoleTees.tournamentId, tournamentId));
+  async getTournamentHoleTees(tournamentId: string): Promise<any[]> {
+    return await db
+      .select({
+        id: tournamentHoleTees.id,
+        tournamentId: tournamentHoleTees.tournamentId,
+        holeId: tournamentHoleTees.holeId,
+        teeColor: tournamentHoleTees.teeColor,
+        holeNumber: holes.holeNumber, // Include hole number for frontend matching
+        createdAt: tournamentHoleTees.createdAt,
+      })
+      .from(tournamentHoleTees)
+      .innerJoin(holes, eq(tournamentHoleTees.holeId, holes.id))
+      .where(eq(tournamentHoleTees.tournamentId, tournamentId))
+      .orderBy(asc(holes.holeNumber));
   }
 
   async createTournamentRound(round: InsertTournamentRound): Promise<TournamentRound> {
