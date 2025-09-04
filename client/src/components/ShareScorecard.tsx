@@ -42,14 +42,22 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
   const { data: scores } = useQuery({
     queryKey: ["/api/rounds", (roundData as any)?.id, "scores"],
     enabled: !!(roundData as any)?.id,
+    staleTime: 0, // Always fetch fresh data
+    refetchOnMount: true, // Refetch when component mounts
+    refetchOnWindowFocus: true, // Refetch when window regains focus
   });
 
   const generateScorecard = async () => {
-    if (!canvasRef.current || !roundData || !playerData) return;
+    if (!canvasRef.current || !roundData || !playerData || !scores) return;
 
     setIsGenerating(true);
     
     try {
+      // Calculate fresh totals from current scores data
+      const totalStrokes = Array.isArray(scores) ? scores.reduce((sum: number, score: any) => sum + score.strokes, 0) : 0;
+      const totalPutts = Array.isArray(scores) ? scores.reduce((sum: number, score: any) => sum + score.putts, 0) : 0;
+      const fairwaysHit = Array.isArray(scores) ? scores.filter((score: any) => score.fairwayHit).length : 0;
+      const greensInRegulation = Array.isArray(scores) ? scores.filter((score: any) => score.greenInRegulation).length : 0;
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
@@ -165,9 +173,8 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
       const playerName = `${(playerData as any)?.firstName || 'Player'} ${(playerData as any)?.lastName || ''}`.trim();
       ctx.fillText(playerName, canvas.width / 2, playerY);
 
-      // Score summary (large centered display)
-      const totalStrokes = (roundData as any)?.totalStrokes || 0;
-      const coursePar = 72; // Default par
+      // Score summary (large centered display) - using fresh calculated totals
+      const coursePar = Array.isArray(holes) ? holes.reduce((sum: number, hole: any) => sum + hole.par, 0) : 72;
       const scoreToPar = totalStrokes - coursePar;
       const scoreText = scoreToPar === 0 ? 'EVEN' : 
                        scoreToPar > 0 ? `+${scoreToPar}` : 
@@ -194,9 +201,9 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
       ctx.textAlign = 'center';
 
       const stats = [
-        `Putts: ${(roundData as any)?.totalPutts || 'N/A'}`,
-        `Fairways: ${(roundData as any)?.fairwaysHit || 0}/${fairwayDenominator}`,
-        `GIR: ${(roundData as any)?.greensInRegulation || 0}/18`,
+        `Putts: ${totalPutts || 'N/A'}`,
+        `Fairways: ${fairwaysHit}/${fairwayDenominator}`,
+        `GIR: ${greensInRegulation}/18`,
       ];
 
       stats.forEach((stat, index) => {
