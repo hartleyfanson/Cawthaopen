@@ -68,7 +68,7 @@ export function FutureTournamentView({ tournament, tournamentId, course }: Futur
 
   // Get unique tee colors being used
   const usedTeeColors = Array.isArray(teeSelections) 
-    ? [...new Set(teeSelections.map((ts: any) => ts.teeColor))]
+    ? Array.from(new Set(teeSelections.map((ts: any) => ts.teeColor)))
     : ['white'];
   
   // Format tee colors for display

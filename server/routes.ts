@@ -272,7 +272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Try external API first, then fall back to expanded mock data
-      let courses = [];
+      let courses: any[] = [];
       
       try {
         // Try GolfCourseAPI.com (free API with 30,000+ courses)
