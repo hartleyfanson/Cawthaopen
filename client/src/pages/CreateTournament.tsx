@@ -259,8 +259,8 @@ export default function CreateTournament() {
       return;
     }
 
-    // Validate course selection (must be a non-empty string)
-    if (!data.courseId || data.courseId.trim() === "") {
+    // Validate course selection (only required for single round tournaments)
+    if (data.numberOfRounds === 1 && (!data.courseId || data.courseId.trim() === "")) {
       form.setError("courseId", { message: "Please select a course" });
       return;
     }
