@@ -653,8 +653,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/scores", isAuthenticated, async (req, res) => {
     try {
+      const userId = (req.user as any)?.claims?.sub;
       const scoreData = insertScoreSchema.parse(req.body);
       const score = await storage.createScore(scoreData);
+      
+      // Get hole information for achievement checking
+      const hole = await storage.getHole(scoreData.holeId);
+      if (hole) {
+        // Check for individual hole achievements (hole-in-one, eagle, birdie, etc.)
+        await storage.checkAndAwardAchievements(userId, {
+          scoreData: {
+            strokes: score.strokes,
+            putts: score.putts,
+            holePar: hole.par,
+            fairwayHit: score.fairwayHit,
+            greenInRegulation: score.greenInRegulation,
+          },
+        });
+        
+        // Check if this completes a round for round-level achievements
+        const round = await storage.getRoundById(scoreData.roundId);
+        if (round) {
+          const roundAnalysis = await (storage as any).analyzeRoundData(round.id);
+          if (roundAnalysis && Object.keys(roundAnalysis).length > 0) {
+            await storage.checkAndAwardAchievements(userId, {
+              roundData: {
+                ...roundAnalysis,
+                roundId: round.id,
+                totalStrokes: round.totalStrokes,
+                fairwaysHit: round.fairwaysHit,
+              },
+            });
+          }
+        }
+      }
+      
       res.status(201).json(score);
     } catch (error) {
       console.error("Error creating score:", error);
@@ -664,6 +697,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/scores/:id", isAuthenticated, async (req, res) => {
     try {
+      const userId = (req.user as any)?.claims?.sub;
       const updates = z.object({
         strokes: z.number().optional(),
         putts: z.number().optional(),
@@ -674,6 +708,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }).parse(req.body);
       
       const score = await storage.updateScore(req.params.id, updates);
+      
+      // Get hole information for achievement checking
+      const hole = await storage.getHole(score.holeId);
+      if (hole && (updates.strokes !== undefined || updates.putts !== undefined)) {
+        // Check for individual hole achievements with updated data
+        await storage.checkAndAwardAchievements(userId, {
+          scoreData: {
+            strokes: score.strokes,
+            putts: score.putts,
+            holePar: hole.par,
+            fairwayHit: score.fairwayHit,
+            greenInRegulation: score.greenInRegulation,
+          },
+        });
+        
+        // Check if this affects round-level achievements
+        const round = await storage.getRoundById(score.roundId);
+        if (round) {
+          const roundAnalysis = await (storage as any).analyzeRoundData(round.id);
+          if (roundAnalysis && Object.keys(roundAnalysis).length > 0) {
+            await storage.checkAndAwardAchievements(userId, {
+              roundData: {
+                ...roundAnalysis,
+                roundId: round.id,
+                totalStrokes: round.totalStrokes,
+                fairwaysHit: round.fairwaysHit,
+              },
+            });
+          }
+        }
+      }
+      
       res.json(score);
     } catch (error) {
       console.error("Error updating score:", error);

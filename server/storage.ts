@@ -263,6 +263,22 @@ export class DatabaseStorage implements IStorage {
       .orderBy(asc(holes.holeNumber));
   }
 
+  async getHole(holeId: string): Promise<Hole | undefined> {
+    const [hole] = await db
+      .select()
+      .from(holes)
+      .where(eq(holes.id, holeId));
+    return hole;
+  }
+
+  async getRoundById(roundId: string): Promise<Round | undefined> {
+    const [round] = await db
+      .select()
+      .from(rounds)
+      .where(eq(rounds.id, roundId));
+    return round;
+  }
+
   async getTournamentLeaderboard(tournamentId: string): Promise<any[]> {
     const result = await db
       .select({
@@ -615,6 +631,99 @@ export class DatabaseStorage implements IStorage {
     return stats;
   }
 
+  // Helper function to analyze round data for achievement conditions
+  private async analyzeRoundData(roundId: string): Promise<any> {
+    // Get all scores for this round with hole information
+    const roundScores = await db
+      .select({
+        strokes: scores.strokes,
+        putts: scores.putts,
+        holePar: holes.par,
+        holeNumber: holes.holeNumber,
+      })
+      .from(scores)
+      .innerJoin(holes, eq(scores.holeId, holes.id))
+      .where(eq(scores.roundId, roundId))
+      .orderBy(holes.holeNumber);
+
+    if (roundScores.length === 0) {
+      return {};
+    }
+
+    let twoPuttOrBetterHoles = 0;
+    let onePuttHoles = 0;
+    let holesAtOrBetterThanBogey = 0;
+    let hasBirdie = false;
+    let hasTripleBogey = false;
+    let consecutiveDoubleBogeys = 0;
+    let maxConsecutiveDoubleBogeys = 0;
+
+    for (const score of roundScores) {
+      // Count putting achievements
+      if (score.putts !== null && score.putts !== undefined) {
+        if (score.putts <= 2) twoPuttOrBetterHoles++;
+        if (score.putts === 1) onePuttHoles++;
+      }
+
+      // Check scoring relative to par
+      const scoreToPar = score.strokes - score.holePar;
+      
+      // Bogey or better (par, birdie, eagle, etc.)
+      if (scoreToPar <= 1) holesAtOrBetterThanBogey++;
+      
+      // Check for birdie and triple bogey
+      if (scoreToPar === -1) hasBirdie = true;
+      if (scoreToPar >= 3) hasTripleBogey = true;
+      
+      // Track consecutive double bogeys
+      if (scoreToPar === 2) {
+        consecutiveDoubleBogeys++;
+        maxConsecutiveDoubleBogeys = Math.max(maxConsecutiveDoubleBogeys, consecutiveDoubleBogeys);
+      } else {
+        consecutiveDoubleBogeys = 0;
+      }
+    }
+
+    return {
+      twoPuttOrBetterHoles,
+      onePuttHoles,
+      holesAtOrBetterThanBogey,
+      maxConsecutiveDoubleBogeys,
+      hasBirdie,
+      hasTripleBogey,
+    };
+  }
+
+  // Helper function to analyze tournament data for achievement conditions
+  private async analyzeTournamentData(playerId: string, tournamentId: string): Promise<any> {
+    // Get all scores for this player in this tournament
+    const tournamentScores = await db
+      .select({
+        strokes: scores.strokes,
+        holePar: holes.par,
+      })
+      .from(scores)
+      .innerJoin(rounds, eq(scores.roundId, rounds.id))
+      .innerJoin(holes, eq(scores.holeId, holes.id))
+      .where(
+        and(
+          eq(rounds.tournamentId, tournamentId),
+          eq(rounds.playerId, playerId)
+        )
+      );
+
+    let birdieCount = 0;
+
+    for (const score of tournamentScores) {
+      const scoreToPar = score.strokes - score.holePar;
+      if (scoreToPar === -1) birdieCount++;
+    }
+
+    return {
+      birdieCount,
+    };
+  }
+
   async checkAndAwardAchievements(playerId: string, context: { scoreData?: any; tournamentData?: any; roundData?: any }): Promise<PlayerAchievement[]> {
     const awardedAchievements: PlayerAchievement[] = [];
     const allAchievements = await this.getAchievements();
@@ -669,6 +778,59 @@ export class DatabaseStorage implements IStorage {
           if (context.roundData && achievement.value && context.roundData.totalStrokes < achievement.value) {
             shouldAward = true;
           }
+          break;
+
+        case 'fairways_in_regulation':
+          if (context.roundData && achievement.value && context.roundData.fairwaysHit >= achievement.value) {
+            shouldAward = true;
+          }
+          break;
+
+        case 'two_putt_master':
+          if (context.roundData && achievement.value && context.roundData.twoPuttOrBetterHoles >= achievement.value) {
+            shouldAward = true;
+          }
+          break;
+
+        case 'one_putt_master':
+          if (context.roundData && achievement.value && context.roundData.onePuttHoles >= achievement.value) {
+            shouldAward = true;
+          }
+          break;
+
+        case 'consistent_performance':
+          if (context.roundData && achievement.value && context.roundData.holesAtOrBetterThanBogey >= achievement.value) {
+            shouldAward = true;
+          }
+          break;
+
+        case 'consecutive_double_bogeys':
+          if (context.roundData && achievement.value && context.roundData.maxConsecutiveDoubleBogeys >= achievement.value) {
+            shouldAward = true;
+          }
+          break;
+
+        case 'birdie_and_triple_bogey':
+          if (context.roundData && context.roundData.hasBirdie && context.roundData.hasTripleBogey) {
+            shouldAward = true;
+          }
+          break;
+
+        case 'extreme_score':
+          if (context.scoreData && context.scoreData.strokes > (context.scoreData.holePar * 3)) {
+            shouldAward = true;
+          }
+          break;
+
+        case 'multiple_birdies_tournament':
+          if (context.tournamentData && achievement.value && context.tournamentData.birdieCount >= achievement.value) {
+            shouldAward = true;
+          }
+          break;
+
+        // Manual achievement - handled separately through voting system
+        case 'crowd_favorite_vote':
+          // This will be handled through a separate admin interface
           break;
       }
 
