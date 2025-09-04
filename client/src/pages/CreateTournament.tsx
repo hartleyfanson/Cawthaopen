@@ -451,7 +451,7 @@ export default function CreateTournament() {
                   <div className="space-y-4">
                     <CourseSearch
                       onCourseSelect={(course, holes) => {
-                        form.setValue("courseId", course.id, {
+                        form.setValue("courseId", Number(course.id), {
                           shouldValidate: true,
                           shouldDirty: true,
                         });
