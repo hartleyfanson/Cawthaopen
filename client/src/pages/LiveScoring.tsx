@@ -42,11 +42,11 @@ export default function LiveScoring() {
   const [, setLocation] = useLocation();
 
   // Local storage key for persisting scoring state (includes round number)
-  const storageKey = `live-scoring-${id}-${user?.id}-round-${selectedRound}`;
+  const storageKey = `live-scoring-${id}-${(user as any)?.id}-round-${selectedRound}`;
 
   // Load scoring state from local storage on mount
   useEffect(() => {
-    if (!id || !user?.id) return;
+    if (!id || !(user as any)?.id) return;
     
     try {
       const savedState = localStorage.getItem(storageKey);
@@ -69,7 +69,7 @@ export default function LiveScoring() {
 
   // Save scoring state to local storage whenever it changes
   useEffect(() => {
-    if (!id || !user?.id) return;
+    if (!id || !(user as any)?.id) return;
     
     const stateToSave = {
       selectedRound,
@@ -88,7 +88,7 @@ export default function LiveScoring() {
     } catch (error) {
       console.log('Could not save scoring state:', error);
     }
-  }, [selectedRound, currentHole, strokes, putts, fairwayHit, greenInRegulation, powerupUsed, powerupNotes, cachedScores, storageKey, id, user?.id]);
+  }, [selectedRound, currentHole, strokes, putts, fairwayHit, greenInRegulation, powerupUsed, powerupNotes, cachedScores, storageKey, id, (user as any)?.id]);
 
   // Clear local storage when round is completed
   const clearSavedState = () => {
@@ -203,7 +203,7 @@ export default function LiveScoring() {
     },
   });
 
-  const currentHoleData = holes?.find((hole: any) => hole.holeNumber === currentHole);
+  const currentHoleData = (holes as any[])?.find((hole: any) => hole.holeNumber === currentHole);
   
   // Get tee selection for current hole
   const currentTeeSelection = Array.isArray(teeSelections) 
@@ -259,7 +259,7 @@ export default function LiveScoring() {
   useEffect(() => {
     if (Array.isArray(existingScores) && Array.isArray(holes) && existingScores.length > 0) {
       const loadedScores = existingScores.map((score: any) => {
-        const hole = holes.find((h: any) => h.id === score.holeId);
+        const hole = (holes as any[]).find((h: any) => h.id === score.holeId);
         return {
           holeNumber: hole?.holeNumber || 1,
           holeId: score.holeId,

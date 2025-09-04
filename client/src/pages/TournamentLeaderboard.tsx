@@ -19,7 +19,7 @@ function AllRoundsInfo({ tournament, tournamentRounds }: { tournament: any; tour
     queryKey: ["/api/courses", tournamentRounds.map(r => r.courseId || (tournament as any)?.courseId)],
     queryFn: async () => {
       const courseIds = tournamentRounds.map(r => r.courseId || (tournament as any)?.courseId);
-      const uniqueCourseIds = [...new Set(courseIds)];
+      const uniqueCourseIds = Array.from(new Set(courseIds));
       return Promise.all(
         uniqueCourseIds.map(async (courseId) => {
           if (!courseId) return null;
@@ -175,7 +175,7 @@ export default function TournamentLeaderboard() {
     tournamentPlayers.some((player: any) => player.playerId === (user as any)?.id);
 
   // Check if tournament is future-dated using consistent date-based logic
-  const isFutureTournament = (() => {
+  const isFutureTournament = useMemo(() => {
     const now = new Date();
     const startDate = (tournament as any)?.startDate ? new Date((tournament as any).startDate) : null;
     
@@ -187,7 +187,7 @@ export default function TournamentLeaderboard() {
     
     // Tournament is future if start date hasn't arrived yet
     return nowDateOnly < startDateOnly;
-  })();
+  }, [tournament]);
 
   // Fetch leaderboard with live updates based on tournament status
   const { data: leaderboard, isLoading: loadingLeaderboard } = useQuery({
@@ -225,14 +225,14 @@ export default function TournamentLeaderboard() {
             {selectedRound === 'all' && tournamentRounds && Array.isArray(tournamentRounds) && tournamentRounds.length > 1 ? (
               <AllRoundsInfo 
                 tournament={tournament} 
-                tournamentRounds={tournamentRounds} 
+                tournamentRounds={tournamentRounds as any[]} 
               />
             ) : selectedRound !== 'all' && tournamentRounds && Array.isArray(tournamentRounds) ? (
               <div className="text-xl text-secondary space-y-1">
                 <p>{(course as any)?.name || 'Course'} • {(course as any)?.location || 'Location'}</p>
                 <p className="text-lg">
-                  Round {selectedRound} • {tournamentRounds.find((r: any) => r.roundNumber === selectedRound)?.roundDate 
-                    ? new Date(tournamentRounds.find((r: any) => r.roundNumber === selectedRound)?.roundDate).toLocaleDateString('en-US', { 
+                  Round {selectedRound} • {(tournamentRounds as any[]).find((r: any) => r.roundNumber === selectedRound)?.roundDate 
+                    ? new Date((tournamentRounds as any[]).find((r: any) => r.roundNumber === selectedRound)?.roundDate).toLocaleDateString('en-US', { 
                         weekday: 'long',
                         year: 'numeric', 
                         month: 'long', 
@@ -368,7 +368,7 @@ export default function TournamentLeaderboard() {
               tournamentId={id || ''}
               course={course}
               selectedRound={selectedRound}
-              tournamentRounds={tournamentRounds}
+              tournamentRounds={tournamentRounds as any[]}
             />
           ) : loadingLeaderboard ? (
             <Card className="bg-muted">
