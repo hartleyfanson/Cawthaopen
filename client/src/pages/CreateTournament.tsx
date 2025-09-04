@@ -275,11 +275,14 @@ export default function CreateTournament() {
         const validRoundConfigs = roundTeeConfigs.filter(config => config && config.roundNumber <= numberOfRounds);
         const validRoundCourses = roundCourses.filter(course => course);
         
+        // Ensure we have at least one course for the tournament
         if (validRoundCourses.length === 0) {
-          // Fallback to main course for all rounds
-          for (let i = 0; i < numberOfRounds; i++) {
-            validRoundCourses[i] = selectedCourse;
-          }
+          toast({
+            title: "Missing Course Selection",
+            description: "Please select a course for at least the first round.",
+            variant: "destructive",
+          });
+          return;
         }
         
         if (validRoundConfigs.length === 0) {
@@ -297,7 +300,7 @@ export default function CreateTournament() {
         tournamentData = {
           name: data.name,
           description: data.description,
-          courseId: data.courseId, // Main course (can be updated later per round)
+          courseId: validRoundCourses[0].id, // Use first round's course as main course
           startDate: data.startDate.toISOString(),
           endDate: data.endDate.toISOString(),
           status: data.status,
