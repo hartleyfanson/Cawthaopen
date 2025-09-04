@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { useState, useMemo } from "react";
+import { useState, useMemo, Fragment } from "react";
 
 interface LeaderboardTableProps {
   leaderboard: any[];
@@ -10,6 +10,7 @@ interface LeaderboardTableProps {
   tournamentId?: string;
   tournament?: any;
   selectedRound?: 'all' | number;
+  tournamentRounds?: any[];
 }
 
 // Helper function to format player name as "first initial. last name"
@@ -25,7 +26,7 @@ function formatPlayerName(playerName: string): string {
   return `${firstName.charAt(0).toUpperCase()}. ${lastName}`;
 }
 
-export function LeaderboardTable({ leaderboard, courseId, tournamentId, tournament, selectedRound = 'all' }: LeaderboardTableProps) {
+export function LeaderboardTable({ leaderboard, courseId, tournamentId, tournament, selectedRound = 'all', tournamentRounds = [] }: LeaderboardTableProps) {
   const [showingFrontNine, setShowingFrontNine] = useState(true);
 
   // Fetch course holes
@@ -46,6 +47,41 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
     enabled: !!tournamentId,
     refetchInterval: 5000, // Auto-refresh every 5 seconds for real-time updates
   });
+
+  // Fetch round-specific leaderboards for multi-round summary
+  const roundLeaderboards = useMemo(() => {
+    if (selectedRound !== 'all' || !Array.isArray(tournamentRounds) || tournamentRounds.length <= 1) {
+      return {};
+    }
+    return Object.fromEntries(
+      tournamentRounds.map(round => [round.roundNumber, null])
+    );
+  }, [selectedRound, tournamentRounds]);
+
+  // Fetch each round's leaderboard for multi-round tournaments
+  const roundQueries = tournamentRounds.map((round: any) => {
+    return useQuery({
+      queryKey: ["/api/tournaments", tournamentId, "leaderboard", "round", round.roundNumber],
+      enabled: selectedRound === 'all' && !!tournamentId && tournamentRounds.length > 1,
+      refetchInterval: 5000,
+    });
+  });
+
+  // Combine round data for multi-round summary
+  const combinedRoundData = useMemo(() => {
+    if (selectedRound !== 'all') return {};
+    
+    const combined: Record<number, any[]> = {};
+    roundQueries.forEach((query, index) => {
+      if (query.data && Array.isArray(query.data)) {
+        const roundNumber = tournamentRounds[index]?.roundNumber;
+        if (roundNumber) {
+          combined[roundNumber] = query.data;
+        }
+      }
+    });
+    return combined;
+  }, [roundQueries, selectedRound, tournamentRounds]);
 
   // Calculate which holes to display based on current view
   const allHoles = Array.isArray(holes) ? holes : [];
@@ -270,6 +306,161 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
     
     return scoreA - scoreB;
   });
+
+  // Multi-round summary component for "All Rounds" view
+  const renderMultiRoundSummary = () => {
+    if (!Array.isArray(tournamentRounds) || tournamentRounds.length <= 1) {
+      return null;
+    }
+
+    // Sort players by total net score across all rounds
+    const sortedPlayers = [...leaderboard].sort((a, b) => {
+      const playerDataA = processedPlayerData[a.playerId];
+      const playerDataB = processedPlayerData[b.playerId];
+      
+      // Calculate total net scores across all rounds
+      const totalNetA = calculateTotalNetScore(a.playerId);
+      const totalNetB = calculateTotalNetScore(b.playerId);
+      
+      return (totalNetA || 999) - (totalNetB || 999);
+    });
+
+    return (
+      <Card className="bg-background overflow-hidden card-shadow">
+        <div className="bg-muted/50 p-4 border-b border-border">
+          <h3 className="text-lg font-semibold text-center">Tournament Summary - All Rounds</h3>
+        </div>
+        
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="text-left p-4 font-semibold">Pos</th>
+                <th className="text-left p-4 font-semibold">Player</th>
+                {tournamentRounds.map((round: any) => [
+                  <th key={`${round.id}-gross`} className="text-center p-4 font-semibold text-sm">R{round.roundNumber} Gross</th>,
+                  <th key={`${round.id}-net`} className="text-center p-4 font-semibold text-sm">R{round.roundNumber} Net</th>
+                ])}
+                <th className="text-center p-4 font-semibold bg-primary/10">Total Gross</th>
+                <th className="text-center p-4 font-semibold bg-primary/10">Total Net</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedPlayers.map((player: any, index: number) => {
+                const totalNetScore = calculateTotalNetScore(player.playerId);
+                const totalGrossScore = calculateTotalGrossScore(player.playerId);
+                const isLeader = index === 0 && totalNetScore;
+                
+                return (
+                  <tr key={player.playerId} className={`border-b border-border ${isLeader ? 'bg-primary/5' : ''}`}>
+                    <td className="p-4">
+                      <div className={`font-bold ${isLeader ? 'text-primary' : ''}`}>
+                        {index + 1}
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center space-x-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src="" alt={player.playerName} />
+                          <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
+                            {player.playerName?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className={`font-semibold ${isLeader ? 'text-primary' : ''}`}>
+                          {formatPlayerName(player.playerName)}
+                        </span>
+                      </div>
+                    </td>
+                    {tournamentRounds.map((round: any) => {
+                      const roundGross = getRoundGrossScore(player.playerId, round.roundNumber);
+                      const roundNet = getRoundNetScore(player.playerId, round.roundNumber);
+                      return [
+                        <td key={`${player.playerId}-${round.id}-gross`} className="p-4 text-center font-medium">
+                          {roundGross || '-'}
+                        </td>,
+                        <td key={`${player.playerId}-${round.id}-net`} className="p-4 text-center font-medium">
+                          {roundNet || '-'}
+                        </td>
+                      ];
+                    })}
+                    <td className={`p-4 text-center font-bold bg-primary/5 ${isLeader ? 'text-primary' : ''}`}>
+                      {totalGrossScore || '-'}
+                    </td>
+                    <td className={`p-4 text-center font-bold bg-primary/5 ${isLeader ? 'text-primary' : ''}`}>
+                      {totalNetScore || '-'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    );
+  };
+
+  // Helper functions for multi-round scoring
+  const getRoundGrossScore = (playerId: string, roundNumber: number) => {
+    const roundData = combinedRoundData[roundNumber];
+    if (!roundData) return null;
+    
+    const playerRoundData = roundData.find((p: any) => p.playerId === playerId);
+    if (!playerRoundData) return null;
+    
+    // Calculate total score from round data
+    const playerScoreData = processedPlayerData[playerId];
+    return playerScoreData?.totalScore > 0 ? playerScoreData.totalScore : null;
+  };
+
+  const getRoundNetScore = (playerId: string, roundNumber: number) => {
+    const roundData = combinedRoundData[roundNumber];
+    if (!roundData) return null;
+    
+    const playerRoundData = roundData.find((p: any) => p.playerId === playerId);
+    if (!playerRoundData) return null;
+    
+    const roundGross = getRoundGrossScore(playerId, roundNumber);
+    if (!roundGross) return null;
+    
+    return calculateNetScore(roundGross, playerId);
+  };
+
+  const calculateTotalGrossScore = (playerId: string) => {
+    // Sum up gross scores across all rounds
+    let total = 0;
+    let hasScores = false;
+    
+    for (const round of tournamentRounds) {
+      const roundScore = getRoundGrossScore(playerId, round.roundNumber);
+      if (roundScore && roundScore > 0) {
+        total += roundScore;
+        hasScores = true;
+      }
+    }
+    
+    return hasScores ? total : null;
+  };
+
+  const calculateTotalNetScore = (playerId: string) => {
+    // Sum up net scores across all rounds
+    let total = 0;
+    let hasScores = false;
+    
+    for (const round of tournamentRounds) {
+      const roundNet = getRoundNetScore(playerId, round.roundNumber);
+      if (roundNet !== null && roundNet > 0) {
+        total += roundNet;
+        hasScores = true;
+      }
+    }
+    
+    return hasScores ? total : null;
+  };
+
+  // Return different views based on selectedRound
+  if (selectedRound === 'all' && Array.isArray(tournamentRounds) && tournamentRounds.length > 1) {
+    return renderMultiRoundSummary();
+  }
 
   return (
     <Card className="bg-background overflow-hidden card-shadow">

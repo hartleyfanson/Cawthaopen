@@ -398,6 +398,8 @@ export default function TournamentLeaderboard() {
               courseId={(tournament as any)?.courseId || ''}
               tournamentId={id}
               tournament={tournament}
+              selectedRound={selectedRound}
+              tournamentRounds={tournamentRounds as any[]}
             />
           ) : Array.isArray(tournamentPlayers) && tournamentPlayers.length ? (
             // Show registered players even with no scores
