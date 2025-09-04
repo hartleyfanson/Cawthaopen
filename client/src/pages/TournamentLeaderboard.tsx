@@ -8,10 +8,61 @@ import { FutureTournamentView } from "@/components/FutureTournamentView";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
+
+// Component to show all courses and date range for multi-round tournaments
+function AllRoundsInfo({ tournament, tournamentRounds }: { tournament: any; tournamentRounds: any[] }) {
+  const { data: allCourses } = useQuery({
+    queryKey: ["/api/courses", tournamentRounds.map(r => r.courseId || (tournament as any)?.courseId)],
+    queryFn: async () => {
+      const courseIds = tournamentRounds.map(r => r.courseId || (tournament as any)?.courseId);
+      const uniqueCourseIds = [...new Set(courseIds)];
+      return Promise.all(
+        uniqueCourseIds.map(async (courseId) => {
+          if (!courseId) return null;
+          const response = await fetch(`/api/courses/${courseId}`);
+          return response.ok ? response.json() : null;
+        })
+      );
+    },
+    enabled: tournamentRounds && tournamentRounds.length > 0,
+  });
+
+  // Calculate date range
+  const dates = tournamentRounds.map(r => r.roundDate).filter(Boolean);
+  const startDate = dates.length > 0 ? new Date(Math.min(...dates.map(d => new Date(d).getTime()))) : null;
+  const endDate = dates.length > 0 ? new Date(Math.max(...dates.map(d => new Date(d).getTime()))) : null;
+  
+  const dateRangeText = startDate && endDate 
+    ? startDate.toDateString() === endDate.toDateString()
+      ? startDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+      : `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+    : 'Dates TBD';
+
+  return (
+    <div className="text-xl text-secondary space-y-2">
+      {/* All Courses Display */}
+      <div className="flex flex-wrap items-center gap-2">
+        {allCourses && allCourses.filter(Boolean).map((course: any, index: number) => (
+          <span key={course.id} className="flex items-center">
+            {course.name} • {course.location}
+            {index < allCourses.filter(Boolean).length - 1 && (
+              <span className="mx-2 text-accent font-bold">|</span>
+            )}
+          </span>
+        ))}
+      </div>
+      
+      {/* Date Range */}
+      <p className="text-lg">
+        All Rounds • {dateRangeText}
+      </p>
+    </div>
+  );
+}
 
 export default function TournamentLeaderboard() {
   const { id } = useParams();
@@ -38,15 +89,32 @@ export default function TournamentLeaderboard() {
     enabled: !!user && !!id,
   });
 
-  const { data: course, isLoading: loadingCourse } = useQuery({
-    queryKey: ["/api/courses", (tournament as any)?.courseId],
-    enabled: !!(tournament as any)?.courseId,
-  });
-
   // Fetch tournament rounds for round selection
   const { data: tournamentRounds } = useQuery({
     queryKey: ["/api/tournaments", id, "rounds"],
     enabled: !!user && !!id,
+  });
+
+  // Dynamic course loading based on selected round and tournament data
+  const currentCourseId = useMemo(() => {
+    if (!tournament) return null;
+    
+    // For multi-round tournaments, try to get course from round data
+    if (selectedRound !== 'all' && tournamentRounds && Array.isArray(tournamentRounds)) {
+      // If we have round-specific course data, use it
+      const roundData = tournamentRounds.find((r: any) => r.roundNumber === selectedRound);
+      if (roundData?.courseId) {
+        return roundData.courseId;
+      }
+    }
+    
+    // Fallback to tournament's main course
+    return (tournament as any)?.courseId;
+  }, [tournament, selectedRound, tournamentRounds]);
+
+  const { data: course, isLoading: loadingCourse } = useQuery({
+    queryKey: ["/api/courses", currentCourseId],
+    enabled: !!currentCourseId,
   });
 
   const { data: leaderboard, isLoading: loadingLeaderboard } = useQuery({
@@ -140,8 +208,13 @@ export default function TournamentLeaderboard() {
             <h2 className="text-3xl sm:text-4xl font-serif font-bold text-accent mb-2">
               {(tournament as any)?.name || 'Tournament Leaderboard'}
             </h2>
-            {/* Dynamic course and date display based on selected round */}
-            {selectedRound !== 'all' && tournamentRounds && Array.isArray(tournamentRounds) ? (
+            {/* Tournament Info with All Courses and Date Range */}
+            {selectedRound === 'all' && tournamentRounds && Array.isArray(tournamentRounds) && tournamentRounds.length > 1 ? (
+              <AllRoundsInfo 
+                tournament={tournament} 
+                tournamentRounds={tournamentRounds} 
+              />
+            ) : selectedRound !== 'all' && tournamentRounds && Array.isArray(tournamentRounds) ? (
               <div className="text-xl text-secondary space-y-1">
                 <p>{(course as any)?.name || 'Course'} • {(course as any)?.location || 'Location'}</p>
                 <p className="text-lg">
@@ -159,9 +232,17 @@ export default function TournamentLeaderboard() {
             ) : (
               <div className="text-xl text-secondary space-y-1">
                 <p>{(course as any)?.name || 'Course'} • {(course as any)?.location || 'Location'}</p>
-                {selectedRound === 'all' && (
-                  <p className="text-lg">All Rounds Combined</p>
-                )}
+                <p className="text-lg">
+                  {selectedRound === 'all' ? 'All Rounds Combined' : (tournament as any)?.startDate 
+                    ? new Date((tournament as any).startDate).toLocaleDateString('en-US', { 
+                        weekday: 'long',
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })
+                    : 'Date TBD'
+                  }
+                </p>
               </div>
             )}
             
