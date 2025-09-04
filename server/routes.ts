@@ -612,10 +612,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = (req.user as any)?.claims?.sub;
       const { teeSelections, roundDates, ...restBody } = req.body;
       
-      const tournamentData = insertTournamentSchema.parse({
+      // Convert date strings to Date objects before validation
+      const processedBody = {
         ...restBody,
+        startDate: restBody.startDate ? new Date(restBody.startDate) : undefined,
+        endDate: restBody.endDate ? new Date(restBody.endDate) : undefined,
         createdBy: userId,
-      });
+      };
+      
+      const tournamentData = insertTournamentSchema.parse(processedBody);
       
       const tournament = await storage.createTournament(tournamentData);
       
