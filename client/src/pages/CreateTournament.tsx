@@ -134,15 +134,13 @@ export default function CreateTournament() {
   // Watch scoringFormat to conditionally show handicap allowance
   const scoringFormat = form.watch("scoringFormat");
   
-  useEffect(() => {
-    if (numberOfRounds) {
-      const newDates = Array.from({ length: numberOfRounds }, (_, i) => {
-        // If we have a date for this index, keep it, otherwise create a new one
-        return roundDates[i] || new Date(Date.now() + (i * 24 * 60 * 60 * 1000)); // Each round a day apart by default
-      });
-      setRoundDates(newDates);
-    }
-  }, [numberOfRounds, roundDates]);
+    // FIX: only depend on numberOfRounds; keep any previously chosen dates
+    useEffect(() => {
+      if (!numberOfRounds) return;
+      setRoundDates(prev =>
+        Array.from({ length: numberOfRounds }, (_, i) => prev[i] ?? new Date(Date.now() + i * 86400000))
+      );
+    }, [numberOfRounds]);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -165,10 +163,11 @@ export default function CreateTournament() {
 
   const createCourseMutation = useMutation({
     mutationFn: async (courseData: any) => {
-      console.log("Creating course with data:", courseData);
-      return await apiRequest("POST", "/api/courses", courseData);
+      const res = await apiRequest("POST", "/api/courses", courseData);
+      if (!res.ok) throw new Error(await res.text());
+      return res.json(); // => { id, ... }
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Course creation error:", error);
       if (isUnauthorizedError(error)) {
         toast({
@@ -176,9 +175,7 @@ export default function CreateTournament() {
           description: "You are logged out. Logging in again...",
           variant: "destructive",
         });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
+        setTimeout(() => { window.location.href = "/api/login"; }, 500);
         return;
       }
       toast({
@@ -189,12 +186,14 @@ export default function CreateTournament() {
     },
   });
 
+
   const createTournamentMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("POST", "/api/tournaments", data);
+      const res = await apiRequest("POST", "/api/tournaments", data);
+      if (!res.ok) throw new Error(await res.text());
+      return res.json() as Promise<Tournament>;
     },
-    onSuccess: (response) => {
-      const tournament = response as Tournament;
+    onSuccess: (tournament: Tournament) => {
       queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tournaments/status/upcoming"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tournaments/status/active"] });
@@ -203,20 +202,16 @@ export default function CreateTournament() {
         title: "Tournament Created",
         description: "Your tournament has been created successfully. Redirecting to tournament page...",
       });
-      // Redirect to the newly created tournament page
-      console.log("Redirecting to tournament:", tournament.id);
       setLocation(`/tournaments/${tournament.id}`);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       if (isUnauthorizedError(error)) {
         toast({
           title: "Unauthorized",
           description: "You are logged out. Logging in again...",
           variant: "destructive",
         });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
+        setTimeout(() => { window.location.href = "/api/login"; }, 500);
         return;
       }
       toast({
@@ -247,7 +242,10 @@ export default function CreateTournament() {
     
     try {
       let courseId = data.courseId;
-      
+      if (courseId && courseId !== "add-manually" && courseId !== "search-courses") {
+        courseId = Number(courseId);
+      }
+
       // If creating a manual course, create it first
       if (isCreatingManualCourse && data.courseId === "add-manually") {
         if (!manualCourseData.name || !manualCourseData.location) {
@@ -290,8 +288,8 @@ export default function CreateTournament() {
         name: data.name,
         description: data.description,
         courseId,
-        startDate: data.startDate,
-        endDate: data.endDate,
+        startDate: data.startDate.toISOString(),
+        endDate: data.endDate.toISOString(),
         status: data.status,
         maxPlayers: data.maxPlayers,
         numberOfRounds: data.numberOfRounds,
@@ -299,8 +297,9 @@ export default function CreateTournament() {
         handicapAllowance: data.handicapAllowance,
         headerImageUrl: uploadedImageUrl || data.headerImageUrl || "",
         teeSelections,
-        roundDates: numberOfRounds > 1 ? roundDates : [data.startDate],
+        roundDates: (numberOfRounds > 1 ? roundDates : [data.startDate]).map(d => d.toISOString()),
       };
+
 
       console.log("Submitting tournament data:", tournamentData);
       
@@ -430,7 +429,7 @@ export default function CreateTournament() {
                               <SelectItem value="loading" disabled>Loading courses...</SelectItem>
                             ) : Array.isArray(courses) && courses.length ? (
                               courses.map((course: any) => (
-                                <SelectItem key={course.id} value={course.id}>
+                                <SelectItem key={course.id} value={String(course.id)}>
                                   {course.name} - {course.location}
                                 </SelectItem>
                               ))
@@ -644,10 +643,11 @@ export default function CreateTournament() {
                               onError={(error) => {
                                 toast({
                                   title: "Upload Error",
-                                  description: error,
+                                  description: String(error),
                                   variant: "destructive",
                                 });
                               }}
+
                               buttonClassName="w-full bg-secondary text-secondary-foreground hover:bg-accent"
                               directFileInput={true}
                             >
