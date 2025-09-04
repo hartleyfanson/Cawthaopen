@@ -19,10 +19,10 @@ export function TournamentCard({ tournament, status }: TournamentCardProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch tournament players to check if current user has joined
+  // Fetch tournament players to check if current user has joined and get accurate player count
   const { data: tournamentPlayers } = useQuery({
     queryKey: ["/api/tournaments", tournament.id, "players"],
-    enabled: !!user && !!tournament.id && status === "upcoming",
+    enabled: !!user && !!tournament.id,
   });
 
   // Check if current user is already joined
@@ -81,6 +81,25 @@ export function TournamentCard({ tournament, status }: TournamentCardProps) {
         return null;
     }
   };
+
+  // Format scoring method for display
+  const formatScoringMethod = (scoringFormat: string) => {
+    switch (scoringFormat) {
+      case 'stroke_play':
+        return 'Stroke Play';
+      case 'stableford':
+        return 'Stableford Points';
+      case 'handicap':
+        return 'Handicap Net Scoring';
+      case 'callaway':
+        return 'Callaway System';
+      default:
+        return 'Stroke Play';
+    }
+  };
+
+  // Get accurate player count from registered players
+  const actualPlayerCount = Array.isArray(tournamentPlayers) ? tournamentPlayers.length : 0;
 
   const getActionButton = () => {
     // Date-based logic instead of status-based
@@ -209,10 +228,15 @@ export function TournamentCard({ tournament, status }: TournamentCardProps) {
           </p>
         )}
         
-        <div className="mb-4">
-          <span className="text-sm text-muted-foreground">
-            {tournament.playerCount || 0} Players
-          </span>
+        <div className="mb-4 space-y-1">
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">
+              {actualPlayerCount} Player{actualPlayerCount !== 1 ? 's' : ''}
+            </span>
+            <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+              {formatScoringMethod(tournament.scoringFormat)}
+            </span>
+          </div>
         </div>
         
         {/* Action button and start date aligned at bottom */}
