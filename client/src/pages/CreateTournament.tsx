@@ -601,6 +601,7 @@ export default function CreateTournament() {
                               onGetUploadParameters={handlePhotoUpload}
                               onComplete={handlePhotoComplete}
                               buttonClassName="w-full bg-secondary text-secondary-foreground hover:bg-accent"
+                              directFileInput={true}
                             >
                               <Upload className="h-4 w-4 mr-2" />
                               {uploadedImageUrl ? 'Change Tournament Photo' : 'Upload Tournament Photo'}

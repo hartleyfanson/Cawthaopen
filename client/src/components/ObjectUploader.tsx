@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import type { ReactNode } from "react";
 import Uppy from "@uppy/core";
 import { DashboardModal } from "@uppy/react";
@@ -19,6 +19,7 @@ interface ObjectUploaderProps {
   ) => void;
   buttonClassName?: string;
   children: ReactNode;
+  directFileInput?: boolean; // When true, opens file browser directly instead of modal
 }
 
 /**
@@ -56,15 +57,17 @@ export function ObjectUploader({
   onComplete,
   buttonClassName,
   children,
+  directFileInput = false,
 }: ObjectUploaderProps) {
   const [showModal, setShowModal] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [uppy] = useState(() =>
     new Uppy({
       restrictions: {
         maxNumberOfFiles,
         maxFileSize,
       },
-      autoProceed: false,
+      autoProceed: directFileInput, // Auto-proceed when using direct file input
     })
       .use(AwsS3, {
         shouldUseMultipart: false,
@@ -75,18 +78,62 @@ export function ObjectUploader({
       })
   );
 
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      // Clear existing files and add new ones
+      uppy.getFiles().forEach(file => uppy.removeFile(file.id));
+      
+      Array.from(files).forEach(file => {
+        try {
+          uppy.addFile({
+            name: file.name,
+            type: file.type,
+            data: file,
+          });
+        } catch (err) {
+          console.error('Error adding file:', err);
+        }
+      });
+      
+      // Reset input value to allow same file selection again
+      event.target.value = '';
+    }
+  };
+
+  const handleButtonClick = () => {
+    if (directFileInput) {
+      fileInputRef.current?.click();
+    } else {
+      setShowModal(true);
+    }
+  };
+
   return (
     <div>
-      <Button onClick={() => setShowModal(true)} className={buttonClassName}>
+      <Button onClick={handleButtonClick} className={buttonClassName}>
         {children}
       </Button>
 
-      <DashboardModal
-        uppy={uppy}
-        open={showModal}
-        onRequestClose={() => setShowModal(false)}
-        proudlyDisplayPoweredByUppy={false}
-      />
+      {directFileInput && (
+        <input
+          ref={fileInputRef}
+          type="file"
+          style={{ display: 'none' }}
+          accept="image/*"
+          multiple={maxNumberOfFiles > 1}
+          onChange={handleFileSelect}
+        />
+      )}
+
+      {!directFileInput && (
+        <DashboardModal
+          uppy={uppy}
+          open={showModal}
+          onRequestClose={() => setShowModal(false)}
+          proudlyDisplayPoweredByUppy={false}
+        />
+      )}
     </div>
   );
 }
