@@ -69,6 +69,8 @@ export default function CreateTournament() {
 
   // Watch numberOfRounds to update round dates
   const numberOfRounds = form.watch("numberOfRounds");
+  // Watch scoringFormat to conditionally show handicap allowance
+  const scoringFormat = form.watch("scoringFormat");
   
   useEffect(() => {
     if (numberOfRounds) {
@@ -696,34 +698,37 @@ export default function CreateTournament() {
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="handicapAllowance"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-foreground">Handicap Allowance</FormLabel>
-                        <FormControl>
-                          <Select 
-                            value={field.value} 
-                            onValueChange={field.onChange}
-                            data-testid="select-handicap-allowance"
-                          >
-                            <SelectTrigger className="bg-background border-border">
-                              <SelectValue placeholder="Select handicap allowance" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="1.00">100% (Full Handicap)</SelectItem>
-                              <SelectItem value="0.90">90% Handicap</SelectItem>
-                              <SelectItem value="0.80">80% Handicap</SelectItem>
-                              <SelectItem value="0.75">75% Handicap</SelectItem>
-                              <SelectItem value="0.70">70% Handicap</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {/* Only show handicap allowance when handicap scoring is selected */}
+                  {scoringFormat === "handicap" && (
+                    <FormField
+                      control={form.control}
+                      name="handicapAllowance"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-foreground">Handicap Allowance</FormLabel>
+                          <FormControl>
+                            <Select 
+                              value={field.value} 
+                              onValueChange={field.onChange}
+                              data-testid="select-handicap-allowance"
+                            >
+                              <SelectTrigger className="bg-background border-border">
+                                <SelectValue placeholder="Select handicap allowance" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="1.00">100% (Full Handicap)</SelectItem>
+                                <SelectItem value="0.90">90% Handicap</SelectItem>
+                                <SelectItem value="0.80">80% Handicap</SelectItem>
+                                <SelectItem value="0.75">75% Handicap</SelectItem>
+                                <SelectItem value="0.70">70% Handicap</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
 
                   <div className="flex gap-4 pt-4">
                     <Button
