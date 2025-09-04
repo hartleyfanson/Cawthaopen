@@ -154,7 +154,7 @@ export function TournamentCard({ tournament, status }: TournamentCardProps) {
         </div>
       )}
       
-      <CardContent className="p-4">
+      <CardContent className="p-4 relative pb-16">
         {!tournament.headerImageUrl && (
           <div className="flex justify-between items-start mb-3">
             <h4 className="text-lg font-semibold text-primary-foreground">
@@ -182,18 +182,22 @@ export function TournamentCard({ tournament, status }: TournamentCardProps) {
           </p>
         )}
         
-        <div className="flex justify-between items-center">
+        <div className="mb-6">
           <span className="text-sm text-muted-foreground">
             {tournament.playerCount || 0} Players
           </span>
-          {getActionButton()}
         </div>
         
         {tournament.startDate && (
-          <div className="mt-2 text-xs text-muted-foreground">
+          <div className="mb-2 text-xs text-muted-foreground">
             Starts: {new Date(tournament.startDate).toLocaleDateString()}
           </div>
         )}
+        
+        {/* Action button positioned in bottom right */}
+        <div className="absolute bottom-4 right-4">
+          {getActionButton()}
+        </div>
       </CardContent>
     </Card>
   );
