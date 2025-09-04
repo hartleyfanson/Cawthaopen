@@ -6,11 +6,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { insertTournamentSchema, type Tournament } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -24,9 +36,25 @@ import type { UploadResult } from "@uppy/core";
 import { Upload, Image } from "lucide-react";
 
 const createTournamentSchema = insertTournamentSchema.extend({
-  maxPlayers: z.number().min(1).max(100),
-  numberOfRounds: z.number().min(1).max(4),
-  headerImageUrl: z.string().optional(),
+  // numeric inputs arrive as strings; coerce them
+  maxPlayers: z.coerce.number().int().min(1).max(100),
+  numberOfRounds: z.coerce.number().int().min(1).max(4),
+
+  // datetime-local gives strings; normalize to Date
+  startDate: z.preprocess(
+    (v) => (v instanceof Date ? v : new Date(String(v))),
+    z.date(),
+  ),
+  endDate: z.preprocess(
+    (v) => (v instanceof Date ? v : new Date(String(v))),
+    z.date(),
+  ),
+
+  // courseId MUST be a number now (selected from search or list)
+  courseId: z.coerce.number().int().positive(),
+
+  handicapAllowance: z.coerce.string(),
+  headerImageUrl: z.string().optional(), // optional = image not required
 });
 
 export default function CreateTournament() {
@@ -34,42 +62,32 @@ export default function CreateTournament() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
-  const [isCreatingManualCourse, setIsCreatingManualCourse] = useState(false);
   const [showCourseSearch, setShowCourseSearch] = useState(false);
-  const [importedCourse, setImportedCourse] = useState<any>(null);
-  const [teeSelectionMode, setTeeSelectionMode] = useState<"same" | "mixed">("same");
+  const [teeSelectionMode, setTeeSelectionMode] = useState<"same" | "mixed">(
+    "same",
+  );
   const [singleTeeColor, setSingleTeeColor] = useState("white");
   const [holeTeeMappings, setHoleTeeMappings] = useState(
-    Array.from({ length: 18 }, (_, i) => ({ holeNumber: i + 1, teeColor: "white" }))
-  );
-  const [manualCourseData, setManualCourseData] = useState({
-    name: "",
-    location: "",
-    description: "",
-    holes: Array.from({ length: 18 }, (_, i) => ({
+    Array.from({ length: 18 }, (_, i) => ({
       holeNumber: i + 1,
-      par: 4,
-      yardageWhite: 350,
-      yardageBlue: 370,
-      yardageRed: 300,
-      yardageGold: 390,
-      handicap: i + 1
-    }))
-  });
+      teeColor: "white",
+    })),
+  );
+
   const [roundDates, setRoundDates] = useState<Date[]>([new Date()]);
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string>("");
 
   // Photo upload handlers
   const handlePhotoUpload = async () => {
     try {
-      const response = await apiRequest('POST', '/api/objects/upload');
+      const response = await apiRequest("POST", "/api/objects/upload");
       const data = await response.json();
       return {
-        method: 'PUT' as const,
-        url: data.uploadURL
+        method: "PUT" as const,
+        url: data.uploadURL,
       };
     } catch (error) {
-      console.error('Error getting upload URL:', error);
+      console.error("Error getting upload URL:", error);
       toast({
         title: "Error",
         description: "Failed to prepare photo upload",
@@ -79,23 +97,29 @@ export default function CreateTournament() {
     }
   };
 
-  const handlePhotoComplete = async (result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
+  const handlePhotoComplete = async (
+    result: UploadResult<Record<string, unknown>, Record<string, unknown>>,
+  ) => {
     try {
       if (result.successful && result.successful.length > 0) {
         const uploadURL = result.successful[0].uploadURL;
-        
+
         if (uploadURL) {
           // Set ACL policy for the uploaded image
-          const aclResponse = await apiRequest('PUT', '/api/tournament-photos', {
-            imageUrl: uploadURL
-          });
+          const aclResponse = await apiRequest(
+            "PUT",
+            "/api/tournament-photos",
+            {
+              imageUrl: uploadURL,
+            },
+          );
           const aclData = await aclResponse.json();
-          
+
           // Use the object path from ACL response
           const objectPath = aclData.objectPath;
           setUploadedImageUrl(objectPath);
-          form.setValue('headerImageUrl', objectPath);
-          
+          form.setValue("headerImageUrl", objectPath);
+
           toast({
             title: "Photo Uploaded",
             description: "Tournament photo has been uploaded successfully",
@@ -103,7 +127,7 @@ export default function CreateTournament() {
         }
       }
     } catch (error) {
-      console.error('Error processing photo upload:', error);
+      console.error("Error processing photo upload:", error);
       toast({
         title: "Error",
         description: "Failed to process photo upload",
@@ -117,9 +141,9 @@ export default function CreateTournament() {
     defaultValues: {
       name: "",
       description: "",
-      courseId: "",
-      startDate: new Date(),
-      endDate: new Date(),
+      courseId: undefined as unknown as number,
+      startDate: new Date(Date.now() + 60 * 60 * 1000), // +1 hour
+      endDate: new Date(Date.now() + 3 * 60 * 60 * 1000), // +3 hours
       status: "upcoming",
       maxPlayers: 32,
       scoringFormat: "stroke_play",
@@ -133,14 +157,17 @@ export default function CreateTournament() {
   const numberOfRounds = form.watch("numberOfRounds");
   // Watch scoringFormat to conditionally show handicap allowance
   const scoringFormat = form.watch("scoringFormat");
-  
-    // FIX: only depend on numberOfRounds; keep any previously chosen dates
-    useEffect(() => {
-      if (!numberOfRounds) return;
-      setRoundDates(prev =>
-        Array.from({ length: numberOfRounds }, (_, i) => prev[i] ?? new Date(Date.now() + i * 86400000))
-      );
-    }, [numberOfRounds]);
+
+  // FIX: only depend on numberOfRounds; keep any previously chosen dates
+  useEffect(() => {
+    if (!numberOfRounds) return;
+    setRoundDates((prev) =>
+      Array.from(
+        { length: numberOfRounds },
+        (_, i) => prev[i] ?? new Date(Date.now() + i * 86400000),
+      ),
+    );
+  }, [numberOfRounds]);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -161,32 +188,6 @@ export default function CreateTournament() {
     enabled: !!user,
   });
 
-  const createCourseMutation = useMutation({
-    mutationFn: async (courseData: any) => {
-      const res = await apiRequest("POST", "/api/courses", courseData);
-      if (!res.ok) throw new Error(await res.text());
-      return res.json(); // => { id, ... }
-    },
-    onError: (error: any) => {
-      console.error("Course creation error:", error);
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => { window.location.href = "/api/login"; }, 500);
-        return;
-      }
-      toast({
-        title: "Error",
-        description: `Failed to create course: ${error.message}`,
-        variant: "destructive",
-      });
-    },
-  });
-
-
   const createTournamentMutation = useMutation({
     mutationFn: async (data: any) => {
       const res = await apiRequest("POST", "/api/tournaments", data);
@@ -195,12 +196,17 @@ export default function CreateTournament() {
     },
     onSuccess: (tournament: Tournament) => {
       queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tournaments/status/upcoming"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tournaments/status/active"] });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/tournaments/status/upcoming"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/tournaments/status/active"],
+      });
       queryClient.invalidateQueries({ queryKey: ["/api/courses"] });
       toast({
         title: "Tournament Created",
-        description: "Your tournament has been created successfully. Redirecting to tournament page...",
+        description:
+          "Your tournament has been created successfully. Redirecting to tournament page...",
       });
       setLocation(`/tournaments/${tournament.id}`);
     },
@@ -211,7 +217,9 @@ export default function CreateTournament() {
           description: "You are logged out. Logging in again...",
           variant: "destructive",
         });
-        setTimeout(() => { window.location.href = "/api/login"; }, 500);
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
         return;
       }
       toast({
@@ -226,62 +234,39 @@ export default function CreateTournament() {
     // Validate dates are in the future
     const now = new Date();
     if (data.startDate <= now) {
-      form.setError("startDate", { message: "Start date must be in the future" });
+      form.setError("startDate", {
+        message: "Start date must be in the future",
+      });
       return;
     }
     if (data.endDate <= data.startDate) {
-      form.setError("endDate", { message: "End date must be after start date" });
+      form.setError("endDate", {
+        message: "End date must be after start date",
+      });
       return;
     }
-    
-    // Validate course selection
-    if (!isCreatingManualCourse && (!data.courseId || data.courseId === "add-manually")) {
-      form.setError("courseId", { message: "Please select a course or create a manual course" });
-      return;
-    }
-    
-    try {
-      let courseId = data.courseId;
-      if (courseId && courseId !== "add-manually" && courseId !== "search-courses") {
-        courseId = Number(courseId);
-      }
 
-      // If creating a manual course, create it first
-      if (isCreatingManualCourse && data.courseId === "add-manually") {
-        if (!manualCourseData.name || !manualCourseData.location) {
-          toast({
-            title: "Error",
-            description: "Please fill in course name and location",
-            variant: "destructive",
-          });
-          return;
-        }
-        
-        const courseResult = await createCourseMutation.mutateAsync({
-          name: manualCourseData.name,
-          location: manualCourseData.location,
-          description: manualCourseData.description,
-          holes: manualCourseData.holes,
-        });
-        
-        courseId = (courseResult as any).id;
-        console.log("Course created with ID:", courseId);
-      }
-      
-      // Final validation - ensure we have a courseId
-      if (!courseId) {
-        toast({
-          title: "Error",
-          description: "Course selection is required",
-          variant: "destructive",
-        });
-        return;
-      }
-      
+    // Validate course selection (must be a positive number)
+    if (
+      !data.courseId ||
+      Number.isNaN(Number(data.courseId)) ||
+      Number(data.courseId) <= 0
+    ) {
+      form.setError("courseId", { message: "Please select a course" });
+      return;
+    }
+
+    try {
+      const courseId = Number(data.courseId);
+
       // Prepare tee mappings based on selection mode
-      const teeSelections = teeSelectionMode === "same" 
-        ? holeTeeMappings.map(hole => ({ holeNumber: hole.holeNumber, teeColor: singleTeeColor }))
-        : holeTeeMappings;
+      const teeSelections =
+        teeSelectionMode === "same"
+          ? holeTeeMappings.map((hole) => ({
+              holeNumber: hole.holeNumber,
+              teeColor: singleTeeColor,
+            }))
+          : holeTeeMappings;
 
       // Create the tournament data
       const tournamentData = {
@@ -297,12 +282,13 @@ export default function CreateTournament() {
         handicapAllowance: data.handicapAllowance,
         headerImageUrl: uploadedImageUrl || data.headerImageUrl || "",
         teeSelections,
-        roundDates: (numberOfRounds > 1 ? roundDates : [data.startDate]).map(d => d.toISOString()),
+        roundDates: (numberOfRounds > 1 ? roundDates : [data.startDate]).map(
+          (d) => d.toISOString(),
+        ),
       };
 
-
       console.log("Submitting tournament data:", tournamentData);
-      
+
       // Create the tournament
       createTournamentMutation.mutate(tournamentData);
     } catch (error) {
@@ -330,7 +316,7 @@ export default function CreateTournament() {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      
+
       {/* Header */}
       <section className="py-12 bg-primary">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -348,24 +334,38 @@ export default function CreateTournament() {
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
           <Card className="bg-muted card-shadow">
             <CardHeader>
-              <CardTitle className="text-2xl font-serif text-accent">Tournament Details</CardTitle>
+              <CardTitle className="text-2xl font-serif text-accent">
+                Tournament Details
+              </CardTitle>
             </CardHeader>
-            
+
             <CardContent>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <form
+                  onSubmit={form.handleSubmit(onSubmit, (errors) => {
+                    console.error("Form validation errors:", errors);
+                    toast({
+                      title: "Check form fields",
+                      description: "Some fields need your attention.",
+                      variant: "destructive",
+                    });
+                  })}
+                  className="space-y-6"
+                >
                   <FormField
                     control={form.control}
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-foreground">Tournament Name</FormLabel>
+                        <FormLabel className="text-foreground">
+                          Tournament Name
+                        </FormLabel>
                         <FormControl>
-                          <Input 
+                          <Input
                             placeholder="e.g., Spring Championship 2024"
                             className="bg-background border-border"
                             data-testid="input-tournament-name"
-                            {...field} 
+                            {...field}
                           />
                         </FormControl>
                         <FormMessage />
@@ -378,14 +378,16 @@ export default function CreateTournament() {
                     name="description"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-foreground">Description</FormLabel>
+                        <FormLabel className="text-foreground">
+                          Description
+                        </FormLabel>
                         <FormControl>
-                          <Textarea 
+                          <Textarea
                             placeholder="Describe your tournament..."
                             className="bg-background border-border"
                             rows={3}
                             data-testid="textarea-tournament-description"
-                            {...field} 
+                            {...field}
                           />
                         </FormControl>
                         <FormMessage />
@@ -398,24 +400,30 @@ export default function CreateTournament() {
                     name="courseId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-foreground">Golf Course</FormLabel>
-                        <Select onValueChange={(value) => {
-                          field.onChange(value);
-                          if (value === "add-manually") {
-                            setIsCreatingManualCourse(true);
-                            setShowCourseSearch(false);
-                            setImportedCourse(null);
-                          } else if (value === "search-courses") {
-                            setShowCourseSearch(true);
-                            setIsCreatingManualCourse(false);
-                          } else {
-                            setIsCreatingManualCourse(false);
-                            setShowCourseSearch(false);
-                            setImportedCourse(null);
+                        <FormLabel className="text-foreground">
+                          Golf Course
+                        </FormLabel>
+                        <Select
+                          value={
+                            form.watch("courseId") &&
+                            Number(form.watch("courseId")) > 0
+                              ? String(form.watch("courseId"))
+                              : undefined
                           }
-                        }} defaultValue={field.value}>
+                          onValueChange={(value) => {
+                            if (value === "search-courses") {
+                              setShowCourseSearch(true);
+                              return;
+                            }
+                            form.setValue("courseId", Number(value), {
+                              shouldValidate: true,
+                              shouldDirty: true,
+                            });
+                            setShowCourseSearch(false);
+                          }}
+                        >
                           <FormControl>
-                            <SelectTrigger 
+                            <SelectTrigger
                               className="bg-background border-border"
                               data-testid="select-course"
                             >
@@ -423,18 +431,26 @@ export default function CreateTournament() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="search-courses">🔍 Search Golf Courses</SelectItem>
-                            <SelectItem value="add-manually">+ Add Manually</SelectItem>
+                            <SelectItem value="search-courses">
+                              🔍 Search Golf Courses
+                            </SelectItem>
                             {loadingCourses ? (
-                              <SelectItem value="loading" disabled>Loading courses...</SelectItem>
+                              <SelectItem value="loading" disabled>
+                                Loading courses...
+                              </SelectItem>
                             ) : Array.isArray(courses) && courses.length ? (
                               courses.map((course: any) => (
-                                <SelectItem key={course.id} value={String(course.id)}>
+                                <SelectItem
+                                  key={course.id}
+                                  value={String(course.id)}
+                                >
                                   {course.name} - {course.location}
                                 </SelectItem>
                               ))
                             ) : (
-                              <SelectItem value="no-courses" disabled>No courses available</SelectItem>
+                              <SelectItem value="no-courses" disabled>
+                                No courses available
+                              </SelectItem>
                             )}
                           </SelectContent>
                         </Select>
@@ -446,171 +462,19 @@ export default function CreateTournament() {
                   {/* Course Search Section */}
                   {showCourseSearch && (
                     <div className="space-y-4">
-                      <CourseSearch 
-                        onCourseSelect={(course, holes) => {
-                          // Set the imported course data
-                          setImportedCourse({ course, holes });
-                          
-                          // Update the manual course data with imported information
-                          setManualCourseData({
-                            name: course.name,
-                            location: `${course.city}, ${course.state}`,
-                            description: `Imported from external course database. ${course.address || ''}`,
-                            holes: holes.map(hole => ({
-                              holeNumber: hole.holeNumber,
-                              par: hole.par,
-                              yardageWhite: hole.yardageWhite || 350,
-                              yardageBlue: hole.yardageBlue || 370,
-                              yardageRed: hole.yardageRed || 300,
-                              yardageGold: hole.yardageGold || 390,
-                              handicap: hole.handicap || hole.holeNumber
-                            }))
+                      <CourseSearch
+                        onCourseSelect={(course) => {
+                          form.setValue("courseId", Number(course.id), {
+                            shouldValidate: true,
+                            shouldDirty: true,
                           });
-                          
-                          // Switch to manual course creation mode with pre-filled data
-                          setIsCreatingManualCourse(true);
                           setShowCourseSearch(false);
-                          form.setValue('courseId', 'add-manually');
+                          toast({
+                            title: "Course selected",
+                            description: `${course.name} set for this tournament.`,
+                          });
                         }}
                       />
-                    </div>
-                  )}
-
-                  {/* Imported Course Preview */}
-                  {importedCourse && (
-                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                        <h4 className="font-semibold text-green-800">Course Imported Successfully</h4>
-                      </div>
-                      <p className="text-sm text-green-700">
-                        <strong>{importedCourse.course.name}</strong> has been imported with {importedCourse.holes.length} holes. 
-                        You can review and modify the course details below before creating your tournament.
-                      </p>
-                    </div>
-                  )}
-
-                  {isCreatingManualCourse && (
-                    <div className="space-y-4 p-4 border border-border rounded-lg bg-card">
-                      <h3 className="text-lg font-semibold text-foreground">Create New Course</h3>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-sm font-medium text-foreground">Course Name</label>
-                          <Input
-                            value={manualCourseData.name}
-                            onChange={(e) => setManualCourseData(prev => ({ ...prev, name: e.target.value }))}
-                            placeholder="Enter course name"
-                            className="bg-background border-border"
-                            data-testid="input-course-name"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-foreground">Location</label>
-                          <Input
-                            value={manualCourseData.location}
-                            onChange={(e) => setManualCourseData(prev => ({ ...prev, location: e.target.value }))}
-                            placeholder="Enter location"
-                            className="bg-background border-border"
-                            data-testid="input-course-location"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <label className="text-sm font-medium text-foreground">Description</label>
-                        <Textarea
-                          value={manualCourseData.description}
-                          onChange={(e) => setManualCourseData(prev => ({ ...prev, description: e.target.value }))}
-                          placeholder="Course description"
-                          className="bg-background border-border"
-                          rows={2}
-                          data-testid="textarea-course-description"
-                        />
-                      </div>
-
-                      <div className="space-y-4">
-                        <h4 className="text-md font-medium text-foreground">Course Layout</h4>
-                        <div className="grid gap-2 max-h-96 overflow-y-auto">
-                          {manualCourseData.holes.map((hole, index) => (
-                            <div key={index} className="grid grid-cols-6 gap-2 items-center p-2 border border-border rounded bg-background">
-                              <span className="text-sm font-medium text-foreground">Hole {hole.holeNumber}</span>
-                              <div>
-                                <label className="text-xs text-muted-foreground">Par</label>
-                                <Input
-                                  type="number"
-                                  min="3"
-                                  max="5"
-                                  value={hole.par}
-                                  onChange={(e) => {
-                                    const newHoles = [...manualCourseData.holes];
-                                    newHoles[index].par = parseInt(e.target.value) || 3;
-                                    setManualCourseData(prev => ({ ...prev, holes: newHoles }));
-                                  }}
-                                  className="h-8 text-xs"
-                                  data-testid={`input-hole-${index + 1}-par`}
-                                />
-                              </div>
-                              <div>
-                                <label className="text-xs text-muted-foreground">White</label>
-                                <Input
-                                  type="number"
-                                  value={hole.yardageWhite}
-                                  onChange={(e) => {
-                                    const newHoles = [...manualCourseData.holes];
-                                    newHoles[index].yardageWhite = parseInt(e.target.value) || 0;
-                                    setManualCourseData(prev => ({ ...prev, holes: newHoles }));
-                                  }}
-                                  className="h-8 text-xs"
-                                  data-testid={`input-hole-${index + 1}-white`}
-                                />
-                              </div>
-                              <div>
-                                <label className="text-xs text-muted-foreground">Blue</label>
-                                <Input
-                                  type="number"
-                                  value={hole.yardageBlue}
-                                  onChange={(e) => {
-                                    const newHoles = [...manualCourseData.holes];
-                                    newHoles[index].yardageBlue = parseInt(e.target.value) || 0;
-                                    setManualCourseData(prev => ({ ...prev, holes: newHoles }));
-                                  }}
-                                  className="h-8 text-xs"
-                                  data-testid={`input-hole-${index + 1}-blue`}
-                                />
-                              </div>
-                              <div>
-                                <label className="text-xs text-muted-foreground">Red</label>
-                                <Input
-                                  type="number"
-                                  value={hole.yardageRed}
-                                  onChange={(e) => {
-                                    const newHoles = [...manualCourseData.holes];
-                                    newHoles[index].yardageRed = parseInt(e.target.value) || 0;
-                                    setManualCourseData(prev => ({ ...prev, holes: newHoles }));
-                                  }}
-                                  className="h-8 text-xs"
-                                  data-testid={`input-hole-${index + 1}-red`}
-                                />
-                              </div>
-                              <div>
-                                <label className="text-xs text-muted-foreground">Gold</label>
-                                <Input
-                                  type="number"
-                                  value={hole.yardageGold}
-                                  onChange={(e) => {
-                                    const newHoles = [...manualCourseData.holes];
-                                    newHoles[index].yardageGold = parseInt(e.target.value) || 0;
-                                    setManualCourseData(prev => ({ ...prev, holes: newHoles }));
-                                  }}
-                                  className="h-8 text-xs"
-                                  data-testid={`input-hole-${index + 1}-gold`}
-                                />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
                     </div>
                   )}
 
@@ -620,13 +484,15 @@ export default function CreateTournament() {
                     name="headerImageUrl"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-foreground">Tournament Photo</FormLabel>
+                        <FormLabel className="text-foreground">
+                          Tournament Photo
+                        </FormLabel>
                         <FormControl>
                           <div className="space-y-4">
                             {uploadedImageUrl && (
                               <div className="relative w-full h-48 bg-muted rounded-lg overflow-hidden">
-                                <img 
-                                  src={uploadedImageUrl} 
+                                <img
+                                  src={uploadedImageUrl}
                                   alt="Tournament photo preview"
                                   className="w-full h-full object-cover"
                                 />
@@ -647,12 +513,13 @@ export default function CreateTournament() {
                                   variant: "destructive",
                                 });
                               }}
-
                               buttonClassName="w-full bg-secondary text-secondary-foreground hover:bg-accent"
                               directFileInput={true}
                             >
                               <Upload className="h-4 w-4 mr-2" />
-                              {uploadedImageUrl ? 'Change Tournament Photo' : 'Upload Tournament Photo'}
+                              {uploadedImageUrl
+                                ? "Change Tournament Photo"
+                                : "Upload Tournament Photo"}
                             </ObjectUploader>
                           </div>
                         </FormControl>
@@ -667,15 +534,23 @@ export default function CreateTournament() {
                       name="startDate"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-foreground">Start Date</FormLabel>
+                          <FormLabel className="text-foreground">
+                            Start Date
+                          </FormLabel>
                           <FormControl>
-                            <Input 
+                            <Input
                               type="datetime-local"
                               className="bg-background border-border"
                               data-testid="input-start-date"
                               {...field}
-                              value={field.value instanceof Date ? field.value.toISOString().slice(0, 16) : field.value}
-                              onChange={(e) => field.onChange(new Date(e.target.value))}
+                              value={
+                                field.value instanceof Date
+                                  ? field.value.toISOString().slice(0, 16)
+                                  : (field.value ?? "")
+                              }
+                              onChange={(e) =>
+                                field.onChange(new Date(e.target.value))
+                              }
                             />
                           </FormControl>
                           <FormMessage />
@@ -688,15 +563,23 @@ export default function CreateTournament() {
                       name="endDate"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-foreground">End Date</FormLabel>
+                          <FormLabel className="text-foreground">
+                            End Date
+                          </FormLabel>
                           <FormControl>
-                            <Input 
+                            <Input
                               type="datetime-local"
                               className="bg-background border-border"
                               data-testid="input-end-date"
                               {...field}
-                              value={field.value instanceof Date ? field.value.toISOString().slice(0, 16) : field.value}
-                              onChange={(e) => field.onChange(new Date(e.target.value))}
+                              value={
+                                field.value instanceof Date
+                                  ? field.value.toISOString().slice(0, 16)
+                                  : (field.value ?? "")
+                              }
+                              onChange={(e) =>
+                                field.onChange(new Date(e.target.value))
+                              }
                             />
                           </FormControl>
                           <FormMessage />
@@ -711,16 +594,20 @@ export default function CreateTournament() {
                       name="maxPlayers"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-foreground">Maximum Players</FormLabel>
+                          <FormLabel className="text-foreground">
+                            Maximum Players
+                          </FormLabel>
                           <FormControl>
-                            <Input 
+                            <Input
                               type="number"
                               min="1"
                               max="100"
                               className="bg-background border-border"
                               data-testid="input-max-players"
                               {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value))}
+                              onChange={(e) =>
+                                field.onChange(parseInt(e.target.value))
+                              }
                             />
                           </FormControl>
                           <FormMessage />
@@ -733,16 +620,20 @@ export default function CreateTournament() {
                       name="numberOfRounds"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-foreground">Number of Rounds</FormLabel>
+                          <FormLabel className="text-foreground">
+                            Number of Rounds
+                          </FormLabel>
                           <FormControl>
-                            <Input 
+                            <Input
                               type="number"
                               min="1"
                               max="4"
                               className="bg-background border-border"
                               data-testid="input-number-of-rounds"
                               {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value))}
+                              onChange={(e) =>
+                                field.onChange(parseInt(e.target.value))
+                              }
                             />
                           </FormControl>
                           <FormMessage />
@@ -754,16 +645,24 @@ export default function CreateTournament() {
                   {/* Round Dates Section */}
                   {numberOfRounds > 1 && (
                     <div className="space-y-4 p-4 border border-border rounded-lg bg-card">
-                      <h3 className="text-lg font-semibold text-foreground">Round Dates</h3>
-                      <p className="text-sm text-muted-foreground">Set the date for each round of the tournament</p>
-                      
+                      <h3 className="text-lg font-semibold text-foreground">
+                        Round Dates
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Set the date for each round of the tournament
+                      </p>
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {Array.from({ length: numberOfRounds }, (_, i) => (
                           <div key={i}>
-                            <label className="text-sm font-medium text-foreground">Round {i + 1} Date</label>
+                            <label className="text-sm font-medium text-foreground">
+                              Round {i + 1} Date
+                            </label>
                             <Input
                               type="datetime-local"
-                              value={roundDates[i]?.toISOString().slice(0, 16) || ''}
+                              value={
+                                roundDates[i]?.toISOString().slice(0, 16) || ""
+                              }
                               onChange={(e) => {
                                 const newDates = [...roundDates];
                                 newDates[i] = new Date(e.target.value);
@@ -779,8 +678,10 @@ export default function CreateTournament() {
                   )}
 
                   <div className="space-y-4 p-4 border border-border rounded-lg bg-card">
-                    <h3 className="text-lg font-semibold text-foreground">Tee Selection</h3>
-                    
+                    <h3 className="text-lg font-semibold text-foreground">
+                      Tee Selection
+                    </h3>
+
                     <div className="space-y-3">
                       <div className="flex items-center space-x-2">
                         <input
@@ -792,9 +693,11 @@ export default function CreateTournament() {
                           className="text-accent"
                           data-testid="radio-same-tee"
                         />
-                        <label htmlFor="same-tee" className="text-foreground">All holes use the same tee</label>
+                        <label htmlFor="same-tee" className="text-foreground">
+                          All holes use the same tee
+                        </label>
                       </div>
-                      
+
                       <div className="flex items-center space-x-2">
                         <input
                           type="radio"
@@ -805,15 +708,22 @@ export default function CreateTournament() {
                           className="text-accent"
                           data-testid="radio-mixed-tee"
                         />
-                        <label htmlFor="mixed-tee" className="text-foreground">Mix and match tees per hole</label>
+                        <label htmlFor="mixed-tee" className="text-foreground">
+                          Mix and match tees per hole
+                        </label>
                       </div>
                     </div>
 
                     {teeSelectionMode === "same" && (
                       <div className="mt-4">
-                        <label className="text-sm font-medium text-foreground mb-2 block">Select Tee Color</label>
-                        <Select value={singleTeeColor} onValueChange={setSingleTeeColor}>
-                          <SelectTrigger 
+                        <label className="text-sm font-medium text-foreground mb-2 block">
+                          Select Tee Color
+                        </label>
+                        <Select
+                          value={singleTeeColor}
+                          onValueChange={setSingleTeeColor}
+                        >
+                          <SelectTrigger
                             className="bg-background border-border"
                             data-testid="select-single-tee-color"
                           >
@@ -831,20 +741,24 @@ export default function CreateTournament() {
 
                     {teeSelectionMode === "mixed" && (
                       <div className="mt-4">
-                        <h4 className="text-sm font-medium text-foreground mb-3">Tee Selection per Hole</h4>
+                        <h4 className="text-sm font-medium text-foreground mb-3">
+                          Tee Selection per Hole
+                        </h4>
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 max-h-80 overflow-y-auto">
                           {holeTeeMappings.map((hole, index) => (
                             <div key={index} className="space-y-1">
-                              <label className="text-xs font-medium text-foreground">Hole {hole.holeNumber}</label>
-                              <Select 
-                                value={hole.teeColor} 
+                              <label className="text-xs font-medium text-foreground">
+                                Hole {hole.holeNumber}
+                              </label>
+                              <Select
+                                value={hole.teeColor}
                                 onValueChange={(color) => {
                                   const newMappings = [...holeTeeMappings];
                                   newMappings[index].teeColor = color;
                                   setHoleTeeMappings(newMappings);
                                 }}
                               >
-                                <SelectTrigger 
+                                <SelectTrigger
                                   className="bg-background border-border h-8 text-xs"
                                   data-testid={`select-hole-${index + 1}-tee`}
                                 >
@@ -869,10 +783,12 @@ export default function CreateTournament() {
                     name="scoringFormat"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-foreground">Tournament Format</FormLabel>
+                        <FormLabel className="text-foreground">
+                          Tournament Format
+                        </FormLabel>
                         <FormControl>
-                          <Select 
-                            value={field.value} 
+                          <Select
+                            value={field.value}
                             onValueChange={field.onChange}
                             data-testid="select-scoring-format"
                           >
@@ -880,10 +796,18 @@ export default function CreateTournament() {
                               <SelectValue placeholder="Select scoring format" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="stroke_play">Stroke Play</SelectItem>
-                              <SelectItem value="stableford">Stableford Points</SelectItem>
-                              <SelectItem value="handicap">Handicap Net Scoring</SelectItem>
-                              <SelectItem value="callaway">Callaway System</SelectItem>
+                              <SelectItem value="stroke_play">
+                                Stroke Play
+                              </SelectItem>
+                              <SelectItem value="stableford">
+                                Stableford Points
+                              </SelectItem>
+                              <SelectItem value="handicap">
+                                Handicap Net Scoring
+                              </SelectItem>
+                              <SelectItem value="callaway">
+                                Callaway System
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                         </FormControl>
@@ -899,10 +823,12 @@ export default function CreateTournament() {
                       name="handicapAllowance"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-foreground">Handicap Allowance</FormLabel>
+                          <FormLabel className="text-foreground">
+                            Handicap Allowance
+                          </FormLabel>
                           <FormControl>
-                            <Select 
-                              value={field.value} 
+                            <Select
+                              value={field.value}
                               onValueChange={field.onChange}
                               data-testid="select-handicap-allowance"
                             >
@@ -910,11 +836,21 @@ export default function CreateTournament() {
                                 <SelectValue placeholder="Select handicap allowance" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="1.00">100% (Full Handicap)</SelectItem>
-                                <SelectItem value="0.90">90% Handicap</SelectItem>
-                                <SelectItem value="0.80">80% Handicap</SelectItem>
-                                <SelectItem value="0.75">75% Handicap</SelectItem>
-                                <SelectItem value="0.70">70% Handicap</SelectItem>
+                                <SelectItem value="1.00">
+                                  100% (Full Handicap)
+                                </SelectItem>
+                                <SelectItem value="0.90">
+                                  90% Handicap
+                                </SelectItem>
+                                <SelectItem value="0.80">
+                                  80% Handicap
+                                </SelectItem>
+                                <SelectItem value="0.75">
+                                  75% Handicap
+                                </SelectItem>
+                                <SelectItem value="0.70">
+                                  70% Handicap
+                                </SelectItem>
                               </SelectContent>
                             </Select>
                           </FormControl>
@@ -936,14 +872,12 @@ export default function CreateTournament() {
                     </Button>
                     <Button
                       type="submit"
-                      disabled={createTournamentMutation.isPending || createCourseMutation.isPending}
+                      disabled={createTournamentMutation.isPending}
                       className="flex-1 bg-secondary text-secondary-foreground hover:bg-accent"
                       data-testid="button-create-tournament"
                     >
-                      {createCourseMutation.isPending 
-                        ? "Creating Course..." 
-                        : createTournamentMutation.isPending 
-                        ? "Creating Tournament..." 
+                      {createTournamentMutation.isPending
+                        ? "Creating Tournament..."
                         : "Create Tournament"}
                     </Button>
                   </div>
