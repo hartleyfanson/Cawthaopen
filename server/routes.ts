@@ -619,10 +619,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/tournaments/:id", async (req, res) => {
     try {
-      const tournament = await storage.getTournament(req.params.id);
+      let tournament = await storage.getTournament(req.params.id);
       if (!tournament) {
         return res.status(404).json({ message: "Tournament not found" });
       }
+      
+      // Auto-update tournament status based on dates
+      const now = new Date();
+      if (tournament.startDate) {
+        const startDate = new Date(tournament.startDate);
+        const endDate = tournament.endDate ? new Date(tournament.endDate) : null;
+        
+        // If start date has passed and status is still upcoming, make it active
+        if (startDate <= now && tournament.status === 'upcoming') {
+          await storage.updateTournament(tournament.id, { status: 'active' });
+          tournament = { ...tournament, status: 'active' };
+        }
+        // If end date has passed and status is still active, make it completed
+        else if (endDate && endDate < now && tournament.status === 'active') {
+          await storage.updateTournament(tournament.id, { status: 'completed' });
+          tournament = { ...tournament, status: 'completed' };
+        }
+      }
+      
       res.json(tournament);
     } catch (error) {
       console.error("Error fetching tournament:", error);
@@ -642,7 +661,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/tournaments/status/:status", async (req, res) => {
     try {
-      const tournaments = await storage.getTournamentsByStatus(req.params.status);
+      let tournaments = await storage.getTournamentsByStatus(req.params.status);
+      
+      // Auto-update tournament status based on dates
+      const now = new Date();
+      const tournamentsToUpdate = [];
+      
+      for (const tournament of tournaments) {
+        if (tournament.startDate) {
+          const startDate = new Date(tournament.startDate);
+          const endDate = tournament.endDate ? new Date(tournament.endDate) : null;
+          
+          // If start date has passed and status is still upcoming, make it active
+          if (startDate <= now && tournament.status === 'upcoming') {
+            await storage.updateTournament(tournament.id, { status: 'active' });
+            tournamentsToUpdate.push({ ...tournament, status: 'active' });
+          }
+          // If end date has passed and status is still active, make it completed
+          else if (endDate && endDate < now && tournament.status === 'active') {
+            await storage.updateTournament(tournament.id, { status: 'completed' });
+            // Don't include in response since it's no longer this status
+          }
+        }
+      }
+      
+      // Re-fetch tournaments with updated status
+      tournaments = await storage.getTournamentsByStatus(req.params.status);
+      
       res.json(tournaments);
     } catch (error) {
       console.error("Error fetching tournaments by status:", error);

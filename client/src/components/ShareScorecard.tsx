@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Share2, Download, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import logoImage from "@assets/IMG_4006_1756925482771.png";
@@ -356,6 +356,9 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
           <DialogTitle className="text-2xl font-serif font-bold text-accent">
             Share Your Scorecard
           </DialogTitle>
+          <DialogDescription>
+            Generate a beautiful scorecard image to share your round with friends and family.
+          </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-6">

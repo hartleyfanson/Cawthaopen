@@ -140,6 +140,11 @@ export default function LiveScoring() {
     queryFn: () => fetch(`/api/rounds/${(currentRoundData as any)?.id}/scores`).then(res => res.json()),
   });
 
+  const { data: teeSelections } = useQuery({
+    queryKey: ["/api/tournaments", id, "tee-selections"],
+    enabled: !!id,
+  });
+
   const createRoundMutation = useMutation({
     mutationFn: async (data: any) => {
       return await apiRequest("POST", "/api/rounds", data);
@@ -199,6 +204,30 @@ export default function LiveScoring() {
   });
 
   const currentHoleData = holes?.find((hole: any) => hole.holeNumber === currentHole);
+  
+  // Get tee selection for current hole
+  const currentTeeSelection = Array.isArray(teeSelections) 
+    ? teeSelections.find((tee: any) => tee.holeNumber === currentHole)
+    : null;
+  const currentTeeColor = currentTeeSelection?.teeColor || 'white';
+  
+  // Get yardage based on tee selection
+  const getHoleYardage = (hole: any, teeColor: string) => {
+    if (!hole) return 0;
+    switch (teeColor.toLowerCase()) {
+      case 'blue': return hole.yardageBlue || hole.yardageWhite || 0;
+      case 'red': return hole.yardageRed || hole.yardageWhite || 0;
+      case 'gold': return hole.yardageGold || hole.yardageWhite || 0;
+      default: return hole.yardageWhite || 0;
+    }
+  };
+  
+  const currentYardage = getHoleYardage(currentHoleData, currentTeeColor);
+  
+  // Format tee color for display
+  const formatTeeColor = (teeColor: string) => {
+    return teeColor.charAt(0).toUpperCase() + teeColor.slice(1).toLowerCase() + ' Tees';
+  };
 
   // Load existing score data when navigating to a hole (for editing)
   useEffect(() => {
@@ -414,7 +443,7 @@ export default function LiveScoring() {
                   Hole {currentHole}
                 </h3>
                 <p className="text-muted-foreground">
-                  Par {currentHoleData?.par} • {currentHoleData?.yardageWhite} yards • White Tees
+                  Par {currentHoleData?.par} • {currentYardage} yards • {formatTeeColor(currentTeeColor)}
                 </p>
               </div>
               <div className="text-right">
