@@ -115,7 +115,6 @@ export function AchievementDetailsModal({
                   {(achievement.rarity || 'common').charAt(0).toUpperCase() + (achievement.rarity || 'common').slice(1)}
                 </Badge>
                 <Badge variant="secondary">{achievement.category}</Badge>
-                <Badge variant="outline">{achievement.points} pts</Badge>
               </div>
             </div>
           </div>
