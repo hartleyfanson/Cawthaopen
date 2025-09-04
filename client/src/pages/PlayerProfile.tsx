@@ -255,7 +255,9 @@ function PlayerProfile() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Average Score</p>
-                      <p className="text-2xl font-bold">{detailedStats?.averageScore || '--'}</p>
+                      <p className="text-2xl font-bold">
+                        {detailedStats?.averageScore ? parseFloat(detailedStats.averageScore).toFixed(2) : '--'}
+                      </p>
                     </div>
                     <Target className="h-8 w-8 text-muted-foreground" />
                   </div>
@@ -478,7 +480,7 @@ function PlayerProfile() {
                         completed rounds
                         {detailedStats?.averageScore && (
                           <span className="block">
-                            {parseFloat(detailedStats.averageScore).toFixed(1)} avg score
+                            {parseFloat(detailedStats.averageScore).toFixed(2)} avg score
                           </span>
                         )}
                       </p>
