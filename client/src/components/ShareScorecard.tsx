@@ -39,8 +39,8 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
   });
 
   const { data: galleryPhotos } = useQuery({
-    queryKey: ["/api/tournaments", effectiveTournament?.id || tournamentId, "gallery"],
-    enabled: !!(effectiveTournament?.id || tournamentId),
+    queryKey: ["/api/tournaments", tournamentId, "gallery"],
+    enabled: !!tournamentId,
   });
 
   const { data: course } = useQuery({
@@ -71,6 +71,9 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
   const processedPlayerData = useMemo(() => {
     if (!playerScores || !Array.isArray(playerScores)) return {};
 
+    console.log('Processing player scores for round:', selectedScorecardRound);
+    console.log('Available player scores:', playerScores.length);
+    
     const playerMap: Record<string, any> = {};
 
     playerScores.forEach((score: any) => {
@@ -90,8 +93,9 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
         };
       }
 
-      // Store individual hole scores - filter by selected round
+      // Store individual hole scores - filter by selected round ONLY
       if (score.strokes !== null && score.strokes !== undefined && score.roundNumber === selectedScorecardRound) {
+        console.log(`Adding Round ${selectedScorecardRound} score for hole ${score.holeNumber}:`, score.strokes);
         playerMap[playerId].scores[score.holeNumber] = {
           strokes: score.strokes,
           par: score.holePar,
@@ -134,6 +138,8 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
   const currentPlayerRoundData = processedPlayerData[(playerData as any)?.id];
   
   console.log('Using SAME data source as leaderboard:', currentPlayerRoundData);
+  console.log('Holes with scores:', Object.keys(currentPlayerRoundData?.scores || {}));
+  console.log('Total holes for Round', selectedScorecardRound, ':', currentPlayerRoundData?.holesCompleted);
 
   const generateScorecard = async () => {
     console.log('Debug scorecard generation:', {
@@ -327,8 +333,9 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
       // Round Notes section (if any notes exist) - adjusted for larger stats
       const notesY = statsY + 120;
       const roundNotes: string[] = [];
-      if (Array.isArray(currentScores)) {
-        currentScores.forEach((score: any) => {
+      const currentScoresArray = Object.values(currentPlayerRoundData.scores || {});
+      if (Array.isArray(currentScoresArray)) {
+        currentScoresArray.forEach((score: any) => {
           const actualScore = score.scores || score;
           if (actualScore.powerupNotes && actualScore.powerupNotes.trim()) {
             const hole = Array.isArray(holes) ? holes.find((h: any) => (h.id || h.holes?.id) === actualScore.holeId) : null;
