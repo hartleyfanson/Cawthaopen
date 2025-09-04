@@ -93,11 +93,12 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
       playerData: !!playerData,
       effectiveScores: !!effectiveScores,
       scores: !!scores,
+      roundSpecificScores: !!roundSpecificScores,
       isSpecificRound,
       targetRoundNumber
     });
     
-    if (!canvasRef.current || !effectiveRoundData || !playerData || !(effectiveScores || scores)) return;
+    if (!canvasRef.current || !effectiveRoundData || !playerData || !(effectiveScores || scores || roundSpecificScores)) return;
 
     setIsGenerating(true);
     
