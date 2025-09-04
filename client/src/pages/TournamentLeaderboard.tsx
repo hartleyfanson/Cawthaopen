@@ -339,6 +339,8 @@ export default function TournamentLeaderboard() {
               tournament={tournament}
               tournamentId={id || ''}
               course={course}
+              selectedRound={selectedRound}
+              tournamentRounds={tournamentRounds}
             />
           ) : loadingLeaderboard ? (
             <Card className="bg-muted">

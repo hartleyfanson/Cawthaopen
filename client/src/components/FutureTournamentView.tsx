@@ -7,9 +7,11 @@ interface FutureTournamentViewProps {
   tournament: any;
   tournamentId: string;
   course: any;
+  selectedRound?: 'all' | number;
+  tournamentRounds?: any[];
 }
 
-export function FutureTournamentView({ tournament, tournamentId, course }: FutureTournamentViewProps) {
+export function FutureTournamentView({ tournament, tournamentId, course, selectedRound = 'all', tournamentRounds }: FutureTournamentViewProps) {
   // Fetch course holes
   const { data: holes } = useQuery({
     queryKey: ["/api/courses", course?.id, "holes"],
@@ -88,6 +90,68 @@ export function FutureTournamentView({ tournament, tournamentId, course }: Futur
     });
   };
 
+  // Dynamic date and course logic based on selected round
+  const getDisplayInfo = () => {
+    if (selectedRound === 'all' && tournamentRounds && Array.isArray(tournamentRounds) && tournamentRounds.length > 1) {
+      // Show date range for all rounds
+      const dates = tournamentRounds.map(r => r.roundDate).filter(Boolean);
+      const startDate = dates.length > 0 ? new Date(Math.min(...dates.map(d => new Date(d).getTime()))) : null;
+      const endDate = dates.length > 0 ? new Date(Math.max(...dates.map(d => new Date(d).getTime()))) : null;
+      
+      const dateRangeText = startDate && endDate 
+        ? startDate.toDateString() === endDate.toDateString()
+          ? formatDate(startDate.toISOString())
+          : `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+        : tournament?.startDate ? formatDate(tournament.startDate) : 'TBD';
+      
+      // Show all courses
+      const allCourses = tournamentRounds
+        .map(r => r.courseId || tournament?.courseId)
+        .filter(Boolean)
+        .filter((id, index, arr) => arr.indexOf(id) === index); // unique course IDs
+      
+      return {
+        dateText: dateRangeText,
+        showAllCourses: true,
+        courseIds: allCourses
+      };
+    } else if (selectedRound !== 'all' && tournamentRounds && Array.isArray(tournamentRounds)) {
+      // Show specific round info
+      const roundData = tournamentRounds.find((r: any) => r.roundNumber === selectedRound);
+      const roundDate = roundData?.roundDate ? formatDate(roundData.roundDate) : 'Date TBD';
+      
+      return {
+        dateText: `Round ${selectedRound} • ${roundDate}`,
+        showAllCourses: false,
+        courseIds: [roundData?.courseId || tournament?.courseId].filter(Boolean)
+      };
+    }
+    
+    // Default single round display
+    return {
+      dateText: tournament?.startDate ? formatDate(tournament.startDate) : 'TBD',
+      showAllCourses: false,
+      courseIds: [tournament?.courseId].filter(Boolean)
+    };
+  };
+
+  const displayInfo = getDisplayInfo();
+
+  // Fetch all courses if needed for multi-round display
+  const { data: allCoursesData } = useQuery({
+    queryKey: ["/api/courses/multiple", displayInfo.courseIds],
+    queryFn: async () => {
+      if (!displayInfo.courseIds.length) return [];
+      return Promise.all(
+        displayInfo.courseIds.map(async (courseId) => {
+          const response = await fetch(`/api/courses/${courseId}`);
+          return response.ok ? response.json() : null;
+        })
+      );
+    },
+    enabled: displayInfo.showAllCourses && displayInfo.courseIds.length > 0,
+  });
+
   return (
     <div className="space-y-8">
       {/* Tournament Info Header */}
@@ -99,7 +163,7 @@ export function FutureTournamentView({ tournament, tournamentId, course }: Futur
               <div>
                 <h3 className="font-semibold text-accent">Tournament Date</h3>
                 <p className="text-secondary">
-                  {tournament?.startDate ? formatDate(tournament.startDate) : 'TBD'}
+                  {displayInfo.dateText}
                 </p>
               </div>
             </div>
@@ -108,8 +172,24 @@ export function FutureTournamentView({ tournament, tournamentId, course }: Futur
               <MapPin className="h-6 w-6 text-accent" />
               <div>
                 <h3 className="font-semibold text-accent">Course</h3>
-                <p className="text-secondary">{course?.name || 'TBD'}</p>
-                <p className="text-sm text-muted-foreground">{course?.location || ''}</p>
+                {displayInfo.showAllCourses && allCoursesData ? (
+                  <div className="space-y-1">
+                    {allCoursesData.filter(Boolean).map((courseData: any, index: number) => (
+                      <div key={courseData.id}>
+                        <p className="text-secondary">{courseData.name}</p>
+                        <p className="text-sm text-muted-foreground">{courseData.location}</p>
+                        {index < allCoursesData.filter(Boolean).length - 1 && (
+                          <hr className="my-1 border-muted-foreground/20" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-secondary">{course?.name || 'TBD'}</p>
+                    <p className="text-sm text-muted-foreground">{course?.location || ''}</p>
+                  </div>
+                )}
               </div>
             </div>
             
