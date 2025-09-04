@@ -199,11 +199,31 @@ export default function LiveScoring() {
 
   const currentHoleData = holes?.find((hole: any) => hole.holeNumber === currentHole);
 
+  // Load existing score data when navigating to a hole (for editing)
   useEffect(() => {
     if (currentHoleData) {
-      setStrokes(currentHoleData.par);
+      // Check if there's an existing score for this hole
+      const existingScore = cachedScores.find(score => score.holeNumber === currentHole);
+      
+      if (existingScore) {
+        // Pre-populate with existing score data
+        setStrokes(existingScore.strokes);
+        setPutts(existingScore.putts);
+        setFairwayHit(existingScore.fairwayHit);
+        setGreenInRegulation(existingScore.greenInRegulation);
+        setPowerupUsed(existingScore.powerupUsed);
+        setPowerupNotes(existingScore.powerupNotes);
+      } else {
+        // Use default values for new holes
+        setStrokes(currentHoleData.par);
+        setPutts(2);
+        setFairwayHit(false);
+        setGreenInRegulation(false);
+        setPowerupUsed(false);
+        setPowerupNotes("");
+      }
     }
-  }, [currentHoleData]);
+  }, [currentHoleData, currentHole, cachedScores]);
 
   // Load existing scores into cache when component mounts (for editing mode)
   useEffect(() => {
@@ -323,39 +343,14 @@ export default function LiveScoring() {
   const nextHole = () => {
     if (currentHole < 18) {
       setCurrentHole(currentHole + 1);
-      resetHoleData();
     }
   };
 
   const previousHole = () => {
     if (currentHole > 1) {
       setCurrentHole(currentHole - 1);
-      resetHoleData();
     }
   };
-
-  const resetHoleData = () => {
-    const nextHoleData = holes?.find((hole: any) => hole.holeNumber === currentHole + 1);
-    setStrokes(nextHoleData?.par || 4);
-    setPutts(2);
-    setFairwayHit(false);
-    setGreenInRegulation(false);
-    setPowerupUsed(false);
-    setPowerupNotes("");
-  };
-  
-  // Load cached score when navigating back to a previous hole
-  useEffect(() => {
-    const cachedScore = cachedScores.find(score => score.holeNumber === currentHole);
-    if (cachedScore) {
-      setStrokes(cachedScore.strokes);
-      setPutts(cachedScore.putts);
-      setFairwayHit(cachedScore.fairwayHit);
-      setGreenInRegulation(cachedScore.greenInRegulation);
-      setPowerupUsed(cachedScore.powerupUsed);
-      setPowerupNotes(cachedScore.powerupNotes);
-    }
-  }, [currentHole, cachedScores]);
 
   if (isLoading) {
     return (
