@@ -123,9 +123,9 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
       roundRect(cardX, cardY, cardWidth, cardHeight, 20);
       ctx.stroke();
 
-      // Header section (much larger green area)
+      // Header section (even larger green area)
       ctx.fillStyle = '#1a4a3a';
-      roundRect(cardX + 20, cardY + 20, cardWidth - 40, 220, 10);
+      roundRect(cardX + 20, cardY + 20, cardWidth - 40, 250, 10);
       ctx.fill();
 
       // Load and draw the logo
@@ -146,17 +146,17 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
       
       ctx.drawImage(logo, logoX, logoY, logoWidth, logoHeight);
 
-      // Course and tournament name (larger in bigger green area)
+      // Course and tournament name (adjusted for even larger green area)
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 20px sans-serif';
       ctx.textAlign = 'center';
       const courseName = (course as any)?.name || 'Championship Course';
       const tournamentName = (tournament as any)?.name || 'Tournament';
-      ctx.fillText(courseName, canvas.width / 2, cardY + 180);
-      ctx.fillText(tournamentName, canvas.width / 2, cardY + 205);
+      ctx.fillText(courseName, canvas.width / 2, cardY + 195);
+      ctx.fillText(tournamentName, canvas.width / 2, cardY + 225);
 
-      // Player section (adjusted for larger header)
-      const playerY = cardY + 280;
+      // Player section (adjusted for even larger header)
+      const playerY = cardY + 310;
       
       // Player name (centered for mobile)
       ctx.fillStyle = '#1a4a3a';

@@ -197,12 +197,6 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
             const isLeader = index === 0 && totalScore > 0;
             const netScore = holesCompleted >= 18 ? calculateNetScore(totalScore, player.playerId) : null;
             
-            // Only show IN after 9+ holes completed, OUT/TOTAL/NET after 18 holes
-            const showIN = holesCompleted >= 9;
-            const showFull = holesCompleted >= 18;
-            
-            if (!showIN && !showFull) return null; // Don't show summary until at least 9 holes
-            
             return (
               <div key={`summary-${player.playerId}`} className={`p-3 rounded-lg ${isLeader ? 'bg-primary/20 border border-primary/30' : 'bg-background/60'}`}>
                 <div className="flex items-center justify-between">
@@ -210,12 +204,6 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
                     <div className={`text-lg font-bold ${isLeader ? 'text-primary' : 'text-muted-foreground'}`}>
                       {index + 1}
                     </div>
-                    <Avatar className="w-6 h-6">
-                      <AvatarImage src={player.profileImageUrl} alt={`${player.playerName} profile`} />
-                      <AvatarFallback className="text-xs">
-                        {player.playerName?.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
-                      </AvatarFallback>
-                    </Avatar>
                     <div>
                       <div className={`font-semibold text-sm ${isLeader ? 'text-primary' : 'text-foreground'}`}>
                         {player.playerName}
@@ -229,53 +217,31 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
                   </div>
                   
                   <div className="flex items-center space-x-4 text-sm font-medium">
-                    {showingFrontNine ? (
-                      // Show OUT when viewing Front 9
-                      showIN && (
-                        <div className="text-center">
-                          <div className="text-xs text-muted-foreground">OUT</div>
-                          <div className={`font-bold ${isLeader ? 'text-primary' : 'text-foreground'}`}>
-                            {frontNineTotal > 0 ? frontNineTotal : '-'}
-                          </div>
-                        </div>
-                      )
-                    ) : (
-                      // Show IN, OUT, TOTAL, NET when viewing Back 9
-                      <>
-                        {showIN && (
-                          <div className="text-center">
-                            <div className="text-xs text-muted-foreground">IN</div>
-                            <div className={`font-bold ${isLeader ? 'text-primary' : 'text-foreground'}`}>
-                              {backNineTotal > 0 ? backNineTotal : '-'}
-                            </div>
-                          </div>
-                        )}
-                        {showIN && (
-                          <div className="text-center">
-                            <div className="text-xs text-muted-foreground">OUT</div>
-                            <div className={`font-bold ${isLeader ? 'text-primary' : 'text-foreground'}`}>
-                              {frontNineTotal > 0 ? frontNineTotal : '-'}
-                            </div>
-                          </div>
-                        )}
-                        {showFull && (
-                          <div className="text-center">
-                            <div className="text-xs text-muted-foreground">TOTAL</div>
-                            <div className={`font-bold ${isLeader ? 'text-primary' : 'text-foreground'}`}>
-                              {totalScore}
-                            </div>
-                          </div>
-                        )}
-                        {showFull && netScore !== null && (
-                          <div className="text-center">
-                            <div className="text-xs text-muted-foreground">NET</div>
-                            <div className={`font-bold ${isLeader ? 'text-primary' : 'text-foreground'}`}>
-                              {netScore}
-                            </div>
-                          </div>
-                        )}
-                      </>
-                    )}
+                    {/* Always show all four values: IN, OUT, TOTAL, NET */}
+                    <div className="text-center">
+                      <div className="text-xs text-muted-foreground">IN</div>
+                      <div className={`font-bold ${isLeader ? 'text-primary' : 'text-foreground'}`}>
+                        {backNineTotal > 0 ? backNineTotal : '-'}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs text-muted-foreground">OUT</div>
+                      <div className={`font-bold ${isLeader ? 'text-primary' : 'text-foreground'}`}>
+                        {frontNineTotal > 0 ? frontNineTotal : '-'}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs text-muted-foreground">TOTAL</div>
+                      <div className={`font-bold ${isLeader ? 'text-primary' : 'text-foreground'}`}>
+                        {totalScore > 0 ? totalScore : '-'}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs text-muted-foreground">NET</div>
+                      <div className={`font-bold ${isLeader ? 'text-primary' : 'text-foreground'}`}>
+                        {netScore !== null ? netScore : '-'}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -325,33 +291,26 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
               }`}
               data-testid={`row-player-${player.playerId}`}
             >
-              <div className="grid gap-1 items-center" style={{gridTemplateColumns: "2fr " + "1fr ".repeat(9)}}>
-                <div className="flex items-center space-x-3">
-                  <div className={`text-xl font-bold ${
-                    isLeader ? 'text-primary' : 'text-muted-foreground'
-                  }`}>
-                    {index + 1}
-                  </div>
-                  <Avatar className="w-8 h-8">
-                    <AvatarImage 
-                      src={player.profileImageUrl}
-                      alt={`${player.playerName} profile`}
-                    />
-                    <AvatarFallback>
-                      {player.playerName?.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <div className={`font-semibold ${
-                      isLeader ? 'text-primary' : 'text-foreground'
-                    }`} data-testid={`text-player-name-${player.playerId}`}>
-                      {player.playerName}
+              <div className="grid gap-1 items-center text-center" style={{gridTemplateColumns: "2fr " + "1fr ".repeat(9)}}>
+                <div className="text-left px-2">
+                  <div className="flex items-center space-x-2">
+                    <div className={`text-lg font-bold ${
+                      isLeader ? 'text-primary' : 'text-muted-foreground'
+                    }`}>
+                      {index + 1}
                     </div>
-                    {totalScore > 0 && (
-                      <div className="text-sm text-muted-foreground">
-                        {scoreToPar === 0 ? 'E' : scoreToPar > 0 ? `+${scoreToPar}` : scoreToPar} ({totalScore})
+                    <div>
+                      <div className={`font-semibold ${
+                        isLeader ? 'text-primary' : 'text-foreground'
+                      }`} data-testid={`text-player-name-${player.playerId}`}>
+                        {player.playerName}
                       </div>
-                    )}
+                      {totalScore > 0 && (
+                        <div className="text-sm text-muted-foreground">
+                          {scoreToPar === 0 ? 'E' : scoreToPar > 0 ? `+${scoreToPar}` : scoreToPar} ({totalScore})
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
                 
