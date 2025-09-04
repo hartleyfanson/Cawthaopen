@@ -32,6 +32,7 @@ function PlayerProfile() {
   const { user: currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>("");
+  const [categoryIndices, setCategoryIndices] = useState<Record<string, number>>({});
 
   // Determine default tab based on route
   useEffect(() => {
@@ -52,8 +53,8 @@ function PlayerProfile() {
   useEffect(() => {
     if (playerId) {
       setSelectedPlayerId(playerId);
-    } else if (currentUser?.id) {
-      setSelectedPlayerId(currentUser.id);
+    } else if ((currentUser as any)?.id) {
+      setSelectedPlayerId((currentUser as any).id);
     }
   }, [playerId, currentUser]);
 
@@ -167,7 +168,7 @@ function PlayerProfile() {
               <SelectContent>
                 {allUsers.map((user) => (
                   <SelectItem key={user.id} value={user.id} data-testid={`select-option-${user.id}`}>
-                    {user.firstName} {user.lastName} {user.id === currentUser?.id ? "(You)" : ""}
+                    {user.firstName} {user.lastName} {user.id === (currentUser as any)?.id ? "(You)" : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -302,7 +303,7 @@ function PlayerProfile() {
                         key={pa.id}
                         achievement={pa.achievement}
                         isUnlocked={true}
-                        unlockedAt={pa.unlockedAt}
+                        unlockedAt={pa.unlockedAt?.toString()}
                         size="sm"
                       />
                     ))}
@@ -316,26 +317,85 @@ function PlayerProfile() {
 
           {/* Achievements Tab */}
           <TabsContent value="achievements" className="space-y-6">
-            {Object.entries(achievementsByCategory).map(([category, categoryAchievements]) => (
-              <Card key={category}>
-                <CardHeader>
-                  <CardTitle className="capitalize">{category} Achievements</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-4 xs:grid-cols-5 sm:grid-cols-6 md:grid-cols-7 lg:grid-cols-8 xl:grid-cols-9 gap-1 xs:gap-2 sm:gap-3 md:gap-4">
-                    {categoryAchievements.map((achievement) => (
-                      <AchievementBadge
-                        key={achievement.id}
-                        achievement={achievement}
-                        isUnlocked={unlockedAchievements.has(achievement.id)}
-                        unlockedAt={playerAchievements.find(pa => pa.achievementId === achievement.id)?.unlockedAt}
-                        size="md"
-                      />
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            {Object.entries(achievementsByCategory).map(([category, categoryAchievements]) => {
+              const currentIndex = categoryIndices[category] || 0;
+              const visibleCount = 5; // Show 5 badges at a time
+              const totalPages = Math.ceil(categoryAchievements.length / visibleCount);
+              const currentAchievements = categoryAchievements.slice(
+                currentIndex * visibleCount,
+                (currentIndex * visibleCount) + visibleCount
+              );
+
+              const updateCategoryIndex = (newIndex: number) => {
+                setCategoryIndices(prev => ({
+                  ...prev,
+                  [category]: newIndex
+                }));
+              };
+
+              return (
+                <Card key={category}>
+                  <CardHeader>
+                    <div className="flex justify-between items-center">
+                      <CardTitle className="capitalize">{category} Achievements</CardTitle>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">
+                          {currentIndex + 1} of {totalPages}
+                        </span>
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => updateCategoryIndex(Math.max(0, currentIndex - 1))}
+                            disabled={currentIndex === 0}
+                            className="h-7 w-7 p-0"
+                            data-testid={`prev-${category}`}
+                          >
+                            ←
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => updateCategoryIndex(Math.min(totalPages - 1, currentIndex + 1))}
+                            disabled={currentIndex === totalPages - 1}
+                            className="h-7 w-7 p-0"
+                            data-testid={`next-${category}`}
+                          >
+                            →
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex justify-center gap-2 sm:gap-3 md:gap-4 min-h-[120px] items-center">
+                      {currentAchievements.map((achievement) => (
+                        <AchievementBadge
+                          key={achievement.id}
+                          achievement={achievement}
+                          isUnlocked={unlockedAchievements.has(achievement.id)}
+                          unlockedAt={playerAchievements.find(pa => pa.achievementId === achievement.id)?.unlockedAt?.toString()}
+                          size="md"
+                        />
+                      ))}
+                    </div>
+                    {/* Page dots */}
+                    <div className="flex justify-center mt-4 gap-1">
+                      {Array.from({ length: totalPages }).map((_, index) => (
+                        <button
+                          key={index}
+                          onClick={() => updateCategoryIndex(index)}
+                          className={`w-2 h-2 rounded-full transition-colors ${
+                            index === currentIndex ? 'bg-primary' : 'bg-muted'
+                          }`}
+                          data-testid={`page-dot-${category}-${index}`}
+                        />
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </TabsContent>
 
           {/* Statistics Tab */}

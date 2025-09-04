@@ -100,14 +100,14 @@ export function AchievementBadge({
           {/* Achievement name */}
           <div className="text-center w-full px-0.5 xs:px-1 flex-grow flex flex-col justify-center min-h-0">
             <p className={`font-semibold leading-tight text-center overflow-hidden ${
-              size === 'sm' ? 'text-[10px] xs:text-xs line-clamp-2' : 
-              size === 'md' ? 'text-xs xs:text-sm line-clamp-2' :
-              'text-sm line-clamp-2'
+              size === 'sm' ? 'text-[8px] xs:text-[10px] line-clamp-3' : 
+              size === 'md' ? 'text-[10px] xs:text-xs line-clamp-3' :
+              'text-xs line-clamp-3'
             }`}>
               {achievement.name}
             </p>
             {unlockedAt && size !== 'sm' && (
-              <p className="text-[10px] xs:text-xs text-muted-foreground mt-0.5 xs:mt-1 truncate">
+              <p className="text-[8px] xs:text-[10px] text-muted-foreground mt-0.5 xs:mt-1 truncate">
                 {new Date(unlockedAt).toLocaleDateString()}
               </p>
             )}
