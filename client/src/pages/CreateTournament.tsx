@@ -746,7 +746,8 @@ export default function CreateTournament() {
 
                   {/* Single Round Dates for single round tournaments */}
                   {numberOfRounds === 1 && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                       control={form.control}
                       name="startDate"
@@ -858,7 +859,9 @@ export default function CreateTournament() {
                         </FormItem>
                       )}
                     />
-                  </div>
+                    </div>
+                    </>
+                  )}
 
                   {/* Round Dates Section */}
                   {numberOfRounds > 1 && (
