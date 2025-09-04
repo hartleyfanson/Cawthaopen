@@ -12,6 +12,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { EditScoreDialog } from "@/components/EditScoreDialog";
 
 // Component to show all courses and date range for multi-round tournaments
 function AllRoundsInfo({ tournament, tournamentRounds }: { tournament: any; tournamentRounds: any[] }) {
@@ -69,6 +70,7 @@ export default function TournamentLeaderboard() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { toast } = useToast();
   const [selectedRound, setSelectedRound] = useState<'all' | number>('all');
+  const [editScoreDialogOpen, setEditScoreDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -298,7 +300,7 @@ export default function TournamentLeaderboard() {
           </div>
           
           <div className="flex justify-center gap-4 flex-wrap">
-            {/* Show Live Scoring/Edit Score button when current date is between tournament start and end dates */}
+            {/* Show Live Scoring/Edit Score buttons when current date is between tournament start and end dates */}
             {(() => {
               const now = new Date();
               const startDate = (tournament as any)?.startDate ? new Date((tournament as any).startDate) : null;
@@ -315,14 +317,28 @@ export default function TournamentLeaderboard() {
                 
               return isTournamentActive;
             })() && (
-              <Link href={`/tournaments/${id}/scoring`}>
-                <Button 
-                  className="bg-secondary text-secondary-foreground hover:bg-accent"
-                  data-testid={hasSubmittedScores ? "button-edit-score" : "button-live-scoring"}
-                >
-                  {hasSubmittedScores ? "Edit Score" : "Live Scoring"}
-                </Button>
-              </Link>
+              <>
+                <Link href={`/tournaments/${id}/scoring`}>
+                  <Button 
+                    className="bg-secondary text-secondary-foreground hover:bg-accent"
+                    data-testid={hasSubmittedScores ? "button-live-scoring" : "button-start-scoring"}
+                  >
+                    {hasSubmittedScores ? "Live Scoring" : "Start Scoring"}
+                  </Button>
+                </Link>
+                
+                {/* Show Edit Score button only if user has submitted scores */}
+                {hasSubmittedScores && (
+                  <Button 
+                    onClick={() => setEditScoreDialogOpen(true)}
+                    variant="outline"
+                    className="border-secondary text-secondary hover:bg-secondary hover:text-secondary-foreground"
+                    data-testid="button-edit-score"
+                  >
+                    Edit Score
+                  </Button>
+                )}
+              </>
             )}
             
             {/* Show Join Tournament button for future tournaments using date-based logic */}
@@ -458,6 +474,14 @@ export default function TournamentLeaderboard() {
           )}
         </div>
       </section>
+
+      {/* Edit Score Dialog */}
+      <EditScoreDialog 
+        open={editScoreDialogOpen}
+        onOpenChange={setEditScoreDialogOpen}
+        tournamentId={id || ''}
+        currentRoundData={currentRound}
+      />
     </div>
   );
 }
