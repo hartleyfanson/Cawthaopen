@@ -219,7 +219,7 @@ function PlayerProfile() {
               </CardHeader>
               <CardContent>
                 {playerAchievements.length > 0 ? (
-                  <div className="flex flex-wrap gap-4">
+                  <div className="flex flex-wrap gap-2 sm:gap-4">
                     {playerAchievements.slice(0, 6).map((pa) => (
                       <AchievementBadge
                         key={pa.id}
@@ -245,7 +245,7 @@ function PlayerProfile() {
                   <CardTitle className="capitalize">{category} Achievements</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 sm:gap-4">
                     {categoryAchievements.map((achievement) => (
                       <AchievementBadge
                         key={achievement.id}
