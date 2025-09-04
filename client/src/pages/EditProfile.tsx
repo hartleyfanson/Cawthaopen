@@ -58,6 +58,7 @@ export default function EditProfile() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      setPreviewImageUrl(null); // Clear preview since it's now saved
       toast({
         title: "Profile Updated",
         description: "Your profile has been successfully updated.",
@@ -114,9 +115,10 @@ export default function EditProfile() {
         // Store the object path for preview (don't save to database yet)
         setPreviewImageUrl(aclData.objectPath);
         
+        // Show success message
         toast({
-          title: "Photo Uploaded",
-          description: "Click 'Save Changes' to update your profile.",
+          title: "Photo Ready",
+          description: "Your new photo is ready. Click 'Save Changes' to update your profile.",
         });
       } catch (error) {
         console.error('Error uploading profile image:', error);
