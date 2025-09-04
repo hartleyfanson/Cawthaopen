@@ -186,6 +186,8 @@ export default function TournamentLeaderboard() {
             <LeaderboardTable 
               leaderboard={leaderboard} 
               courseId={(tournament as any)?.courseId || ''}
+              tournamentId={id}
+              tournament={tournament}
             />
           ) : Array.isArray(tournamentPlayers) && tournamentPlayers.length ? (
             // Show registered players even with no scores

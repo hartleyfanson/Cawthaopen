@@ -126,8 +126,8 @@ export default function CreateTournament() {
         title: "Tournament Created",
         description: "Your tournament has been created successfully",
       });
-      // Redirect to tournaments page
-      setLocation(`/tournaments/history`);
+      // Redirect to dashboard
+      setLocation(`/`);
     },
     onError: (error) => {
       console.error("Tournament creation error:", error);

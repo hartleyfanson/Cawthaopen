@@ -235,6 +235,11 @@ export default function LiveScoring() {
         title: "Round Complete!",
         description: "All scores have been saved successfully. Returning to leaderboard.",
       });
+
+      // Invalidate caches to trigger real-time leaderboard updates
+      queryClient.invalidateQueries({ queryKey: ["/api/tournaments", id, "leaderboard"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tournaments", id, "player-scores"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rounds", roundToUse.id, "scores"] });
       
       // Navigate back to leaderboard
       setLocation(`/tournaments/${id}/leaderboard`);

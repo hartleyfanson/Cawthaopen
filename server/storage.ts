@@ -57,6 +57,7 @@ export interface IStorage {
   updateScore(scoreId: string, updates: Partial<Score>): Promise<Score>;
   getRoundScores(roundId: string): Promise<Score[]>;
   getTournamentLeaderboard(tournamentId: string): Promise<any[]>;
+  getTournamentPlayerScores(tournamentId: string): Promise<any[]>;
   
   // Gallery operations
   createGalleryPhoto(photo: InsertGalleryPhoto): Promise<GalleryPhoto>;
@@ -249,6 +250,32 @@ export class DatabaseStorage implements IStorage {
       .where(eq(rounds.tournamentId, tournamentId))
       .groupBy(rounds.playerId, users.firstName, users.lastName, users.profileImageUrl)
       .orderBy(asc(sql`SUM(${rounds.totalStrokes})`));
+
+    return result;
+  }
+
+  async getTournamentPlayerScores(tournamentId: string): Promise<any[]> {
+    const result = await db
+      .select({
+        playerId: rounds.playerId,
+        playerName: sql<string>`${users.firstName} || ' ' || ${users.lastName}`.as('playerName'),
+        profileImageUrl: users.profileImageUrl,
+        roundId: rounds.id,
+        roundNumber: rounds.roundNumber,
+        holeId: scores.holeId,
+        holeNumber: holes.holeNumber,
+        holePar: holes.par,
+        strokes: scores.strokes,
+        putts: scores.putts,
+        fairwayHit: scores.fairwayHit,
+        greenInRegulation: scores.greenInRegulation,
+      })
+      .from(rounds)
+      .innerJoin(users, eq(rounds.playerId, users.id))
+      .innerJoin(scores, eq(scores.roundId, rounds.id))
+      .innerJoin(holes, eq(scores.holeId, holes.id))
+      .where(eq(rounds.tournamentId, tournamentId))
+      .orderBy(asc(rounds.playerId), asc(holes.holeNumber));
 
     return result;
   }

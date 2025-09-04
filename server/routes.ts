@@ -353,6 +353,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all player scores for a tournament
+  app.get("/api/tournaments/:tournamentId/player-scores", async (req, res) => {
+    try {
+      const scores = await storage.getTournamentPlayerScores(req.params.tournamentId);
+      res.json(scores);
+    } catch (error) {
+      console.error("Error fetching tournament player scores:", error);
+      res.status(500).json({ message: "Failed to fetch tournament player scores" });
+    }
+  });
+
   // Gallery routes
   app.get("/api/tournaments/:id/gallery", async (req, res) => {
     try {

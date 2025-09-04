@@ -2,19 +2,29 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 interface LeaderboardTableProps {
   leaderboard: any[];
   courseId?: string;
+  tournamentId?: string;
+  tournament?: any;
 }
 
-export function LeaderboardTable({ leaderboard, courseId }: LeaderboardTableProps) {
+export function LeaderboardTable({ leaderboard, courseId, tournamentId, tournament }: LeaderboardTableProps) {
   const [showingFrontNine, setShowingFrontNine] = useState(true);
 
+  // Fetch course holes
   const { data: holes } = useQuery({
     queryKey: ["/api/courses", courseId, "holes"],
     enabled: !!courseId,
+  });
+
+  // Fetch all player scores for the tournament
+  const { data: playerScores, refetch: refetchScores } = useQuery({
+    queryKey: ["/api/tournaments", tournamentId, "player-scores"],
+    enabled: !!tournamentId,
+    refetchInterval: 10000, // Auto-refresh every 10 seconds for real-time updates
   });
 
   // Calculate which holes to display based on current view
@@ -23,27 +33,119 @@ export function LeaderboardTable({ leaderboard, courseId }: LeaderboardTableProp
     ? allHoles.slice(0, 9)  // Front 9: holes 1-9
     : allHoles.slice(9, 18); // Back 9: holes 10-18
   
+  // Process player scores into a usable format
+  const processedPlayerData = useMemo(() => {
+    if (!playerScores || !Array.isArray(playerScores)) return {};
+
+    const playerMap: Record<string, any> = {};
+
+    playerScores.forEach((score: any) => {
+      const playerId = score.playerId;
+      
+      if (!playerMap[playerId]) {
+        playerMap[playerId] = {
+          playerId: score.playerId,
+          playerName: score.playerName,
+          profileImageUrl: score.profileImageUrl,
+          scores: {},
+          frontNineTotal: 0,
+          backNineTotal: 0,
+          totalScore: 0,
+          holesCompleted: 0,
+        };
+      }
+
+      // Store individual hole scores
+      if (score.strokes !== null && score.strokes !== undefined) {
+        playerMap[playerId].scores[score.holeNumber] = {
+          strokes: score.strokes,
+          par: score.holePar,
+          putts: score.putts,
+          fairwayHit: score.fairwayHit,
+          greenInRegulation: score.greenInRegulation,
+        };
+        playerMap[playerId].holesCompleted++;
+      }
+    });
+
+    // Calculate totals for each player
+    Object.values(playerMap).forEach((player: any) => {
+      let frontNineTotal = 0;
+      let backNineTotal = 0;
+      
+      // Front 9 totals (holes 1-9)
+      for (let hole = 1; hole <= 9; hole++) {
+        if (player.scores[hole]?.strokes) {
+          frontNineTotal += player.scores[hole].strokes;
+        }
+      }
+      
+      // Back 9 totals (holes 10-18)  
+      for (let hole = 10; hole <= 18; hole++) {
+        if (player.scores[hole]?.strokes) {
+          backNineTotal += player.scores[hole].strokes;
+        }
+      }
+
+      player.frontNineTotal = frontNineTotal;
+      player.backNineTotal = backNineTotal;
+      player.totalScore = frontNineTotal + backNineTotal;
+    });
+
+    return playerMap;
+  }, [playerScores]);
+
+  // Calculate NET score based on tournament scoring system
+  const calculateNetScore = (totalScore: number, playerId: string) => {
+    if (!tournament?.scoringSystem || totalScore === 0) return null;
+    
+    // For now, using a simple handicap calculation
+    // In a real system, you'd fetch the player's official handicap
+    const estimatedHandicap = 18; // Placeholder - should be fetched from player data
+    
+    switch (tournament.scoringSystem) {
+      case 'stroke-play':
+        return totalScore - estimatedHandicap;
+      case 'stableford':
+        // Stableford scoring logic would go here
+        return totalScore;
+      case 'handicap':
+        return totalScore - estimatedHandicap;
+      default:
+        return totalScore;
+    }
+  };
+
   // Calculate if a score is under par or over par
   const isUnderPar = (score: number, par: number) => score < par;
   const isOverPar = (score: number, par: number) => score > par;
 
-  // Mock hole scores for demonstration - in real app this would come from API
+  // Get player hole scores for display
   const getPlayerHoleScores = (playerId: string) => {
-    // This would be replaced with actual API call to get player's round scores
+    const playerData = processedPlayerData[playerId];
+    if (!playerData) return [];
+    
     return displayHoles.map((hole: any) => {
-      // Random scores for demo - replace with actual data
-      const score = Math.floor(Math.random() * 3) + hole.par - 1;
-      return { holeId: hole.id, score, par: hole.par };
+      const scoreData = playerData.scores[hole.holeNumber];
+      return {
+        holeId: hole.id,
+        score: scoreData?.strokes || null,
+        par: hole.par,
+        hasScore: !!scoreData?.strokes
+      };
     });
   };
 
-  // Get all 18 holes scores for calculating totals
-  const getAllPlayerHoleScores = (playerId: string) => {
-    return allHoles.map((hole: any) => {
-      const score = Math.floor(Math.random() * 3) + hole.par - 1;
-      return { holeId: hole.id, score, par: hole.par, holeNumber: hole.holeNumber };
-    });
-  };
+  // Sort leaderboard by total score (lowest first)
+  const sortedLeaderboard = [...leaderboard].sort((a, b) => {
+    const playerDataA = processedPlayerData[a.playerId];
+    const playerDataB = processedPlayerData[b.playerId];
+    
+    const scoreA = playerDataA?.totalScore || 999;
+    const scoreB = playerDataB?.totalScore || 999;
+    
+    return scoreA - scoreB;
+  });
 
   return (
     <Card className="bg-background overflow-hidden card-shadow">
@@ -81,47 +183,78 @@ export function LeaderboardTable({ leaderboard, courseId }: LeaderboardTableProp
       
       {/* Header with hole numbers */}
       <div className="bg-muted p-4 border-b border-border">
-        <div className="grid gap-1 text-center text-sm font-medium text-muted-foreground" style={{gridTemplateColumns: "2fr " + "1fr ".repeat(9) + " 1fr 1fr 1fr"}}>
-          <div className="text-left">PLAYER</div>
-          {displayHoles.map((hole: any, index: number) => (
-            <div key={hole.id} data-testid={`header-hole-${hole.holeNumber}`}>
-              {hole.holeNumber}
-            </div>
-          ))}
-          <div className="font-bold text-accent">{showingFrontNine ? 'OUT' : 'IN'}</div>
-          {!showingFrontNine && <div className="font-bold text-accent">OUT</div>}
-          <div className="font-bold text-accent">TOTAL</div>
-        </div>
-        <div className="grid gap-1 text-center text-sm text-muted-foreground mt-1" style={{gridTemplateColumns: "2fr " + "1fr ".repeat(9) + " 1fr 1fr 1fr"}}>
-          <div className="text-left">PAR</div>
-          {displayHoles.map((hole: any) => (
-            <div key={`par-${hole.id}`} data-testid={`header-par-${hole.holeNumber}`}>
-              {hole.par}
-            </div>
-          ))}
-          <div className="font-bold">{showingFrontNine ? allHoles.slice(9, 18).reduce((sum: number, hole: any) => sum + hole.par, 0) : allHoles.slice(0, 9).reduce((sum: number, hole: any) => sum + hole.par, 0)}</div>
-          {!showingFrontNine && <div className="font-bold">{allHoles.slice(9, 18).reduce((sum: number, hole: any) => sum + hole.par, 0)}</div>}
-          <div className="font-bold">{allHoles.reduce((sum: number, hole: any) => sum + hole.par, 0)}</div>
-        </div>
+        {/* Dynamic grid columns based on view */}
+        {showingFrontNine ? (
+          // Front 9: Player + 9 holes + OUT (no TOTAL)
+          <div className="grid gap-1 text-center text-sm font-medium text-muted-foreground" style={{gridTemplateColumns: "2fr " + "1fr ".repeat(9) + " 1fr"}}>
+            <div className="text-left">PLAYER</div>
+            {displayHoles.map((hole: any) => (
+              <div key={hole.id} data-testid={`header-hole-${hole.holeNumber}`}>
+                {hole.holeNumber}
+              </div>
+            ))}
+            <div className="font-bold text-accent">OUT</div>
+          </div>
+        ) : (
+          // Back 9: Player + 9 holes + IN + OUT + TOTAL + NET
+          <div className="grid gap-1 text-center text-sm font-medium text-muted-foreground" style={{gridTemplateColumns: "2fr " + "1fr ".repeat(9) + " 1fr 1fr 1fr 1fr"}}>
+            <div className="text-left">PLAYER</div>
+            {displayHoles.map((hole: any) => (
+              <div key={hole.id} data-testid={`header-hole-${hole.holeNumber}`}>
+                {hole.holeNumber}
+              </div>
+            ))}
+            <div className="font-bold text-accent">IN</div>
+            <div className="font-bold text-accent">OUT</div>
+            <div className="font-bold text-accent">TOTAL</div>
+            <div className="font-bold text-accent">NET</div>
+          </div>
+        )}
+        
+        {/* PAR row */}
+        {showingFrontNine ? (
+          <div className="grid gap-1 text-center text-sm text-muted-foreground mt-1" style={{gridTemplateColumns: "2fr " + "1fr ".repeat(9) + " 1fr"}}>
+            <div className="text-left">PAR</div>
+            {displayHoles.map((hole: any) => (
+              <div key={`par-${hole.id}`} data-testid={`header-par-${hole.holeNumber}`}>
+                {hole.par}
+              </div>
+            ))}
+            <div className="font-bold">{allHoles.slice(0, 9).reduce((sum: number, hole: any) => sum + hole.par, 0)}</div>
+          </div>
+        ) : (
+          <div className="grid gap-1 text-center text-sm text-muted-foreground mt-1" style={{gridTemplateColumns: "2fr " + "1fr ".repeat(9) + " 1fr 1fr 1fr 1fr"}}>
+            <div className="text-left">PAR</div>
+            {displayHoles.map((hole: any) => (
+              <div key={`par-${hole.id}`} data-testid={`header-par-${hole.holeNumber}`}>
+                {hole.par}
+              </div>
+            ))}
+            <div className="font-bold">{allHoles.slice(9, 18).reduce((sum: number, hole: any) => sum + hole.par, 0)}</div>
+            <div className="font-bold">{allHoles.slice(0, 9).reduce((sum: number, hole: any) => sum + hole.par, 0)}</div>
+            <div className="font-bold">{allHoles.reduce((sum: number, hole: any) => sum + hole.par, 0)}</div>
+            <div className="font-bold">-</div>
+          </div>
+        )}
       </div>
       
       {/* Player rows */}
       <div className="divide-y divide-border">
-        {leaderboard.map((player: any, index: number) => {
+        {sortedLeaderboard.map((player: any, index: number) => {
+          const playerData = processedPlayerData[player.playerId];
           const holeScores = getPlayerHoleScores(player.playerId);
-          const allHoleScores = getAllPlayerHoleScores(player.playerId);
           
-          // Calculate scores for front 9, back 9, and total
-          const frontNineScores = allHoleScores.filter(score => score.holeNumber <= 9);
-          const backNineScores = allHoleScores.filter(score => score.holeNumber > 9);
-          
-          const frontNineTotal = frontNineScores.reduce((sum: number, score: any) => sum + score.score, 0);
-          const backNineTotal = backNineScores.reduce((sum: number, score: any) => sum + score.score, 0);
-          const totalScore = frontNineTotal + backNineTotal;
+          const frontNineTotal = playerData?.frontNineTotal || 0;
+          const backNineTotal = playerData?.backNineTotal || 0;
+          const totalScore = playerData?.totalScore || 0;
+          const holesCompleted = playerData?.holesCompleted || 0;
           
           const totalPar = allHoles.reduce((sum: number, hole: any) => sum + hole.par, 0);
-          const scoreToPar = totalScore - totalPar;
-          const isLeader = index === 0;
+          const scoreToPar = totalScore > 0 ? totalScore - totalPar : 0;
+          const isLeader = index === 0 && totalScore > 0;
+          
+          // Calculate NET score (only show after 18 holes completed)
+          const netScore = holesCompleted >= 18 ? calculateNetScore(totalScore, player.playerId) : null;
           
           return (
             <div 
@@ -131,76 +264,166 @@ export function LeaderboardTable({ leaderboard, courseId }: LeaderboardTableProp
               }`}
               data-testid={`row-player-${player.playerId}`}
             >
-              <div className="grid gap-1 items-center" style={{gridTemplateColumns: "2fr " + "1fr ".repeat(9) + " 1fr 1fr 1fr"}}>
-                <div className="flex items-center space-x-3">
-                  <div className={`text-xl font-bold ${
-                    isLeader ? 'text-accent' : 'text-muted-foreground'
-                  }`}>
-                    {index + 1}
-                  </div>
-                  <Avatar className="w-8 h-8">
-                    <AvatarImage 
-                      src={player.profileImageUrl || `https://images.unsplash.com/photo-150${7003 + index}211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&h=100`}
-                      alt={`${player.playerName} profile`}
-                    />
-                    <AvatarFallback>
-                      {player.playerName?.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <div className={`font-semibold ${
-                      isLeader ? 'text-accent' : 'text-foreground'
-                    }`} data-testid={`text-player-name-${player.playerId}`}>
-                      {player.playerName}
+              {showingFrontNine ? (
+                // Front 9: Player + 9 holes + OUT (no TOTAL)
+                <div className="grid gap-1 items-center" style={{gridTemplateColumns: "2fr " + "1fr ".repeat(9) + " 1fr"}}>
+                  <div className="flex items-center space-x-3">
+                    <div className={`text-xl font-bold ${
+                      isLeader ? 'text-accent' : 'text-muted-foreground'
+                    }`}>
+                      {index + 1}
                     </div>
-                    <div className="text-sm text-secondary">
-                      {scoreToPar === 0 ? 'E' : scoreToPar > 0 ? `+${scoreToPar}` : scoreToPar} ({totalScore})
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Hole scores */}
-                {holeScores.map((score, holeIndex) => {
-                  const isUnder = isUnderPar(score.score, score.par);
-                  const isOver = isOverPar(score.score, score.par);
-                  return (
-                    <div 
-                      key={holeIndex}
-                      className="text-center"
-                      data-testid={`score-hole-${holeIndex + 1}-player-${player.playerId}`}
-                    >
-                      {isUnder ? (
-                        <div className="under-par mx-auto">
-                          {score.score}
-                        </div>
-                      ) : isOver ? (
-                        <div className="over-par mx-auto">
-                          {score.score}
-                        </div>
-                      ) : (
-                        <div className={isLeader ? 'text-accent' : 'text-foreground'}>
-                          {score.score}
+                    <Avatar className="w-8 h-8">
+                      <AvatarImage 
+                        src={player.profileImageUrl}
+                        alt={`${player.playerName} profile`}
+                      />
+                      <AvatarFallback>
+                        {player.playerName?.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className={`font-semibold ${
+                        isLeader ? 'text-accent' : 'text-foreground'
+                      }`} data-testid={`text-player-name-${player.playerId}`}>
+                        {player.playerName}
+                      </div>
+                      {totalScore > 0 && (
+                        <div className="text-sm text-secondary">
+                          {scoreToPar === 0 ? 'E' : scoreToPar > 0 ? `+${scoreToPar}` : scoreToPar} ({totalScore})
                         </div>
                       )}
                     </div>
-                  );
-                })}
-                
-                {/* IN/OUT totals */}
-                <div className={`text-center font-bold ${isLeader ? 'text-accent' : 'text-foreground'}`} data-testid={`total-${showingFrontNine ? 'out' : 'in'}-${player.playerId}`}>
-                  {showingFrontNine ? backNineTotal : frontNineTotal}
-                </div>
-                {!showingFrontNine && (
-                  <div className={`text-center font-bold ${isLeader ? 'text-accent' : 'text-foreground'}`} data-testid={`total-out-${player.playerId}`}>
-                    {backNineTotal}
                   </div>
-                )}
-                
-                {/* Total score */}
-                <div className={`text-center font-bold ${isLeader ? 'text-accent' : 'text-foreground'}`} data-testid={`total-score-${player.playerId}`}>
-                  {totalScore}
+                  
+                  {/* Hole scores */}
+                  {holeScores.map((score, holeIndex) => {
+                    if (!score.hasScore) {
+                      return (
+                        <div key={holeIndex} className="text-center text-muted-foreground">
+                          -
+                        </div>
+                      );
+                    }
+                    
+                    const isUnder = isUnderPar(score.score, score.par);
+                    const isOver = isOverPar(score.score, score.par);
+                    return (
+                      <div 
+                        key={holeIndex}
+                        className="text-center"
+                        data-testid={`score-hole-${holeIndex + 1}-player-${player.playerId}`}
+                      >
+                        {isUnder ? (
+                          <div className="under-par mx-auto">
+                            {score.score}
+                          </div>
+                        ) : isOver ? (
+                          <div className="over-par mx-auto">
+                            {score.score}
+                          </div>
+                        ) : (
+                          <div className={isLeader ? 'text-accent' : 'text-foreground'}>
+                            {score.score}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  
+                  {/* OUT total */}
+                  <div className={`text-center font-bold ${isLeader ? 'text-accent' : 'text-foreground'}`} data-testid={`total-out-${player.playerId}`}>
+                    {frontNineTotal > 0 ? frontNineTotal : '-'}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                // Back 9: Player + 9 holes + IN + OUT + TOTAL + NET
+                <div className="grid gap-1 items-center" style={{gridTemplateColumns: "2fr " + "1fr ".repeat(9) + " 1fr 1fr 1fr 1fr"}}>
+                  <div className="flex items-center space-x-3">
+                    <div className={`text-xl font-bold ${
+                      isLeader ? 'text-accent' : 'text-muted-foreground'
+                    }`}>
+                      {index + 1}
+                    </div>
+                    <Avatar className="w-8 h-8">
+                      <AvatarImage 
+                        src={player.profileImageUrl}
+                        alt={`${player.playerName} profile`}
+                      />
+                      <AvatarFallback>
+                        {player.playerName?.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className={`font-semibold ${
+                        isLeader ? 'text-accent' : 'text-foreground'
+                      }`} data-testid={`text-player-name-${player.playerId}`}>
+                        {player.playerName}
+                      </div>
+                      {totalScore > 0 && (
+                        <div className="text-sm text-secondary">
+                          {scoreToPar === 0 ? 'E' : scoreToPar > 0 ? `+${scoreToPar}` : scoreToPar} ({totalScore})
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Hole scores */}
+                  {holeScores.map((score, holeIndex) => {
+                    if (!score.hasScore) {
+                      return (
+                        <div key={holeIndex} className="text-center text-muted-foreground">
+                          -
+                        </div>
+                      );
+                    }
+                    
+                    const isUnder = isUnderPar(score.score, score.par);
+                    const isOver = isOverPar(score.score, score.par);
+                    return (
+                      <div 
+                        key={holeIndex}
+                        className="text-center"
+                        data-testid={`score-hole-${holeIndex + 10}-player-${player.playerId}`}
+                      >
+                        {isUnder ? (
+                          <div className="under-par mx-auto">
+                            {score.score}
+                          </div>
+                        ) : isOver ? (
+                          <div className="over-par mx-auto">
+                            {score.score}
+                          </div>
+                        ) : (
+                          <div className={isLeader ? 'text-accent' : 'text-foreground'}>
+                            {score.score}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  
+                  {/* IN total */}
+                  <div className={`text-center font-bold ${isLeader ? 'text-accent' : 'text-foreground'}`} data-testid={`total-in-${player.playerId}`}>
+                    {backNineTotal > 0 ? backNineTotal : '-'}
+                  </div>
+                  
+                  {/* OUT total */}
+                  <div className={`text-center font-bold ${isLeader ? 'text-accent' : 'text-foreground'}`} data-testid={`total-out-${player.playerId}`}>
+                    {frontNineTotal > 0 ? frontNineTotal : '-'}
+                  </div>
+                  
+                  {/* TOTAL score */}
+                  <div className={`text-center font-bold ${isLeader ? 'text-accent' : 'text-foreground'}`} data-testid={`total-score-${player.playerId}`}>
+                    {totalScore > 0 ? totalScore : '-'}
+                  </div>
+                  
+                  {/* NET score (only show after 18 holes completed) */}
+                  <div className={`text-center font-bold ${isLeader ? 'text-accent' : 'text-foreground'}`} data-testid={`net-score-${player.playerId}`}>
+                    {netScore !== null ? netScore : '-'}
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}
