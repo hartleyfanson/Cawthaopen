@@ -19,6 +19,7 @@ export default function LiveScoring() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
+  const [selectedRound, setSelectedRound] = useState(1);
   const [currentHole, setCurrentHole] = useState(1);
   const [strokes, setStrokes] = useState(4);
   const [putts, setPutts] = useState(2);
@@ -41,6 +42,64 @@ export default function LiveScoring() {
   
   const [, setLocation] = useLocation();
 
+  // Local storage key for persisting scoring state (includes round number)
+  const storageKey = `live-scoring-${id}-${user?.id}-round-${selectedRound}`;
+
+  // Load scoring state from local storage on mount
+  useEffect(() => {
+    if (!id || !user?.id) return;
+    
+    try {
+      const savedState = localStorage.getItem(storageKey);
+      if (savedState) {
+        const parsed = JSON.parse(savedState);
+        if (parsed.selectedRound) setSelectedRound(parsed.selectedRound);
+        if (parsed.currentHole) setCurrentHole(parsed.currentHole);
+        if (parsed.strokes) setStrokes(parsed.strokes);
+        if (parsed.putts) setPutts(parsed.putts);
+        if (parsed.fairwayHit !== undefined) setFairwayHit(parsed.fairwayHit);
+        if (parsed.greenInRegulation !== undefined) setGreenInRegulation(parsed.greenInRegulation);
+        if (parsed.powerupUsed !== undefined) setPowerupUsed(parsed.powerupUsed);
+        if (parsed.powerupNotes) setPowerupNotes(parsed.powerupNotes);
+        if (parsed.cachedScores) setCachedScores(parsed.cachedScores);
+      }
+    } catch (error) {
+      console.log('Could not load saved scoring state:', error);
+    }
+  }, [id, user?.id, storageKey]);
+
+  // Save scoring state to local storage whenever it changes
+  useEffect(() => {
+    if (!id || !user?.id) return;
+    
+    const stateToSave = {
+      selectedRound,
+      currentHole,
+      strokes,
+      putts,
+      fairwayHit,
+      greenInRegulation,
+      powerupUsed,
+      powerupNotes,
+      cachedScores,
+    };
+    
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(stateToSave));
+    } catch (error) {
+      console.log('Could not save scoring state:', error);
+    }
+  }, [selectedRound, currentHole, strokes, putts, fairwayHit, greenInRegulation, powerupUsed, powerupNotes, cachedScores, storageKey, id, user?.id]);
+
+  // Clear local storage when round is completed
+  const clearSavedState = () => {
+    try {
+      localStorage.removeItem(storageKey);
+    } catch (error) {
+      console.log('Could not clear saved state:', error);
+    }
+  };
+
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       toast({
@@ -60,19 +119,25 @@ export default function LiveScoring() {
     enabled: !!user && !!id,
   });
 
+  // Fetch tournament rounds to enable round navigation
+  const { data: tournamentRounds } = useQuery({
+    queryKey: ["/api/tournaments", id, "rounds"],
+    enabled: !!user && !!id,
+  });
+
   const { data: holes } = useQuery({
     queryKey: ["/api/courses", (tournament as any)?.courseId, "holes"],
     enabled: !!(tournament as any)?.courseId,
   });
 
-  const { data: currentRound } = useQuery({
-    queryKey: ["/api/rounds", id, "1"],
+  const { data: currentRoundData } = useQuery({
+    queryKey: ["/api/rounds", id, selectedRound.toString()],
     enabled: !!user && !!id,
   });
 
   const { data: existingScores } = useQuery({
-    queryKey: ["/api/rounds", (currentRound as any)?.id, "scores"],
-    enabled: !!(currentRound as any)?.id,
+    queryKey: ["/api/rounds", (currentRoundData as any)?.id, "scores"],
+    enabled: !!(currentRoundData as any)?.id,
   });
 
   const createRoundMutation = useMutation({
@@ -195,13 +260,13 @@ export default function LiveScoring() {
       // First cache the current hole (hole 18)
       cacheScoreAndContinue();
       
-      let roundToUse = currentRound;
+      let roundToUse = currentRoundData;
       
       if (!roundToUse) {
         // Create round first
         roundToUse = await createRoundMutation.mutateAsync({
           tournamentId: id,
-          roundNumber: 1,
+          roundNumber: selectedRound,
         });
       }
 
@@ -235,6 +300,9 @@ export default function LiveScoring() {
         title: "Round Complete!",
         description: "All scores have been saved successfully. Returning to leaderboard.",
       });
+
+      // Clear saved scoring state since round is complete
+      clearSavedState();
 
       // Invalidate caches to trigger real-time leaderboard updates
       queryClient.invalidateQueries({ queryKey: ["/api/tournaments", id, "leaderboard"] });
@@ -312,8 +380,32 @@ export default function LiveScoring() {
           <div className="text-center mb-8">
             <h2 className="text-3xl font-serif font-bold text-accent mb-2">Live Scoring</h2>
             <p className="text-xl text-muted-foreground">
-              {tournament?.name} • Round 1
+              {tournament?.name} • Round {selectedRound}
             </p>
+            
+            {/* Round Selection - show only if tournament has multiple rounds */}
+            {tournamentRounds && Array.isArray(tournamentRounds) && tournamentRounds.length > 1 && (
+              <div className="flex justify-center mt-4">
+                <div className="flex bg-background rounded-lg p-1 shadow-sm">
+                  {tournamentRounds.map((round: any) => (
+                    <Button
+                      key={round.id}
+                      onClick={() => setSelectedRound(round.roundNumber)}
+                      variant={selectedRound === round.roundNumber ? "default" : "ghost"}
+                      size="sm"
+                      className={`px-4 py-2 text-sm transition-all ${
+                        selectedRound === round.roundNumber
+                          ? "bg-primary text-primary-foreground shadow-sm" 
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      }`}
+                      data-testid={`button-round-${round.roundNumber}`}
+                    >
+                      Round {round.roundNumber}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           
           <Card className="bg-background card-shadow">
@@ -497,7 +589,7 @@ export default function LiveScoring() {
               <div className="mt-6 text-center">
                 <ShareScorecard 
                   tournamentId={id || ''}
-                  roundData={currentRound}
+                  roundData={currentRoundData}
                   playerData={user}
                 />
               </div>

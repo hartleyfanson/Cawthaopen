@@ -49,6 +49,20 @@ export default function CreateTournament() {
       handicap: i + 1
     }))
   });
+  const [roundDates, setRoundDates] = useState<Date[]>([new Date()]);
+
+  // Watch numberOfRounds to update round dates
+  const numberOfRounds = form.watch("numberOfRounds");
+  
+  useEffect(() => {
+    if (numberOfRounds) {
+      const newDates = Array.from({ length: numberOfRounds }, (_, i) => {
+        // If we have a date for this index, keep it, otherwise create a new one
+        return roundDates[i] || new Date(Date.now() + (i * 24 * 60 * 60 * 1000)); // Each round a day apart by default
+      });
+      setRoundDates(newDates);
+    }
+  }, [numberOfRounds]);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -195,11 +209,12 @@ export default function CreateTournament() {
         ? holeTeeMappings.map(hole => ({ holeNumber: hole.holeNumber, teeColor: singleTeeColor }))
         : holeTeeMappings;
 
-      // Create the tournament with the course ID and tee selections
+      // Create the tournament with the course ID, tee selections, and round dates
       createTournamentMutation.mutate({
         ...data,
         courseId,
         teeSelections,
+        roundDates: numberOfRounds > 1 ? roundDates : [data.startDate],
       });
     } catch (error) {
       console.error("Error in submission process:", error);
@@ -539,6 +554,33 @@ export default function CreateTournament() {
                       )}
                     />
                   </div>
+
+                  {/* Round Dates Section */}
+                  {numberOfRounds > 1 && (
+                    <div className="space-y-4 p-4 border border-border rounded-lg bg-card">
+                      <h3 className="text-lg font-semibold text-foreground">Round Dates</h3>
+                      <p className="text-sm text-muted-foreground">Set the date for each round of the tournament</p>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {Array.from({ length: numberOfRounds }, (_, i) => (
+                          <div key={i}>
+                            <label className="text-sm font-medium text-foreground">Round {i + 1} Date</label>
+                            <Input
+                              type="datetime-local"
+                              value={roundDates[i]?.toISOString().slice(0, 16) || ''}
+                              onChange={(e) => {
+                                const newDates = [...roundDates];
+                                newDates[i] = new Date(e.target.value);
+                                setRoundDates(newDates);
+                              }}
+                              className="bg-background border-border"
+                              data-testid={`input-round-${i + 1}-date`}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="space-y-4 p-4 border border-border rounded-lg bg-card">
                     <h3 className="text-lg font-semibold text-foreground">Tee Selection</h3>

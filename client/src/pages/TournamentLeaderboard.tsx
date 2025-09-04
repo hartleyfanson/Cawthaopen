@@ -7,7 +7,7 @@ import { ShareScorecard } from "@/components/ShareScorecard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -16,6 +16,7 @@ export default function TournamentLeaderboard() {
   const { id } = useParams();
   const { user, isAuthenticated, isLoading } = useAuth();
   const { toast } = useToast();
+  const [selectedRound, setSelectedRound] = useState<'all' | number>('all');
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -41,8 +42,16 @@ export default function TournamentLeaderboard() {
     enabled: !!(tournament as any)?.courseId,
   });
 
+  // Fetch tournament rounds for round selection
+  const { data: tournamentRounds } = useQuery({
+    queryKey: ["/api/tournaments", id, "rounds"],
+    enabled: !!user && !!id,
+  });
+
   const { data: leaderboard, isLoading: loadingLeaderboard } = useQuery({
-    queryKey: ["/api/tournaments", id, "leaderboard"],
+    queryKey: selectedRound === 'all' 
+      ? ["/api/tournaments", id, "leaderboard"]
+      : ["/api/tournaments", id, "leaderboard", "round", selectedRound],
     enabled: !!user && !!id,
   });
 
@@ -128,6 +137,43 @@ export default function TournamentLeaderboard() {
             <p className="text-xl text-secondary">
               {(course as any)?.name || 'Course'} • {(course as any)?.location || 'Location'}
             </p>
+            
+            {/* Round Selection - show only if tournament has multiple rounds */}
+            {tournamentRounds && Array.isArray(tournamentRounds) && tournamentRounds.length > 1 && (
+              <div className="flex justify-center mt-6">
+                <div className="flex bg-background rounded-lg p-1 shadow-sm">
+                  <Button
+                    onClick={() => setSelectedRound('all')}
+                    variant={selectedRound === 'all' ? "default" : "ghost"}
+                    size="sm"
+                    className={`px-4 py-2 text-sm transition-all ${
+                      selectedRound === 'all'
+                        ? "bg-primary text-primary-foreground shadow-sm" 
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    }`}
+                    data-testid="button-round-all"
+                  >
+                    All Rounds
+                  </Button>
+                  {tournamentRounds.map((round: any) => (
+                    <Button
+                      key={round.id}
+                      onClick={() => setSelectedRound(round.roundNumber)}
+                      variant={selectedRound === round.roundNumber ? "default" : "ghost"}
+                      size="sm"
+                      className={`px-4 py-2 text-sm transition-all ${
+                        selectedRound === round.roundNumber
+                          ? "bg-primary text-primary-foreground shadow-sm" 
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      }`}
+                      data-testid={`button-round-${round.roundNumber}`}
+                    >
+                      Round {round.roundNumber}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           
           <div className="flex justify-center gap-4 flex-wrap">

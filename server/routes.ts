@@ -15,6 +15,7 @@ import {
   insertRoundSchema,
   insertScoreSchema,
   insertGalleryPhotoSchema,
+  insertTournamentRoundSchema,
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -210,7 +211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/tournaments", isAuthenticated, async (req, res) => {
     try {
       const userId = (req.user as any)?.claims?.sub;
-      const { teeSelections, ...restBody } = req.body;
+      const { teeSelections, roundDates, ...restBody } = req.body;
       
       const tournamentData = insertTournamentSchema.parse({
         ...restBody,
@@ -232,6 +233,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
               teeColor: teeSelection.teeColor,
             });
           }
+        }
+      }
+      
+      // Create tournament rounds with dates if provided
+      if (roundDates && Array.isArray(roundDates) && roundDates.length > 0) {
+        for (let i = 0; i < roundDates.length; i++) {
+          const roundData = insertTournamentRoundSchema.parse({
+            tournamentId: tournament.id,
+            roundNumber: i + 1,
+            roundDate: new Date(roundDates[i]),
+          });
+          await storage.createTournamentRound(roundData);
         }
       }
       
@@ -275,6 +288,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching leaderboard:", error);
       res.status(500).json({ message: "Failed to fetch leaderboard" });
+    }
+  });
+
+  app.get("/api/tournaments/:id/leaderboard/round/:roundNumber", async (req, res) => {
+    try {
+      const roundNumber = parseInt(req.params.roundNumber);
+      if (isNaN(roundNumber)) {
+        return res.status(400).json({ message: "Invalid round number" });
+      }
+      const leaderboard = await storage.getTournamentRoundLeaderboard(req.params.id, roundNumber);
+      res.json(leaderboard);
+    } catch (error) {
+      console.error("Error fetching round leaderboard:", error);
+      res.status(500).json({ message: "Failed to fetch round leaderboard" });
+    }
+  });
+
+  app.get("/api/tournaments/:id/rounds", async (req, res) => {
+    try {
+      const rounds = await storage.getTournamentRounds(req.params.id);
+      res.json(rounds);
+    } catch (error) {
+      console.error("Error fetching tournament rounds:", error);
+      res.status(500).json({ message: "Failed to fetch tournament rounds" });
     }
   });
 

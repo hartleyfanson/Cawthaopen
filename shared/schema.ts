@@ -136,6 +136,15 @@ export const tournamentHoleTees = pgTable("tournament_hole_tees", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Tournament round definitions with dates
+export const tournamentRounds = pgTable("tournament_rounds", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tournamentId: varchar("tournament_id").references(() => tournaments.id).notNull(),
+  roundNumber: integer("round_number").notNull(),
+  roundDate: timestamp("round_date").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   tournaments: many(tournaments),
@@ -175,6 +184,7 @@ export const tournamentsRelations = relations(tournaments, ({ one, many }) => ({
   rounds: many(rounds),
   galleryPhotos: many(galleryPhotos),
   holeTees: many(tournamentHoleTees),
+  tournamentRounds: many(tournamentRounds),
 }));
 
 export const tournamentPlayersRelations = relations(tournamentPlayers, ({ one }) => ({
@@ -233,6 +243,13 @@ export const tournamentHoleTeesRelations = relations(tournamentHoleTees, ({ one 
   }),
 }));
 
+export const tournamentRoundsRelations = relations(tournamentRounds, ({ one }) => ({
+  tournament: one(tournaments, {
+    fields: [tournamentRounds.tournamentId],
+    references: [tournaments.id],
+  }),
+}));
+
 // Zod schemas for validation
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -284,6 +301,11 @@ export const insertTournamentHoleTeeSchema = createInsertSchema(tournamentHoleTe
   createdAt: true,
 });
 
+export const insertTournamentRoundSchema = createInsertSchema(tournamentRounds).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
@@ -304,3 +326,5 @@ export type GalleryPhoto = typeof galleryPhotos.$inferSelect;
 export type InsertGalleryPhoto = z.infer<typeof insertGalleryPhotoSchema>;
 export type TournamentHoleTee = typeof tournamentHoleTees.$inferSelect;
 export type InsertTournamentHoleTee = z.infer<typeof insertTournamentHoleTeeSchema>;
+export type TournamentRound = typeof tournamentRounds.$inferSelect;
+export type InsertTournamentRound = z.infer<typeof insertTournamentRoundSchema>;

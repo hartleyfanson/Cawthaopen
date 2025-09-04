@@ -8,6 +8,7 @@ import {
   scores,
   galleryPhotos,
   tournamentHoleTees,
+  tournamentRounds,
   type User,
   type UpsertUser,
   type Course,
@@ -26,6 +27,8 @@ import {
   type InsertGalleryPhoto,
   type TournamentHoleTee,
   type InsertTournamentHoleTee,
+  type TournamentRound,
+  type InsertTournamentRound,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, asc, and, sql } from "drizzle-orm";
@@ -57,6 +60,7 @@ export interface IStorage {
   updateScore(scoreId: string, updates: Partial<Score>): Promise<Score>;
   getRoundScores(roundId: string): Promise<Score[]>;
   getTournamentLeaderboard(tournamentId: string): Promise<any[]>;
+  getTournamentRoundLeaderboard(tournamentId: string, roundNumber: number): Promise<any[]>;
   getTournamentPlayerScores(tournamentId: string): Promise<any[]>;
   
   // Gallery operations
@@ -65,6 +69,10 @@ export interface IStorage {
   
   // Tournament hole tee operations
   createTournamentHoleTee(holeTee: InsertTournamentHoleTee): Promise<TournamentHoleTee>;
+  
+  // Tournament round operations
+  createTournamentRound(round: InsertTournamentRound): Promise<TournamentRound>;
+  getTournamentRounds(tournamentId: string): Promise<TournamentRound[]>;
   
   // Stats operations
   getUserStats(userId: string): Promise<any>;
@@ -254,6 +262,29 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
+  async getTournamentRoundLeaderboard(tournamentId: string, roundNumber: number): Promise<any[]> {
+    const result = await db
+      .select({
+        playerId: rounds.playerId,
+        playerName: sql<string>`${users.firstName} || ' ' || ${users.lastName}`.as('playerName'),
+        profileImageUrl: users.profileImageUrl,
+        totalStrokes: rounds.totalStrokes,
+        totalPutts: rounds.totalPutts,
+        fairwaysHit: rounds.fairwaysHit,
+        greensInRegulation: rounds.greensInRegulation,
+        roundNumber: rounds.roundNumber,
+      })
+      .from(rounds)
+      .innerJoin(users, eq(rounds.playerId, users.id))
+      .where(and(
+        eq(rounds.tournamentId, tournamentId),
+        eq(rounds.roundNumber, roundNumber)
+      ))
+      .orderBy(asc(rounds.totalStrokes));
+
+    return result;
+  }
+
   async getTournamentPlayerScores(tournamentId: string): Promise<any[]> {
     const result = await db
       .select({
@@ -298,6 +329,19 @@ export class DatabaseStorage implements IStorage {
   async createTournamentHoleTee(holeTee: InsertTournamentHoleTee): Promise<TournamentHoleTee> {
     const [newHoleTee] = await db.insert(tournamentHoleTees).values(holeTee).returning();
     return newHoleTee;
+  }
+
+  async createTournamentRound(round: InsertTournamentRound): Promise<TournamentRound> {
+    const [newRound] = await db.insert(tournamentRounds).values(round).returning();
+    return newRound;
+  }
+
+  async getTournamentRounds(tournamentId: string): Promise<TournamentRound[]> {
+    return await db
+      .select()
+      .from(tournamentRounds)
+      .where(eq(tournamentRounds.tournamentId, tournamentId))
+      .orderBy(asc(tournamentRounds.roundNumber));
   }
 
   // Stats operations
