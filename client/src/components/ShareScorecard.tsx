@@ -65,7 +65,7 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
 
   const { data: scores } = useQuery({
     queryKey: ["/api/rounds", (effectiveRoundData as any)?.id, "scores"],
-    enabled: !!(effectiveRoundData as any)?.id && !effectiveScores,
+    enabled: !!(effectiveRoundData as any)?.id,
     staleTime: 0, // Always fetch fresh data
     refetchOnMount: true, // Refetch when component mounts
     refetchOnWindowFocus: true, // Refetch when window regains focus
@@ -79,13 +79,24 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
   });
 
   const generateScorecard = async () => {
+    console.log('Debug scorecard generation:', {
+      canvasRef: !!canvasRef.current,
+      effectiveRoundData: !!effectiveRoundData,
+      playerData: !!playerData,
+      effectiveScores: !!effectiveScores,
+      scores: !!scores,
+      isSpecificRound,
+      targetRoundNumber
+    });
+    
     if (!canvasRef.current || !effectiveRoundData || !playerData || !(effectiveScores || scores)) return;
 
     setIsGenerating(true);
     
     try {
-      // Calculate fresh totals from current scores data (prefer recent complete round data)
+      // Calculate fresh totals from current scores data
       const currentScores = effectiveScores || scores;
+      console.log('Current scores for scorecard:', currentScores);
       const totalStrokes = Array.isArray(currentScores) ? currentScores.reduce((sum: number, score: any) => sum + (score.strokes || score.scores?.strokes), 0) : 0;
       const totalPutts = Array.isArray(currentScores) ? currentScores.reduce((sum: number, score: any) => sum + (score.putts || score.scores?.putts), 0) : 0;
       const fairwaysHit = Array.isArray(currentScores) ? currentScores.filter((score: any) => score.fairwayHit || score.scores?.fairwayHit).length : 0;
