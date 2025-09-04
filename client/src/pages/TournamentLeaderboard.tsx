@@ -368,6 +368,8 @@ export default function TournamentLeaderboard() {
                 tournamentId={id || ''}
                 roundData={currentRound}
                 playerData={user}
+                selectedRound={selectedRound}
+                tournamentRounds={tournamentRounds as any[]}
               />
             )}
           </div>

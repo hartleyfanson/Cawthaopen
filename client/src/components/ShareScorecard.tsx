@@ -11,25 +11,37 @@ interface ShareScorecardProps {
   tournamentId: string;
   roundData?: any;
   playerData?: any;
+  selectedRound?: 'all' | number;
+  tournamentRounds?: any[];
 }
 
-export function ShareScorecard({ tournamentId, roundData, playerData }: ShareScorecardProps) {
+export function ShareScorecard({ tournamentId, roundData, playerData, selectedRound = 'all', tournamentRounds = [] }: ShareScorecardProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
 
-  // Fetch the most recent complete round for scorecard generation
+  // Determine which round data to use based on selectedRound
+  const isSpecificRound = typeof selectedRound === 'number';
+  const targetRoundNumber = isSpecificRound ? selectedRound : undefined;
+  
+  // Find the target round data for specific round scorecards
+  const targetRoundData = isSpecificRound && Array.isArray(tournamentRounds) 
+    ? tournamentRounds.find(r => r.roundNumber === targetRoundNumber)
+    : null;
+
+  // Fetch the most recent complete round only for 'all' rounds view
   const { data: recentCompleteRound } = useQuery({
     queryKey: ["/api/players/recent-complete-round"],
     staleTime: 30000, // Cache for 30 seconds
+    enabled: !isSpecificRound, // Only fetch when not viewing a specific round
   });
 
-  // Use recent complete round data or fallback to provided roundData
-  const effectiveRoundData = recentCompleteRound?.round || roundData;
-  const effectiveScores = recentCompleteRound?.scores || null;
-  const effectiveTournament = recentCompleteRound?.tournament || null;
-  const effectiveCourse = recentCompleteRound?.course || null;
+  // Use appropriate round data based on context
+  const effectiveRoundData = isSpecificRound ? (targetRoundData || roundData) : (recentCompleteRound?.round || roundData);
+  const effectiveScores = isSpecificRound ? null : (recentCompleteRound as any)?.scores;
+  const effectiveTournament = (recentCompleteRound as any)?.tournament || null;
+  const effectiveCourse = (recentCompleteRound as any)?.course || null;
 
   const { data: tournament } = useQuery({
     queryKey: ["/api/tournaments", tournamentId],
@@ -57,6 +69,13 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
     staleTime: 0, // Always fetch fresh data
     refetchOnMount: true, // Refetch when component mounts
     refetchOnWindowFocus: true, // Refetch when window regains focus
+  });
+
+  // For specific rounds, also fetch round-specific leaderboard data
+  const { data: roundLeaderboard } = useQuery({
+    queryKey: ["/api/tournaments", tournamentId, "leaderboard", "round", targetRoundNumber],
+    enabled: isSpecificRound && !!tournamentId && !!targetRoundNumber,
+    staleTime: 0,
   });
 
   const generateScorecard = async () => {
