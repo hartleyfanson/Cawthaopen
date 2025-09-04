@@ -35,27 +35,29 @@ import { ObjectUploader } from "@/components/ObjectUploader";
 import type { UploadResult } from "@uppy/core";
 import { Upload, Image } from "lucide-react";
 
-const createTournamentSchema = insertTournamentSchema.extend({
-  // numeric inputs arrive as strings; coerce them
-  maxPlayers: z.coerce.number().int().min(1).max(100),
-  numberOfRounds: z.coerce.number().int().min(1).max(4),
+const createTournamentSchema = insertTournamentSchema
+  .extend({
+    // numeric inputs arrive as strings; coerce them
+    maxPlayers: z.coerce.number().int().min(1).max(100),
+    numberOfRounds: z.coerce.number().int().min(1).max(4),
 
-  // datetime-local gives strings; normalize to Date
-  startDate: z.preprocess(
-    (v) => (v instanceof Date ? v : new Date(String(v))),
-    z.date(),
-  ),
-  endDate: z.preprocess(
-    (v) => (v instanceof Date ? v : new Date(String(v))),
-    z.date(),
-  ),
+    // datetime-local gives strings; normalize to Date
+    startDate: z.preprocess(
+      (v) => (v instanceof Date ? v : new Date(String(v))),
+      z.date(),
+    ),
+    endDate: z.preprocess(
+      (v) => (v instanceof Date ? v : new Date(String(v))),
+      z.date(),
+    ),
 
-  // courseId MUST be a string now (from API search)
-  courseId: z.string().min(1, "Please select a course"),
+    // courseId must be a positive integer
+    courseId: z.coerce.number().int().positive(),
 
-  handicapAllowance: z.coerce.string(),
-  headerImageUrl: z.string().optional(), // optional = image not required
-}).omit({ createdBy: true }); // omit createdBy as it will be set server-side
+    handicapAllowance: z.coerce.string(),
+    headerImageUrl: z.string().optional(), // optional = image not required
+  })
+  .omit({ createdBy: true }); // omit createdBy as it will be set server-side
 
 export default function CreateTournament() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -141,7 +143,7 @@ export default function CreateTournament() {
     defaultValues: {
       name: "",
       description: "",
-      courseId: "",
+      courseId: undefined as unknown as number,
       startDate: new Date(Date.now() + 60 * 60 * 1000), // +1 hour
       endDate: new Date(Date.now() + 3 * 60 * 60 * 1000), // +3 hours
       status: "upcoming",
@@ -182,7 +184,6 @@ export default function CreateTournament() {
       return;
     }
   }, [isAuthenticated, isLoading, toast]);
-
 
   const createTournamentMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -242,14 +243,18 @@ export default function CreateTournament() {
       return;
     }
 
-    // Validate course selection
-    if (!data.courseId || data.courseId.trim() === "") {
+    // Validate course selection (must be a positive number)
+    if (
+      !data.courseId ||
+      Number.isNaN(Number(data.courseId)) ||
+      Number(data.courseId) <= 0
+    ) {
       form.setError("courseId", { message: "Please select a course" });
       return;
     }
 
     try {
-      const courseId = data.courseId;
+      const courseId = Number(data.courseId);
 
       // Prepare tee mappings based on selection mode
       const teeSelections =
@@ -401,23 +406,39 @@ export default function CreateTournament() {
                               <div className="p-4 bg-green-50 dark:bg-green-950 rounded-lg border border-green-200 dark:border-green-800">
                                 <div className="flex items-start justify-between">
                                   <div className="space-y-1">
-                                    <p className="font-semibold text-green-800 dark:text-green-200">{selectedCourse.name}</p>
+                                    <p className="font-semibold text-green-800 dark:text-green-200">
+                                      {selectedCourse.name}
+                                    </p>
                                     <p className="text-sm text-green-600 dark:text-green-300">
-                                      {selectedCourse.city}, {selectedCourse.state} {selectedCourse.country}
+                                      {selectedCourse.city},{" "}
+                                      {selectedCourse.state}{" "}
+                                      {selectedCourse.country}
                                     </p>
                                     <p className="text-xs text-green-600 dark:text-green-400">
-                                      {selectedCourse.holes?.length || selectedCourse.holes || 18} holes • Par {selectedCourse.holes?.reduce?.((sum: number, hole: any) => sum + hole.par, 0) || 'TBD'}
+                                      {selectedCourse.holes?.length ||
+                                        selectedCourse.holes ||
+                                        18}{" "}
+                                      holes • Par{" "}
+                                      {selectedCourse.holes?.reduce?.(
+                                        (sum: number, hole: any) =>
+                                          sum + hole.par,
+                                        0,
+                                      ) || "TBD"}
                                     </p>
                                   </div>
                                   <div className="text-right">
                                     <div className="h-8 w-8 bg-green-600 rounded-full flex items-center justify-center">
-                                      <span className="text-white text-xs">✓</span>
+                                      <span className="text-white text-xs">
+                                        ✓
+                                      </span>
                                     </div>
                                   </div>
                                 </div>
                               </div>
                             ) : (
-                              <p className="text-sm text-muted-foreground">Search for a golf course below</p>
+                              <p className="text-sm text-muted-foreground">
+                                Search for a golf course below
+                              </p>
                             )}
                           </div>
                         </FormControl>
