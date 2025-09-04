@@ -140,9 +140,30 @@ export default function TournamentLeaderboard() {
             <h2 className="text-3xl sm:text-4xl font-serif font-bold text-accent mb-2">
               {(tournament as any)?.name || 'Tournament Leaderboard'}
             </h2>
-            <p className="text-xl text-secondary">
-              {(course as any)?.name || 'Course'} • {(course as any)?.location || 'Location'}
-            </p>
+            {/* Dynamic course and date display based on selected round */}
+            {selectedRound !== 'all' && tournamentRounds && Array.isArray(tournamentRounds) ? (
+              <div className="text-xl text-secondary space-y-1">
+                <p>{(course as any)?.name || 'Course'} • {(course as any)?.location || 'Location'}</p>
+                <p className="text-lg">
+                  Round {selectedRound} • {tournamentRounds.find((r: any) => r.roundNumber === selectedRound)?.roundDate 
+                    ? new Date(tournamentRounds.find((r: any) => r.roundNumber === selectedRound)?.roundDate).toLocaleDateString('en-US', { 
+                        weekday: 'long',
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })
+                    : 'Date TBD'
+                  }
+                </p>
+              </div>
+            ) : (
+              <div className="text-xl text-secondary space-y-1">
+                <p>{(course as any)?.name || 'Course'} • {(course as any)?.location || 'Location'}</p>
+                {selectedRound === 'all' && (
+                  <p className="text-lg">All Rounds Combined</p>
+                )}
+              </div>
+            )}
             
             {/* Round Selection - show only if tournament has multiple rounds */}
             {tournamentRounds && Array.isArray(tournamentRounds) && tournamentRounds.length > 1 && (

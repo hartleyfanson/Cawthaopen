@@ -9,6 +9,7 @@ interface LeaderboardTableProps {
   courseId?: string;
   tournamentId?: string;
   tournament?: any;
+  selectedRound?: 'all' | number;
 }
 
 // Helper function to format player name as "first initial. last name"
@@ -24,13 +25,19 @@ function formatPlayerName(playerName: string): string {
   return `${firstName.charAt(0).toUpperCase()}. ${lastName}`;
 }
 
-export function LeaderboardTable({ leaderboard, courseId, tournamentId, tournament }: LeaderboardTableProps) {
+export function LeaderboardTable({ leaderboard, courseId, tournamentId, tournament, selectedRound = 'all' }: LeaderboardTableProps) {
   const [showingFrontNine, setShowingFrontNine] = useState(true);
 
   // Fetch course holes
   const { data: holes } = useQuery({
     queryKey: ["/api/courses", courseId, "holes"],
     enabled: !!courseId,
+  });
+
+  // Fetch tee selections for this tournament
+  const { data: teeSelections } = useQuery({
+    queryKey: ["/api/tournaments", tournamentId, "tee-selections"],
+    enabled: !!tournamentId,
   });
 
   // Fetch all player scores for the tournament
@@ -283,6 +290,42 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
             </div>
           ))}
         </div>
+
+        {/* HANDICAP row */}
+        <div className="grid gap-1 text-center text-xs text-muted-foreground mt-1" style={{gridTemplateColumns: "2fr " + "1fr ".repeat(9)}}>
+          <div className="text-left">HDCP</div>
+          {displayHoles.map((hole: any) => (
+            <div key={`hdcp-${hole.id}`} data-testid={`header-hdcp-${hole.holeNumber}`}>
+              {hole.handicap || '-'}
+            </div>
+          ))}
+        </div>
+
+        {/* TEE COLORS row */}
+        {Array.isArray(teeSelections) && teeSelections.length > 0 && (
+          <div className="grid gap-1 text-center text-xs mt-1" style={{gridTemplateColumns: "2fr " + "1fr ".repeat(9)}}>
+            <div className="text-left text-muted-foreground">TEES</div>
+            {displayHoles.map((hole: any) => {
+              const teeSelection = teeSelections.find((tee: any) => tee.holeNumber === hole.holeNumber);
+              const teeColor = teeSelection?.teeColor || 'white';
+              const teeColorClasses: Record<string, string> = {
+                white: 'bg-gray-100 text-gray-800 border-gray-300',
+                blue: 'bg-blue-100 text-blue-800 border-blue-300',
+                red: 'bg-red-100 text-red-800 border-red-300', 
+                gold: 'bg-yellow-100 text-yellow-800 border-yellow-300'
+              };
+              const teeColorClass = teeColorClasses[teeColor] || teeColorClasses.white;
+              
+              return (
+                <div key={`tee-${hole.id}`} className="flex justify-center">
+                  <div className={`px-1 py-0.5 rounded text-xs border ${teeColorClass}`}>
+                    {teeColor.charAt(0).toUpperCase()}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
       
       {/* Player rows - hole-by-hole scores only */}
