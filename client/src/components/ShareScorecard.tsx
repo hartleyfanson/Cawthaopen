@@ -63,20 +63,28 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
     enabled: !!(effectiveCourse || course as any)?.id,
   });
 
-  const { data: scores } = useQuery({
-    queryKey: ["/api/rounds", (effectiveRoundData as any)?.id, "scores"],
-    enabled: !!(effectiveRoundData as any)?.id,
-    staleTime: 0, // Always fetch fresh data
-    refetchOnMount: true, // Refetch when component mounts
-    refetchOnWindowFocus: true, // Refetch when window regains focus
-  });
-
-  // For specific rounds, also fetch round-specific leaderboard data
-  const { data: roundLeaderboard } = useQuery({
-    queryKey: ["/api/tournaments", tournamentId, "leaderboard", "round", targetRoundNumber],
-    enabled: isSpecificRound && !!tournamentId && !!targetRoundNumber,
+  // Fetch tournament player scores for round-specific data
+  const { data: tournamentPlayerScores } = useQuery({
+    queryKey: ["/api/tournaments", tournamentId, "player-scores"],
+    enabled: isSpecificRound && !!tournamentId,
     staleTime: 0,
   });
+
+  // For non-specific rounds, still use the old approach
+  const { data: scores } = useQuery({
+    queryKey: ["/api/rounds", (effectiveRoundData as any)?.id, "scores"],
+    enabled: !!(effectiveRoundData as any)?.id && !isSpecificRound,
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+  });
+
+  // For specific rounds, filter tournament scores by round and player
+  const roundSpecificScores = isSpecificRound && Array.isArray(tournamentPlayerScores) 
+    ? tournamentPlayerScores.filter((score: any) => 
+        score.roundNumber === targetRoundNumber && score.playerId === playerData?.id
+      )
+    : null;
 
   const generateScorecard = async () => {
     console.log('Debug scorecard generation:', {
@@ -95,8 +103,10 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
     
     try {
       // Calculate fresh totals from current scores data
-      const currentScores = effectiveScores || scores;
+      const currentScores = effectiveScores || scores || roundSpecificScores;
       console.log('Current scores for scorecard:', currentScores);
+      console.log('Round specific scores:', roundSpecificScores);
+      console.log('Tournament player scores:', tournamentPlayerScores);
       const totalStrokes = Array.isArray(currentScores) ? currentScores.reduce((sum: number, score: any) => sum + (score.strokes || score.scores?.strokes), 0) : 0;
       const totalPutts = Array.isArray(currentScores) ? currentScores.reduce((sum: number, score: any) => sum + (score.putts || score.scores?.putts), 0) : 0;
       const fairwaysHit = Array.isArray(currentScores) ? currentScores.filter((score: any) => score.fairwayHit || score.scores?.fairwayHit).length : 0;
