@@ -51,13 +51,27 @@ const createTournamentSchema = insertTournamentSchema
       z.date(),
     ),
 
-    // courseId must be a non-empty string
-    courseId: z.string().min(1, "Please select a course"),
+    // courseId is required for single rounds, optional for multi-rounds
+    courseId: z.string().optional(),
 
     handicapAllowance: z.coerce.string(),
     headerImageUrl: z.string().optional(), // optional = image not required
   })
-  .omit({ createdBy: true }); // omit createdBy as it will be set server-side
+  .omit({ createdBy: true })
+  .refine(
+    (data) => {
+      // For single round tournaments, courseId is required
+      if (data.numberOfRounds === 1) {
+        return data.courseId && data.courseId.length > 0;
+      }
+      // For multi-round tournaments, courseId is not required
+      return true;
+    },
+    {
+      message: "Please select a course",
+      path: ["courseId"],
+    }
+  ); // omit createdBy as it will be set server-side
 
 export default function CreateTournament() {
   const { user, isAuthenticated, isLoading } = useAuth();
