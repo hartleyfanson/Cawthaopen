@@ -459,7 +459,10 @@ export default function CreateTournament() {
                           
                           const importData = await importResponse.json();
                           
-                          form.setValue("courseId", course.id, {
+                          // Use the course ID from the import response (the actual database ID)
+                          const actualCourseId = importData.course.id;
+                          
+                          form.setValue("courseId", actualCourseId, {
                             shouldValidate: true,
                             shouldDirty: true,
                           });

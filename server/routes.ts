@@ -522,9 +522,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ course: existingCourse, imported: false });
       }
       
-      // Create course data
+      // Create course data (don't set ID, let database generate it)
       const courseData = insertCourseSchema.parse({
-        id: course.id,
         name: course.name,
         location: `${course.city}, ${course.state}, ${course.country}`,
         description: `Golf course in ${course.city}, ${course.state}`,
