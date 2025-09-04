@@ -276,14 +276,14 @@ export const insertTournamentSchema = createInsertSchema(tournaments).omit({
   createdAt: true,
 }).extend({
   // Override date fields to accept strings and convert to Date objects
-  startDate: z.preprocess(
-    (val) => val ? new Date(String(val)) : val,
-    z.date().optional()
-  ),
-  endDate: z.preprocess(
-    (val) => val ? new Date(String(val)) : val,
-    z.date().optional()
-  ),
+  startDate: z.union([
+    z.string().transform(val => new Date(val)),
+    z.date()
+  ]).optional(),
+  endDate: z.union([
+    z.string().transform(val => new Date(val)),
+    z.date()
+  ]).optional(),
 });
 
 export const insertTournamentPlayerSchema = createInsertSchema(tournamentPlayers).omit({
