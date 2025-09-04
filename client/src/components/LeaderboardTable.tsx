@@ -59,10 +59,10 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
   }, [selectedRound, tournamentRounds]);
 
   // Fetch each round's leaderboard for multi-round tournaments
-  const roundQueries = tournamentRounds.map((round: any) => {
+  const roundQueries = (Array.isArray(tournamentRounds) ? tournamentRounds : []).map((round: any) => {
     return useQuery({
       queryKey: ["/api/tournaments", tournamentId, "leaderboard", "round", round.roundNumber],
-      enabled: selectedRound === 'all' && !!tournamentId && tournamentRounds.length > 1,
+      enabled: selectedRound === 'all' && !!tournamentId && Array.isArray(tournamentRounds) && tournamentRounds.length > 1,
       refetchInterval: 5000,
     });
   });
@@ -73,7 +73,7 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
     
     const combined: Record<number, any[]> = {};
     roundQueries.forEach((query, index) => {
-      if (query.data && Array.isArray(query.data)) {
+      if (query.data && Array.isArray(query.data) && Array.isArray(tournamentRounds)) {
         const roundNumber = tournamentRounds[index]?.roundNumber;
         if (roundNumber) {
           combined[roundNumber] = query.data;
@@ -187,7 +187,7 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
   // Calculate Callaway score using proper Callaway system logic
   const calculateCallawayScore = (totalScore: number, handicap: number, playerId: string) => {
     const playerData = processedPlayerData[playerId];
-    if (!playerData || playerData.holesCompleted < 18) return totalScore;
+    if (!playerData || playerData.holesCompleted < 18 || !Array.isArray(allHoles) || allHoles.length === 0) return totalScore;
 
     // Apply double par maximum rule to each hole score
     const adjustedHoleScores: number[] = [];
@@ -204,7 +204,7 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
       }
     }
 
-    if (adjustedHoleScores.length !== 18) return totalScore;
+    if (!Array.isArray(adjustedHoleScores) || adjustedHoleScores.length !== 18) return totalScore;
 
     // Determine handicap deduction based on adjusted gross score
     const getCallawayDeduction = (grossScore: number): number => {
@@ -234,6 +234,7 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
     const holeDeficits: { holeIndex: number; deficit: number; strokes: number }[] = [];
     
     for (let i = 0; i < 18; i++) {
+      if (!Array.isArray(allHoles) || !Array.isArray(adjustedHoleScores)) break;
       const hole = allHoles.find((h: any) => h.holeNumber === i + 1);
       if (hole && adjustedHoleScores[i]) {
         const deficit = adjustedHoleScores[i] - hole.par;
@@ -248,12 +249,14 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
     }
 
     // Sort by worst holes (highest deficit first, then highest strokes)
-    holeDeficits.sort((a, b) => {
-      if (b.deficit !== a.deficit) {
-        return b.deficit - a.deficit;
-      }
-      return b.strokes - a.strokes;
-    });
+    if (Array.isArray(holeDeficits)) {
+      holeDeficits.sort((a, b) => {
+        if (b.deficit !== a.deficit) {
+          return b.deficit - a.deficit;
+        }
+        return b.strokes - a.strokes;
+      });
+    }
 
     // Calculate deduction
     let totalDeduction = 0;
@@ -261,13 +264,15 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
     const hasHalfHole = deductionAmount % 1 === 0.5;
 
     // Deduct worst holes
-    for (let i = 0; i < wholeHoles && i < holeDeficits.length; i++) {
-      totalDeduction += holeDeficits[i].deficit;
-    }
+    if (Array.isArray(holeDeficits)) {
+      for (let i = 0; i < wholeHoles && i < holeDeficits.length; i++) {
+        totalDeduction += holeDeficits[i].deficit;
+      }
 
-    // Handle half hole deduction
-    if (hasHalfHole && wholeHoles < holeDeficits.length) {
-      totalDeduction += Math.floor(holeDeficits[wholeHoles].deficit / 2);
+      // Handle half hole deduction
+      if (hasHalfHole && wholeHoles < holeDeficits.length) {
+        totalDeduction += Math.floor(holeDeficits[wholeHoles].deficit / 2);
+      }
     }
 
     // Apply handicap adjustment (-2 to +2 range)

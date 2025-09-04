@@ -71,8 +71,6 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
   const processedPlayerData = useMemo(() => {
     if (!playerScores || !Array.isArray(playerScores)) return {};
 
-    console.log('Processing player scores for round:', selectedScorecardRound);
-    console.log('Available player scores:', playerScores.length);
     
     const playerMap: Record<string, any> = {};
 
@@ -95,7 +93,6 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
 
       // Store individual hole scores - filter by selected round ONLY
       if (score.strokes !== null && score.strokes !== undefined && score.roundNumber === selectedScorecardRound) {
-        console.log(`Adding Round ${selectedScorecardRound} score for hole ${score.holeNumber}:`, score.strokes);
         playerMap[playerId].scores[score.holeNumber] = {
           strokes: score.strokes,
           par: score.holePar,
@@ -137,18 +134,8 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
   // Get current player's data from processed data (same as leaderboard)
   const currentPlayerRoundData = processedPlayerData[(playerData as any)?.id];
   
-  console.log('Using SAME data source as leaderboard:', currentPlayerRoundData);
-  console.log('Holes with scores:', Object.keys(currentPlayerRoundData?.scores || {}));
-  console.log('Total holes for Round', selectedScorecardRound, ':', currentPlayerRoundData?.holesCompleted);
 
   const generateScorecard = async () => {
-    console.log('Debug scorecard generation:', {
-      canvasRef: !!canvasRef.current,
-      effectiveRoundData: !!effectiveRoundData,
-      playerData: !!playerData,
-      currentPlayerRoundData: !!currentPlayerRoundData,
-      selectedScorecardRound
-    });
     
     if (!canvasRef.current || !effectiveRoundData || !playerData || !currentPlayerRoundData) return;
 
@@ -289,13 +276,6 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
       // Score summary (large centered display) - using same calculation as leaderboard
       const coursePar = Array.isArray(holes) ? holes.reduce((sum: number, hole: any) => sum + (hole.par || hole.holes?.par), 0) : 72;
       const scoreToPar = totalStrokes > 0 ? totalStrokes - coursePar : 0;
-      
-      console.log('Scorecard calculation (matching leaderboard):', {
-        totalStrokes,
-        coursePar,
-        scoreToPar,
-        playerData: currentPlayerRoundData
-      });
       const scoreText = scoreToPar === 0 ? 'EVEN' : 
                        scoreToPar > 0 ? `+${scoreToPar}` : 
                        `${scoreToPar}`;
