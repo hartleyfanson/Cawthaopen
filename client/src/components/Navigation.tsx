@@ -31,6 +31,7 @@ export function Navigation() {
     lastName: '',
     email: ''
   });
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -44,6 +45,13 @@ export function Navigation() {
       });
     }
   }, [user]);
+
+  // Reset preview when modal closes
+  React.useEffect(() => {
+    if (!isProfileDialogOpen) {
+      setPreviewImageUrl(null);
+    }
+  }, [isProfileDialogOpen]);
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -69,7 +77,11 @@ export function Navigation() {
 
   const handleProfileSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateProfileMutation.mutate(editForm);
+    const formData = { ...editForm };
+    if (previewImageUrl) {
+      (formData as any).profileImageUrl = previewImageUrl;
+    }
+    updateProfileMutation.mutate(formData);
   };
 
   const handleProfileImageUpload = async () => {
@@ -101,23 +113,18 @@ export function Navigation() {
         });
         const aclData = await aclResponse.json();
         
-        // Update user profile with the proper object path
-        await apiRequest('PUT', `/api/users/${(user as any)?.id}/profile`, {
-          profileImageUrl: aclData.objectPath
-        });
-        
-        // Invalidate and refetch user data to update UI immediately
-        queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+        // Store the object path for preview (don't save to database yet)
+        setPreviewImageUrl(aclData.objectPath);
         
         toast({
-          title: "Profile Image Updated",
-          description: "Your profile image has been successfully updated.",
+          title: "Photo Uploaded",
+          description: "Click 'Save Changes' to update your profile.",
         });
       } catch (error) {
-        console.error('Error updating profile image:', error);
+        console.error('Error uploading profile image:', error);
         toast({
-          title: "Update Failed",
-          description: "Failed to update profile image. Please try again.",
+          title: "Upload Failed",
+          description: "Failed to upload profile image. Please try again.",
           variant: "destructive",
         });
       }
@@ -260,7 +267,7 @@ export function Navigation() {
                   <form onSubmit={handleProfileSubmit} className="space-y-4">
                     <div className="flex flex-col items-center space-y-4">
                       <Avatar className="h-20 w-20">
-                        <AvatarImage src={(user as any)?.profileImageUrl} />
+                        <AvatarImage src={previewImageUrl || (user as any)?.profileImageUrl} />
                         <AvatarFallback className="bg-secondary text-secondary-foreground text-lg">
                           {getInitials((user as any)?.firstName, (user as any)?.lastName)}
                         </AvatarFallback>
