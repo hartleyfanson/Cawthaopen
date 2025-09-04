@@ -18,7 +18,33 @@ import { PowerupComments } from "@/components/PowerupComments";
 
 // Component to show all courses and date range for multi-round tournaments
 function AllRoundsInfo({ tournament, tournamentRounds }: { tournament: any; tournamentRounds: any[] }) {
-  return null;
+  if (!Array.isArray(tournamentRounds) || tournamentRounds.length === 0) {
+    return (
+      <div className="text-xl text-secondary space-y-1">
+        <p>Tournament • All Rounds</p>
+        <p className="text-lg">Multiple Rounds</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="text-xl text-secondary space-y-1">
+      <p>Multi-Round Tournament • {tournamentRounds.length} Rounds</p>
+      <p className="text-lg">
+        {tournament?.startDate && tournament?.endDate
+          ? `${new Date(tournament.startDate).toLocaleDateString('en-US', { 
+              month: 'short', 
+              day: 'numeric' 
+            })} - ${new Date(tournament.endDate).toLocaleDateString('en-US', { 
+              month: 'short', 
+              day: 'numeric',
+              year: 'numeric'
+            })}`
+          : 'Date Range TBD'
+        }
+      </p>
+    </div>
+  );
 }
 
 export default function TournamentLeaderboard() {

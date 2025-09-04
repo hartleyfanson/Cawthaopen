@@ -48,24 +48,42 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
     refetchInterval: 5000, // Auto-refresh every 5 seconds for real-time updates
   });
 
-  // Fetch round-specific leaderboards for multi-round summary
-  const roundLeaderboards = useMemo(() => {
-    if (selectedRound !== 'all' || !Array.isArray(tournamentRounds) || tournamentRounds.length <= 1) {
-      return {};
-    }
-    return Object.fromEntries(
-      tournamentRounds.map(round => [round.roundNumber, null])
-    );
+  // Determine if we need to fetch round-specific data
+  const shouldFetchRounds = useMemo(() => {
+    return selectedRound === 'all' && Array.isArray(tournamentRounds) && tournamentRounds.length > 1;
   }, [selectedRound, tournamentRounds]);
 
-  // Fetch each round's leaderboard for multi-round tournaments
-  const roundQueries = (Array.isArray(tournamentRounds) ? tournamentRounds : []).map((round: any) => {
-    return useQuery({
-      queryKey: ["/api/tournaments", tournamentId, "leaderboard", "round", round.roundNumber],
-      enabled: selectedRound === 'all' && !!tournamentId && Array.isArray(tournamentRounds) && tournamentRounds.length > 1,
-      refetchInterval: 5000,
-    });
+  // Fixed number of round queries to avoid hook order issues
+  const maxRounds = 4; // Reasonable limit for tournament rounds
+  const safeRounds = Array.isArray(tournamentRounds) ? tournamentRounds.slice(0, maxRounds) : [];
+  
+  // Create exactly maxRounds queries to maintain hook order
+  const roundQuery1 = useQuery({
+    queryKey: ["/api/tournaments", tournamentId, "leaderboard", "round", safeRounds[0]?.roundNumber],
+    enabled: shouldFetchRounds && !!tournamentId && safeRounds.length >= 1,
+    refetchInterval: 5000,
   });
+  
+  const roundQuery2 = useQuery({
+    queryKey: ["/api/tournaments", tournamentId, "leaderboard", "round", safeRounds[1]?.roundNumber],
+    enabled: shouldFetchRounds && !!tournamentId && safeRounds.length >= 2,
+    refetchInterval: 5000,
+  });
+  
+  const roundQuery3 = useQuery({
+    queryKey: ["/api/tournaments", tournamentId, "leaderboard", "round", safeRounds[2]?.roundNumber],
+    enabled: shouldFetchRounds && !!tournamentId && safeRounds.length >= 3,
+    refetchInterval: 5000,
+  });
+  
+  const roundQuery4 = useQuery({
+    queryKey: ["/api/tournaments", tournamentId, "leaderboard", "round", safeRounds[3]?.roundNumber],
+    enabled: shouldFetchRounds && !!tournamentId && safeRounds.length >= 4,
+    refetchInterval: 5000,
+  });
+
+  // Collect active round queries
+  const roundQueries = [roundQuery1, roundQuery2, roundQuery3, roundQuery4].slice(0, safeRounds.length);
 
   // Combine round data for multi-round summary
   const combinedRoundData = useMemo(() => {
