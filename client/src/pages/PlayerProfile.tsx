@@ -8,7 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { AchievementBadge } from "@/components/AchievementBadge";
-import { Trophy, Award, Target, TrendingUp, Calendar, BarChart3, Star } from "lucide-react";
+import { Trophy, Award, Target, TrendingUp, Calendar, BarChart3, Star, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 import type { Achievement, PlayerAchievement, PlayerStats, User } from "@shared/schema";
 
 interface PlayerAchievementWithDetails extends PlayerAchievement {
@@ -96,6 +97,22 @@ function PlayerProfile() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100">
       <div className="container mx-auto px-4 py-8">
+        {/* Back Button */}
+        <div className="mb-6">
+          <Link href="/">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+              data-testid="button-back-to-dashboard"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Back to Dashboard</span>
+              <span className="sm:hidden">Back</span>
+            </Button>
+          </Link>
+        </div>
+        
         {/* Player Header */}
         <Card className="mb-8 border-green-200 shadow-lg">
           <CardContent className="pt-6">

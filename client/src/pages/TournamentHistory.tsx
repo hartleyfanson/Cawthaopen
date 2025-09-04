@@ -4,6 +4,7 @@ import { Navigation } from "@/components/Navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
+import { ArrowLeft } from "lucide-react";
 import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -81,6 +82,22 @@ export default function TournamentHistory() {
       {/* Header */}
       <section className="py-12 bg-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Back Button */}
+          <div className="mb-6">
+            <Link href="/">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+                data-testid="button-back-to-dashboard"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span className="hidden sm:inline">Back to Dashboard</span>
+                <span className="sm:hidden">Back</span>
+              </Button>
+            </Link>
+          </div>
+          
           <div className="flex flex-col sm:flex-row justify-between items-center mb-8">
             <h2 className="text-3xl sm:text-4xl font-serif font-bold text-accent mb-4 sm:mb-0">
               Tournaments

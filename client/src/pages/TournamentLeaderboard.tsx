@@ -216,8 +216,8 @@ export default function TournamentLeaderboard() {
                 Gallery
               </Button>
             </Link>
-            {/* Only show Share Scorecard for active/completed tournaments with scores */}
-            {(tournament as any)?.status !== "upcoming" && hasSubmittedScores && (
+            {/* Only show Share Scorecard for active/completed tournaments */}
+            {(tournament as any)?.status !== "upcoming" && (
               <ShareScorecard 
                 tournamentId={id || ''}
                 roundData={currentRound}

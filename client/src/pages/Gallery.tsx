@@ -7,7 +7,7 @@ import { ObjectUploader } from "@/components/ObjectUploader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Camera } from "lucide-react";
+import { Camera, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -116,6 +116,21 @@ export default function Gallery() {
       {/* Header */}
       <section className="py-12 bg-muted">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Back Button */}
+          <div className="mb-6">
+            <Link href={`/tournaments/${id}/leaderboard`}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+                data-testid="button-back-to-tournament"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span className="hidden sm:inline">Back to Tournament</span>
+                <span className="sm:hidden">Back</span>
+              </Button>
+            </Link>
+          </div>
           <div className="text-center mb-8">
             <h2 className="text-3xl sm:text-4xl font-serif font-bold text-accent mb-2">
               Tournament Gallery
