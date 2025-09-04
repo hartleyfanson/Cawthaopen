@@ -366,7 +366,7 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
                     <td className="p-4">
                       <div className="flex items-center space-x-3">
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src="" alt={player.playerName} />
+                          <AvatarImage src={player.profileImageUrl || ""} alt={player.playerName} />
                           <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
                             {player.playerName?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)}
                           </AvatarFallback>
