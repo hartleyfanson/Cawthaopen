@@ -79,6 +79,7 @@ export interface IStorage {
   
   // Tournament hole tee operations
   createTournamentHoleTee(holeTee: InsertTournamentHoleTee): Promise<TournamentHoleTee>;
+  getTournamentHoleTees(tournamentId: string): Promise<TournamentHoleTee[]>;
   
   // Tournament round operations
   createTournamentRound(round: InsertTournamentRound): Promise<TournamentRound>;
@@ -113,15 +114,7 @@ export class DatabaseStorage implements IStorage {
 
   async getAllUsers(): Promise<User[]> {
     return await db
-      .select({
-        id: users.id,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        email: users.email,
-        profileImageUrl: users.profileImageUrl,
-        createdAt: users.createdAt,
-        updatedAt: users.updatedAt,
-      })
+      .select()
       .from(users)
       .orderBy(asc(users.firstName), asc(users.lastName));
   }
@@ -417,6 +410,10 @@ export class DatabaseStorage implements IStorage {
   async createTournamentHoleTee(holeTee: InsertTournamentHoleTee): Promise<TournamentHoleTee> {
     const [newHoleTee] = await db.insert(tournamentHoleTees).values(holeTee).returning();
     return newHoleTee;
+  }
+
+  async getTournamentHoleTees(tournamentId: string): Promise<TournamentHoleTee[]> {
+    return await db.select().from(tournamentHoleTees).where(eq(tournamentHoleTees.tournamentId, tournamentId));
   }
 
   async createTournamentRound(round: InsertTournamentRound): Promise<TournamentRound> {

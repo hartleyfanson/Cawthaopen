@@ -16,11 +16,42 @@ export function FutureTournamentView({ tournament, tournamentId, course }: Futur
     enabled: !!course?.id,
   });
 
+  // Fetch tournament tee selections
+  const { data: teeSelections } = useQuery({
+    queryKey: ["/api/tournaments", tournamentId, "tee-selections"],
+    enabled: !!tournamentId,
+  });
+
   // Fetch registered players
   const { data: players } = useQuery({
     queryKey: ["/api/tournaments", tournamentId, "players"],
     enabled: !!tournamentId,
   });
+
+  // Helper function to get yardage based on tee selection
+  const getHoleYardage = (hole: any) => {
+    const teeSelection = Array.isArray(teeSelections) 
+      ? teeSelections.find((ts: any) => ts.holeId === hole.id)
+      : null;
+    
+    const teeColor = teeSelection?.teeColor || 'white';
+    
+    switch (teeColor) {
+      case 'gold': return hole.yardageGold || hole.yardageWhite;
+      case 'blue': return hole.yardageBlue || hole.yardageWhite;
+      case 'red': return hole.yardageRed || hole.yardageWhite;
+      case 'white':
+      default: return hole.yardageWhite;
+    }
+  };
+
+  // Helper function to get tee color for a hole
+  const getHoleTeeColor = (hole: any) => {
+    const teeSelection = Array.isArray(teeSelections) 
+      ? teeSelections.find((ts: any) => ts.holeId === hole.id)
+      : null;
+    return teeSelection?.teeColor || 'white';
+  };
 
   // Calculate course statistics
   const allHoles = Array.isArray(holes) ? holes : [];
@@ -31,9 +62,22 @@ export function FutureTournamentView({ tournament, tournamentId, course }: Futur
   const backNinePar = backNine.reduce((sum, hole) => sum + hole.par, 0);
   const totalPar = frontNinePar + backNinePar;
   
-  const frontNineYardage = frontNine.reduce((sum, hole) => sum + hole.yardageWhite, 0);
-  const backNineYardage = backNine.reduce((sum, hole) => sum + hole.yardageWhite, 0);
+  const frontNineYardage = frontNine.reduce((sum, hole) => sum + getHoleYardage(hole), 0);
+  const backNineYardage = backNine.reduce((sum, hole) => sum + getHoleYardage(hole), 0);
   const totalYardage = frontNineYardage + backNineYardage;
+
+  // Get unique tee colors being used
+  const usedTeeColors = Array.isArray(teeSelections) 
+    ? [...new Set(teeSelections.map((ts: any) => ts.teeColor))]
+    : ['white'];
+  
+  // Format tee colors for display
+  const formatTeeColors = (colors: string[]) => {
+    if (colors.length === 1) {
+      return `${colors[0].charAt(0).toUpperCase() + colors[0].slice(1)} Tees`;
+    }
+    return `Mixed Tees (${colors.map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(', ')})`;
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -84,9 +128,16 @@ export function FutureTournamentView({ tournament, tournamentId, course }: Futur
         {/* Course Scorecard */}
         <Card className="bg-background">
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Star className="h-5 w-5 text-accent" />
-              <span>Course Scorecard</span>
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Star className="h-5 w-5 text-accent" />
+                <span>Course Scorecard</span>
+              </div>
+              {usedTeeColors.length > 0 && (
+                <Badge variant="outline" className="text-accent border-accent">
+                  {formatTeeColors(usedTeeColors)}
+                </Badge>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -110,7 +161,7 @@ export function FutureTournamentView({ tournament, tournamentId, course }: Futur
                           <tr key={hole.id} className="border-b border-border/50">
                             <td className="py-2 font-medium">{hole.holeNumber}</td>
                             <td className="text-center py-2">{hole.par}</td>
-                            <td className="text-center py-2">{hole.yardageWhite}</td>
+                            <td className="text-center py-2">{getHoleYardage(hole)}</td>
                             <td className="text-center py-2">{hole.handicap}</td>
                           </tr>
                         ))}
@@ -143,7 +194,7 @@ export function FutureTournamentView({ tournament, tournamentId, course }: Futur
                           <tr key={hole.id} className="border-b border-border/50">
                             <td className="py-2 font-medium">{hole.holeNumber}</td>
                             <td className="text-center py-2">{hole.par}</td>
-                            <td className="text-center py-2">{hole.yardageWhite}</td>
+                            <td className="text-center py-2">{getHoleYardage(hole)}</td>
                             <td className="text-center py-2">{hole.handicap}</td>
                           </tr>
                         ))}

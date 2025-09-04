@@ -587,6 +587,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/tournaments/:id/tee-selections", async (req, res) => {
+    try {
+      const holeTees = await storage.getTournamentHoleTees(req.params.id);
+      res.json(holeTees);
+    } catch (error) {
+      console.error("Error fetching tournament tee selections:", error);
+      res.status(500).json({ message: "Failed to fetch tee selections" });
+    }
+  });
+
   app.get("/api/tournaments/status/:status", async (req, res) => {
     try {
       const tournaments = await storage.getTournamentsByStatus(req.params.status);

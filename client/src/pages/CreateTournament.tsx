@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { insertTournamentSchema } from "@shared/schema";
+import { insertTournamentSchema, type Tournament } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -194,16 +194,18 @@ export default function CreateTournament() {
       return await apiRequest("POST", "/api/tournaments", data);
     },
     onSuccess: (response) => {
+      const tournament = response as Tournament;
       queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tournaments/status/upcoming"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tournaments/status/active"] });
       queryClient.invalidateQueries({ queryKey: ["/api/courses"] });
       toast({
         title: "Tournament Created",
-        description: "Your tournament has been created successfully",
+        description: "Your tournament has been created successfully. Redirecting to tournament page...",
       });
-      // Redirect to dashboard
-      setLocation(`/`);
+      // Redirect to the newly created tournament page
+      console.log("Redirecting to tournament:", tournament.id);
+      setLocation(`/tournaments/${tournament.id}`);
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
