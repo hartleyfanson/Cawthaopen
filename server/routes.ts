@@ -122,6 +122,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Profile photo upload ACL endpoint
+  app.put("/api/profile-photos", isAuthenticated, async (req, res) => {
+    if (!req.body.imageUrl) {
+      return res.status(400).json({ error: "imageUrl is required" });
+    }
+
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
+        req.body.imageUrl,
+        {
+          owner: (req.user as any)?.claims?.sub,
+          visibility: "public", // Profile photos should be public
+        }
+      );
+
+      res.status(200).json({
+        objectPath: objectPath,
+      });
+    } catch (error) {
+      console.error("Error setting profile photo ACL:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Tournament photo upload ACL endpoint
   app.put("/api/tournament-photos", isAuthenticated, async (req, res) => {
     if (!req.body.imageUrl) {

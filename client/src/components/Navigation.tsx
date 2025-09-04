@@ -95,17 +95,26 @@ export function Navigation() {
       try {
         const uploadURL = result.successful[0].uploadURL;
         
-        // Update user profile with new image URL
+        // Set ACL policy for the uploaded profile image
+        const aclResponse = await apiRequest('PUT', '/api/profile-photos', {
+          imageUrl: uploadURL
+        });
+        const aclData = await aclResponse.json();
+        
+        // Update user profile with the proper object path
         await apiRequest('PUT', `/api/users/${(user as any)?.id}/profile`, {
-          profileImageUrl: uploadURL
+          profileImageUrl: aclData.objectPath
         });
         
+        // Invalidate and refetch user data to update UI immediately
         queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+        
         toast({
           title: "Profile Image Updated",
           description: "Your profile image has been successfully updated.",
         });
       } catch (error) {
+        console.error('Error updating profile image:', error);
         toast({
           title: "Update Failed",
           description: "Failed to update profile image. Please try again.",
