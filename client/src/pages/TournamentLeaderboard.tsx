@@ -181,9 +181,9 @@ export default function TournamentLeaderboard() {
   const isUserJoined = Array.isArray(tournamentPlayers) && 
     tournamentPlayers.some((player: any) => player.playerId === (user as any)?.id);
 
-  // Check if tournament is future-dated
-  const isFutureTournament = (tournament as any)?.status === "upcoming" || 
-    (tournament as any)?.startDate && new Date((tournament as any)?.startDate) > new Date();
+  // Check if tournament is future-dated (only show future view if start date is in the future)
+  const isFutureTournament = (tournament as any)?.startDate && 
+    new Date((tournament as any)?.startDate).toDateString() > new Date().toDateString();
 
   if (isLoading || loadingTournament) {
     return (
