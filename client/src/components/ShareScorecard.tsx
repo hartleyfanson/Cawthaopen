@@ -123,9 +123,9 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
       roundRect(cardX, cardY, cardWidth, cardHeight, 20);
       ctx.stroke();
 
-      // Header section (taller for mobile)
+      // Header section (much larger green area)
       ctx.fillStyle = '#1a4a3a';
-      roundRect(cardX + 20, cardY + 20, cardWidth - 40, 160, 10);
+      roundRect(cardX + 20, cardY + 20, cardWidth - 40, 220, 10);
       ctx.fill();
 
       // Load and draw the logo
@@ -138,25 +138,25 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
         logo.src = logoImage;
       });
 
-      // Draw logo in header (larger for mobile)
-      const logoHeight = 80;
+      // Draw logo in header (much larger)
+      const logoHeight = 120;
       const logoWidth = (logo.width / logo.height) * logoHeight;
       const logoX = (canvas.width - logoWidth) / 2;
-      const logoY = cardY + 35;
+      const logoY = cardY + 40;
       
       ctx.drawImage(logo, logoX, logoY, logoWidth, logoHeight);
 
-      // Course and tournament name (multi-line for mobile)
+      // Course and tournament name (larger in bigger green area)
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 16px sans-serif';
+      ctx.font = 'bold 20px sans-serif';
       ctx.textAlign = 'center';
       const courseName = (course as any)?.name || 'Championship Course';
       const tournamentName = (tournament as any)?.name || 'Tournament';
-      ctx.fillText(courseName, canvas.width / 2, cardY + 135);
-      ctx.fillText(tournamentName, canvas.width / 2, cardY + 155);
+      ctx.fillText(courseName, canvas.width / 2, cardY + 180);
+      ctx.fillText(tournamentName, canvas.width / 2, cardY + 205);
 
-      // Player section (adjusted for mobile)
-      const playerY = cardY + 220;
+      // Player section (adjusted for larger header)
+      const playerY = cardY + 280;
       
       // Player name (centered for mobile)
       ctx.fillStyle = '#1a4a3a';
@@ -187,10 +187,10 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
       const par4And5Holes = Array.isArray(holes) ? holes.filter((hole: any) => hole.par === 4 || hole.par === 5) : [];
       const fairwayDenominator = par4And5Holes.length;
       
-      // Stats section (stacked vertically for mobile)
+      // Stats section (much larger and bold)
       const statsY = playerY + 150;
       ctx.fillStyle = '#1a4a3a';
-      ctx.font = '20px sans-serif';
+      ctx.font = 'bold 32px sans-serif';
       ctx.textAlign = 'center';
 
       const stats = [
@@ -200,11 +200,11 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
       ];
 
       stats.forEach((stat, index) => {
-        ctx.fillText(stat, canvas.width / 2, statsY + (index * 30));
+        ctx.fillText(stat, canvas.width / 2, statsY + (index * 40));
       });
 
-      // Round Notes section (if any notes exist) - compact for square layout
-      const notesY = statsY + 90;
+      // Round Notes section (if any notes exist) - adjusted for larger stats
+      const notesY = statsY + 120;
       const roundNotes: string[] = [];
       if (Array.isArray(scores)) {
         scores.forEach((score: any) => {
