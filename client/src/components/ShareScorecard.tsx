@@ -60,18 +60,80 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
     staleTime: 0,
   });
 
-  // Use the same data source as the leaderboard - round-specific leaderboard API
-  const { data: roundLeaderboardData } = useQuery({
-    queryKey: ["/api/tournaments", tournamentId, "leaderboard", "round", selectedScorecardRound],
-    enabled: !!tournamentId && !!selectedScorecardRound,
+  // Use the EXACT same data source as the working leaderboard - player-scores API  
+  const { data: playerScores } = useQuery({
+    queryKey: ["/api/tournaments", tournamentId, "player-scores"],
+    enabled: !!tournamentId,
+    staleTime: 0,
   });
+
+  // Process player data the EXACT same way as LeaderboardTable does
+  const processedPlayerData = useMemo(() => {
+    if (!playerScores || !Array.isArray(playerScores)) return {};
+
+    const playerMap: Record<string, any> = {};
+
+    playerScores.forEach((score: any) => {
+      const playerId = score.playerId;
+      
+      if (!playerMap[playerId]) {
+        playerMap[playerId] = {
+          playerId: score.playerId,
+          playerName: score.playerName,
+          profileImageUrl: score.profileImageUrl,
+          handicap: score.handicap || 0,
+          scores: {},
+          frontNineTotal: 0,
+          backNineTotal: 0,
+          totalScore: 0,
+          holesCompleted: 0,
+        };
+      }
+
+      // Store individual hole scores - filter by selected round
+      if (score.strokes !== null && score.strokes !== undefined && score.roundNumber === selectedScorecardRound) {
+        playerMap[playerId].scores[score.holeNumber] = {
+          strokes: score.strokes,
+          par: score.holePar,
+          putts: score.putts,
+          fairwayHit: score.fairwayHit,
+          greenInRegulation: score.greenInRegulation,
+        };
+        playerMap[playerId].holesCompleted++;
+      }
+    });
+
+    // Calculate totals for each player (same logic as LeaderboardTable)
+    Object.values(playerMap).forEach((player: any) => {
+      let frontNineTotal = 0;
+      let backNineTotal = 0;
+      
+      // Front 9 totals (holes 1-9)
+      for (let hole = 1; hole <= 9; hole++) {
+        if (player.scores[hole]?.strokes) {
+          frontNineTotal += player.scores[hole].strokes;
+        }
+      }
+      
+      // Back 9 totals (holes 10-18)  
+      for (let hole = 10; hole <= 18; hole++) {
+        if (player.scores[hole]?.strokes) {
+          backNineTotal += player.scores[hole].strokes;
+        }
+      }
+
+      player.frontNineTotal = frontNineTotal;
+      player.backNineTotal = backNineTotal;
+      player.totalScore = frontNineTotal + backNineTotal;
+    });
+
+    return playerMap;
+  }, [playerScores, selectedScorecardRound]);
   
-  // Get the current player's data from the round leaderboard (single source of truth)
-  const currentPlayerRoundData = Array.isArray(roundLeaderboardData) 
-    ? roundLeaderboardData.find((player: any) => player.playerId === playerData?.id)
-    : null;
+  // Get current player's data from processed data (same as leaderboard)
+  const currentPlayerRoundData = processedPlayerData[(playerData as any)?.id];
   
-  console.log('Using round leaderboard data (source of truth):', currentPlayerRoundData);
+  console.log('Using SAME data source as leaderboard:', currentPlayerRoundData);
 
   const generateScorecard = async () => {
     console.log('Debug scorecard generation:', {
@@ -87,8 +149,8 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
     setIsGenerating(true);
     
     try {
-      // Use the single source of truth - round leaderboard data
-      if (!currentPlayerRoundData) {
+      // Use the exact same data source and processing as the working leaderboard
+      if (!currentPlayerRoundData || currentPlayerRoundData.totalScore === 0) {
         toast({
           title: "No Data Found",
           description: `No score data found for Round ${selectedScorecardRound}.`,
@@ -98,11 +160,11 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
         return;
       }
       
-      // Use the exact same data source as the leaderboard
-      const totalStrokes = currentPlayerRoundData.totalStrokes || 0;
-      const totalPutts = currentPlayerRoundData.totalPutts || 0;
-      const fairwaysHit = currentPlayerRoundData.fairwaysHit || 0;
-      const greensInRegulation = currentPlayerRoundData.greensInRegulation || 0;
+      // Use the exact same processed data as the leaderboard
+      const totalStrokes = currentPlayerRoundData.totalScore || 0;
+      const totalPutts = Object.values(currentPlayerRoundData.scores).reduce((sum: number, score: any) => sum + (score.putts || 0), 0);
+      const fairwaysHit = Object.values(currentPlayerRoundData.scores).filter((score: any) => score.fairwayHit).length;
+      const greensInRegulation = Object.values(currentPlayerRoundData.scores).filter((score: any) => score.greenInRegulation).length;
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
