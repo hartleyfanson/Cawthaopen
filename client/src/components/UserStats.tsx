@@ -125,6 +125,60 @@ export function UserStats({ userId }: UserStatsProps) {
               {(stats as any)?.totalRounds || 0}
             </span>
           </div>
+          
+          <div className="flex justify-between items-center">
+            <span className="text-muted-foreground">Tournaments Played</span>
+            <span 
+              className="text-accent font-semibold" 
+              data-testid="stat-tournaments-played"
+            >
+              {(stats as any)?.tournamentsPlayed || 0}
+            </span>
+          </div>
+          
+          {(stats as any)?.bestFinish && (
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Best Tournament Finish</span>
+              <span 
+                className="text-accent font-semibold" 
+                data-testid="stat-best-finish"
+              >
+                #{(stats as any)?.bestFinish}
+              </span>
+            </div>
+          )}
+          
+          {(stats as any)?.averagePlacement && (
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Average Placement</span>
+              <span 
+                className="text-accent font-semibold" 
+                data-testid="stat-avg-placement"
+              >
+                #{(stats as any)?.averagePlacement}
+              </span>
+            </div>
+          )}
+          
+          <div className="flex justify-between items-center">
+            <span className="text-muted-foreground">Top 10 Finishes</span>
+            <span 
+              className="text-accent font-semibold" 
+              data-testid="stat-top10"
+            >
+              {(stats as any)?.top10Finishes || 0}
+            </span>
+          </div>
+          
+          <div className="flex justify-between items-center">
+            <span className="text-muted-foreground">Top 5 Finishes</span>
+            <span 
+              className="text-accent font-semibold" 
+              data-testid="stat-top5"
+            >
+              {(stats as any)?.top5Finishes || 0}
+            </span>
+          </div>
         </div>
         
         <Link href="/achievements?tab=stats">
