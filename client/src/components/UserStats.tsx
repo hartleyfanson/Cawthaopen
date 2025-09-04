@@ -44,33 +44,6 @@ export function UserStats({ userId }: UserStatsProps) {
       </CardHeader>
       
       <CardContent>
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="bg-primary rounded-lg p-4 text-center">
-            <div className="flex items-center justify-center mb-2">
-              <TrendingUp className="h-5 w-5 text-accent mr-2" />
-            </div>
-            <div 
-              className="text-2xl font-bold text-accent" 
-              data-testid="stat-average-score"
-            >
-              {formatAverage((stats as any)?.averageScore || 0)}
-            </div>
-            <div className="text-sm text-muted-foreground">Average Score</div>
-          </div>
-          
-          <div className="bg-primary rounded-lg p-4 text-center">
-            <div className="flex items-center justify-center mb-2">
-              <Award className="h-5 w-5 text-accent mr-2" />
-            </div>
-            <div 
-              className="text-2xl font-bold text-accent" 
-              data-testid="stat-handicap"
-            >
-              {(stats as any)?.handicap || 'N/A'}
-            </div>
-            <div className="text-sm text-muted-foreground">Estimated Handicap</div>
-          </div>
-        </div>
         
         <div className="space-y-3">
           <div className="flex justify-between items-center">
@@ -107,76 +80,12 @@ export function UserStats({ userId }: UserStatsProps) {
           </div>
           
           <div className="flex justify-between items-center">
-            <span className="text-muted-foreground">Tournaments Won</span>
-            <span 
-              className="text-accent font-semibold" 
-              data-testid="stat-wins"
-            >
-              {(stats as any)?.wins || 0}
-            </span>
-          </div>
-          
-          <div className="flex justify-between items-center">
             <span className="text-muted-foreground">Rounds Played</span>
             <span 
               className="text-accent font-semibold" 
               data-testid="stat-rounds"
             >
               {(stats as any)?.totalRounds || 0}
-            </span>
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <span className="text-muted-foreground">Tournaments Played</span>
-            <span 
-              className="text-accent font-semibold" 
-              data-testid="stat-tournaments-played"
-            >
-              {(stats as any)?.tournamentsPlayed || 0}
-            </span>
-          </div>
-          
-          {(stats as any)?.bestFinish && (
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">Best Tournament Finish</span>
-              <span 
-                className="text-accent font-semibold" 
-                data-testid="stat-best-finish"
-              >
-                #{(stats as any)?.bestFinish}
-              </span>
-            </div>
-          )}
-          
-          {(stats as any)?.averagePlacement && (
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">Average Placement</span>
-              <span 
-                className="text-accent font-semibold" 
-                data-testid="stat-avg-placement"
-              >
-                #{(stats as any)?.averagePlacement}
-              </span>
-            </div>
-          )}
-          
-          <div className="flex justify-between items-center">
-            <span className="text-muted-foreground">Top 10 Finishes</span>
-            <span 
-              className="text-accent font-semibold" 
-              data-testid="stat-top10"
-            >
-              {(stats as any)?.top10Finishes || 0}
-            </span>
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <span className="text-muted-foreground">Top 5 Finishes</span>
-            <span 
-              className="text-accent font-semibold" 
-              data-testid="stat-top5"
-            >
-              {(stats as any)?.top5Finishes || 0}
             </span>
           </div>
         </div>
