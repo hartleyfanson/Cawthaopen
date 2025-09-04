@@ -982,6 +982,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get power-up comments for a tournament
+  app.get("/api/tournaments/:tournamentId/powerup-comments", async (req, res) => {
+    try {
+      const comments = await storage.getTournamentPowerupComments(req.params.tournamentId);
+      res.json(comments);
+    } catch (error) {
+      console.error("Error fetching tournament power-up comments:", error);
+      res.status(500).json({ message: "Failed to fetch power-up comments" });
+    }
+  });
+
   // Gallery routes
   app.get("/api/tournaments/:id/gallery", async (req, res) => {
     try {

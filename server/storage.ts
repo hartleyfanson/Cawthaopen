@@ -83,6 +83,9 @@ export interface IStorage {
   createTournamentHoleTee(holeTee: InsertTournamentHoleTee): Promise<TournamentHoleTee>;
   getTournamentHoleTees(tournamentId: string): Promise<TournamentHoleTee[]>;
   
+  // Tournament powerup operations
+  getTournamentPowerupComments(tournamentId: string): Promise<any[]>;
+  
   // Tournament round operations
   createTournamentRound(round: InsertTournamentRound): Promise<TournamentRound>;
   getTournamentRounds(tournamentId: string): Promise<TournamentRound[]>;
@@ -442,6 +445,28 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(scores, eq(scores.roundId, rounds.id))
       .innerJoin(holes, eq(scores.holeId, holes.id))
       .where(eq(rounds.tournamentId, tournamentId))
+      .orderBy(asc(rounds.playerId), asc(holes.holeNumber));
+
+    return result;
+  }
+
+  async getTournamentPowerupComments(tournamentId: string): Promise<any[]> {
+    const result = await db
+      .select({
+        playerId: rounds.playerId,
+        playerName: sql<string>`${users.firstName} || ' ' || ${users.lastName}`.as('playerName'),
+        holeNumber: holes.holeNumber,
+        powerupNotes: scores.powerupNotes,
+        roundNumber: rounds.roundNumber,
+      })
+      .from(rounds)
+      .innerJoin(users, eq(rounds.playerId, users.id))
+      .innerJoin(scores, eq(scores.roundId, rounds.id))
+      .innerJoin(holes, eq(scores.holeId, holes.id))
+      .where(and(
+        eq(rounds.tournamentId, tournamentId),
+        eq(scores.powerupUsed, true)
+      ))
       .orderBy(asc(rounds.playerId), asc(holes.holeNumber));
 
     return result;

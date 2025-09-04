@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { EditScoreDialog } from "@/components/EditScoreDialog";
+import { PowerupComments } from "@/components/PowerupComments";
 
 
 // Component to show all courses and date range for multi-round tournaments
@@ -386,14 +387,20 @@ export default function TournamentLeaderboard() {
               </CardContent>
             </Card>
           ) : Array.isArray(leaderboard) && leaderboard.length ? (
-            <LeaderboardTable 
-              leaderboard={leaderboard} 
-              courseId={(tournament as any)?.courseId || ''}
-              tournamentId={id}
-              tournament={tournament}
-              selectedRound={selectedRound}
-              tournamentRounds={tournamentRounds as any[]}
-            />
+            <>
+              <LeaderboardTable 
+                leaderboard={leaderboard} 
+                courseId={(tournament as any)?.courseId || ''}
+                tournamentId={id}
+                tournament={tournament}
+                selectedRound={selectedRound}
+                tournamentRounds={tournamentRounds as any[]}
+              />
+              <PowerupComments 
+                tournamentId={id || ''}
+                selectedRound={selectedRound}
+              />
+            </>
           ) : Array.isArray(tournamentPlayers) && tournamentPlayers.length ? (
             // Show registered players even with no scores
             <Card className="bg-muted">
