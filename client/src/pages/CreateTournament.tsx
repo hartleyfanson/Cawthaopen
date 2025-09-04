@@ -129,11 +129,14 @@ export default function CreateTournament() {
 
   const createTournamentMutation = useMutation({
     mutationFn: async (data: any) => {
-      console.log("Creating tournament with data:", data);
-      return await apiRequest("POST", "/api/tournaments", data);
+      console.log("🚀 Creating tournament with data:", data);
+      console.log("🚀 API request starting to /api/tournaments");
+      const result = await apiRequest("POST", "/api/tournaments", data);
+      console.log("🚀 API request completed, result:", result);
+      return result;
     },
     onSuccess: (response) => {
-      console.log("Tournament created successfully:", response);
+      console.log("✅ Tournament created successfully:", response);
       queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tournaments/status/upcoming"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tournaments/status/active"] });
@@ -146,7 +149,12 @@ export default function CreateTournament() {
       setLocation(`/`);
     },
     onError: (error) => {
-      console.error("Tournament creation error:", error);
+      console.error("❌ Tournament creation error:", error);
+      console.error("❌ Error details:", {
+        message: error.message,
+        name: error.name,
+        stack: error.stack
+      });
       if (isUnauthorizedError(error)) {
         toast({
           title: "Unauthorized",
@@ -167,19 +175,27 @@ export default function CreateTournament() {
   });
 
   const onSubmit = async (data: any) => {
+    console.log("=== FORM SUBMISSION STARTED ===");
     console.log("Form submitted with data:", data);
     console.log("Form errors:", form.formState.errors);
+    console.log("Form valid state:", form.formState.isValid);
+    console.log("Form isDirty:", form.formState.isDirty);
+    console.log("Form isSubmitting:", form.formState.isSubmitting);
     
     // Validate dates are in the future
     const now = new Date();
     if (data.startDate <= now) {
+      console.log("❌ Start date validation failed");
       form.setError("startDate", { message: "Start date must be in the future" });
       return;
     }
     if (data.endDate <= data.startDate) {
+      console.log("❌ End date validation failed");
       form.setError("endDate", { message: "End date must be after start date" });
       return;
     }
+    
+    console.log("✅ Date validation passed");
     
     try {
       let courseId = data.courseId;
@@ -212,14 +228,19 @@ export default function CreateTournament() {
         : holeTeeMappings;
 
       // Create the tournament with the course ID, tee selections, and round dates
-      createTournamentMutation.mutate({
+      const tournamentPayload = {
         ...data,
         courseId,
         teeSelections,
         roundDates: numberOfRounds > 1 ? roundDates : [data.startDate],
-      });
+      };
+      
+      console.log("📤 Tournament payload to be sent:", tournamentPayload);
+      console.log("📤 Tournament mutation pending state:", createTournamentMutation.isPending);
+      
+      createTournamentMutation.mutate(tournamentPayload);
     } catch (error) {
-      console.error("Error in submission process:", error);
+      console.error("❌ Error in submission process:", error);
     }
   };
 
@@ -745,6 +766,14 @@ export default function CreateTournament() {
                       disabled={createTournamentMutation.isPending || createCourseMutation.isPending}
                       className="flex-1 bg-secondary text-secondary-foreground hover:bg-accent"
                       data-testid="button-create-tournament"
+                      onClick={() => {
+                        console.log("🔘 Submit button clicked");
+                        console.log("🔘 Form state:", {
+                          isValid: form.formState.isValid,
+                          errors: form.formState.errors,
+                          values: form.getValues()
+                        });
+                      }}
                     >
                       {createCourseMutation.isPending 
                         ? "Creating Course..." 
