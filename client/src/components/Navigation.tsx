@@ -82,18 +82,6 @@ export function Navigation() {
                 Achievements
               </span>
             </Link>
-            <Link href="/statistics">
-              <span 
-                className={`transition-colors cursor-pointer ${
-                  isActive("/statistics")
-                    ? "text-secondary" 
-                    : "text-primary-foreground hover:text-secondary"
-                }`}
-                data-testid="nav-statistics"
-              >
-                Statistics
-              </span>
-            </Link>
           </div>
           
           <div className="flex items-center space-x-4">
@@ -165,17 +153,6 @@ export function Navigation() {
                   }`}
                 >
                   Achievements
-                </span>
-              </Link>
-              <Link href="/statistics" onClick={() => setIsMobileMenuOpen(false)}>
-                <span 
-                  className={`block px-3 py-2 rounded-md text-base font-medium transition-colors cursor-pointer ${
-                    isActive("/statistics")
-                      ? "bg-secondary text-secondary-foreground" 
-                      : "text-primary-foreground hover:bg-primary/50"
-                  }`}
-                >
-                  Statistics
                 </span>
               </Link>
               <button
