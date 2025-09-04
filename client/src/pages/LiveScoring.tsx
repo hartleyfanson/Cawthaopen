@@ -466,7 +466,8 @@ export default function LiveScoring() {
                       <Button
                         onClick={() => {
                           if (strokes === null) {
-                            setStrokes(currentHoleData?.par ? currentHoleData.par - 1 : 3);
+                            // First press sets to par
+                            setStrokes(currentHoleData?.par || 4);
                           } else {
                             setStrokes(Math.max(1, strokes - 1));
                           }
@@ -486,7 +487,8 @@ export default function LiveScoring() {
                       <Button
                         onClick={() => {
                           if (strokes === null) {
-                            setStrokes(currentHoleData?.par ? currentHoleData.par + 1 : 5);
+                            // First press sets to par
+                            setStrokes(currentHoleData?.par || 4);
                           } else {
                             setStrokes(strokes + 1);
                           }
