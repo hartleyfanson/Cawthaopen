@@ -653,11 +653,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/tournaments", isAuthenticated, async (req, res) => {
     try {
       const userId = (req.user as any)?.claims?.sub;
-      const { teeSelections, roundDates, ...restBody } = req.body;
+      const { teeSelections, roundDates, roundCourses, ...restBody } = req.body;
+      
+      // For multi-round tournaments with no main courseId, use first round's course
+      let courseId = restBody.courseId;
+      if ((!courseId || courseId.trim() === "") && restBody.numberOfRounds > 1 && roundCourses && roundCourses.length > 0) {
+        courseId = roundCourses[0]?.id;
+      }
       
       // Manually convert date strings to Date objects before validation
       const dataForValidation = {
         ...restBody,
+        courseId,
         createdBy: userId,
         startDate: restBody.startDate ? new Date(restBody.startDate) : undefined,
         endDate: restBody.endDate ? new Date(restBody.endDate) : undefined,
