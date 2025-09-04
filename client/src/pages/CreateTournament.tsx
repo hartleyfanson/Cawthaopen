@@ -445,18 +445,41 @@ export default function CreateTournament() {
                   {/* Course Search Section */}
                   <div className="space-y-4">
                     <CourseSearch
-                      onCourseSelect={(course, holes) => {
-                        form.setValue("courseId", course.id, {
-                          shouldValidate: true,
-                          shouldDirty: true,
-                        });
-                        // Clear any existing errors
-                        form.clearErrors("courseId");
-                        setSelectedCourse({ ...course, holes });
-                        toast({
-                          title: "Course selected",
-                          description: `${course.name} set for this tournament.`,
-                        });
+                      onCourseSelect={async (course, holes) => {
+                        try {
+                          // Import the course to the database
+                          const importResponse = await apiRequest("POST", "/api/courses/import", {
+                            course,
+                            holes,
+                          });
+                          
+                          if (!importResponse.ok) {
+                            throw new Error("Failed to import course");
+                          }
+                          
+                          const importData = await importResponse.json();
+                          
+                          form.setValue("courseId", course.id, {
+                            shouldValidate: true,
+                            shouldDirty: true,
+                          });
+                          // Clear any existing errors
+                          form.clearErrors("courseId");
+                          setSelectedCourse({ ...course, holes });
+                          toast({
+                            title: "Course selected",
+                            description: importData.imported 
+                              ? `${course.name} imported and set for this tournament.`
+                              : `${course.name} set for this tournament.`,
+                          });
+                        } catch (error) {
+                          console.error("Error importing course:", error);
+                          toast({
+                            title: "Error",
+                            description: "Failed to import course. Please try again.",
+                            variant: "destructive",
+                          });
+                        }
                       }}
                     />
                   </div>

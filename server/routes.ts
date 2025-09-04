@@ -511,6 +511,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create course from search results (auto-import)
+  app.post("/api/courses/import", isAuthenticated, async (req, res) => {
+    try {
+      const { course, holes } = req.body;
+      
+      // Check if course already exists
+      const existingCourse = await storage.getCourse(course.id);
+      if (existingCourse) {
+        return res.json({ course: existingCourse, imported: false });
+      }
+      
+      // Create course data
+      const courseData = insertCourseSchema.parse({
+        id: course.id,
+        name: course.name,
+        location: `${course.city}, ${course.state}, ${course.country}`,
+        description: `Golf course in ${course.city}, ${course.state}`,
+        totalHoles: holes.length,
+      });
+      
+      const createdCourse = await storage.createCourse(courseData);
+      
+      // Create holes
+      for (const holeData of holes) {
+        const hole = insertHoleSchema.parse({
+          courseId: createdCourse.id,
+          holeNumber: holeData.holeNumber,
+          par: holeData.par,
+          yardageWhite: holeData.yardageWhite,
+          yardageBlue: holeData.yardageBlue,
+          yardageRed: holeData.yardageRed,
+          yardageGold: holeData.yardageGold,
+          handicap: holeData.handicap,
+        });
+        await storage.createHole(hole);
+      }
+      
+      res.json({ course: createdCourse, imported: true });
+    } catch (error) {
+      console.error("Error importing course:", error);
+      res.status(500).json({ message: "Failed to import course" });
+    }
+  });
+
   app.get("/api/courses/details/:courseId", async (req, res) => {
     try {
       const { courseId } = req.params;
