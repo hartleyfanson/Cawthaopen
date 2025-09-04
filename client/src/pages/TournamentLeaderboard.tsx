@@ -117,13 +117,6 @@ export default function TournamentLeaderboard() {
     enabled: !!currentCourseId,
   });
 
-  const { data: leaderboard, isLoading: loadingLeaderboard } = useQuery({
-    queryKey: selectedRound === 'all' 
-      ? ["/api/tournaments", id, "leaderboard"]
-      : ["/api/tournaments", id, "leaderboard", "round", selectedRound],
-    enabled: !!user && !!id,
-  });
-
   // Fetch current round data based on selected round (for scorecard generation)
   const { data: currentRound } = useQuery({
     queryKey: ["/api/rounds", id, selectedRound === 'all' ? "1" : selectedRound.toString()],
@@ -181,9 +174,29 @@ export default function TournamentLeaderboard() {
   const isUserJoined = Array.isArray(tournamentPlayers) && 
     tournamentPlayers.some((player: any) => player.playerId === (user as any)?.id);
 
-  // Check if tournament is future-dated
-  const isFutureTournament = (tournament as any)?.status === "upcoming" || 
-    (tournament as any)?.startDate && new Date((tournament as any)?.startDate) > new Date();
+  // Check if tournament is future-dated using consistent date-based logic
+  const isFutureTournament = (() => {
+    const now = new Date();
+    const startDate = (tournament as any)?.startDate ? new Date((tournament as any).startDate) : null;
+    
+    if (!startDate) return true; // If no start date, consider it future
+    
+    // Compare dates only (ignore time) for user-friendly behavior
+    const nowDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    
+    // Tournament is future if start date hasn't arrived yet
+    return nowDateOnly < startDateOnly;
+  })();
+
+  // Fetch leaderboard with live updates based on tournament status
+  const { data: leaderboard, isLoading: loadingLeaderboard } = useQuery({
+    queryKey: selectedRound === 'all' 
+      ? ["/api/tournaments", id, "leaderboard"]
+      : ["/api/tournaments", id, "leaderboard", "round", selectedRound],
+    enabled: !!user && !!id,
+    refetchInterval: !isFutureTournament ? 5000 : 30000, // Live updates every 5s when active, slower when future
+  });
 
   if (isLoading || loadingTournament) {
     return (
@@ -312,8 +325,8 @@ export default function TournamentLeaderboard() {
               </Link>
             )}
             
-            {/* Show Join Tournament button for upcoming tournaments */}
-            {(tournament as any)?.status === "upcoming" && !isUserJoined && (
+            {/* Show Join Tournament button for future tournaments using date-based logic */}
+            {isFutureTournament && !isUserJoined && (
               <Button 
                 onClick={() => joinTournamentMutation.mutate()}
                 disabled={joinTournamentMutation.isPending}
@@ -333,8 +346,8 @@ export default function TournamentLeaderboard() {
                 Gallery
               </Button>
             </Link>
-            {/* Only show Share Scorecard for active/completed tournaments */}
-            {(tournament as any)?.status !== "upcoming" && (
+            {/* Only show Share Scorecard for active/completed tournaments using date-based logic */}
+            {!isFutureTournament && (
               <ShareScorecard 
                 tournamentId={id || ''}
                 roundData={currentRound}

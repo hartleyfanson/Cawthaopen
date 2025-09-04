@@ -44,7 +44,7 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
   const { data: playerScores, refetch: refetchScores } = useQuery({
     queryKey: ["/api/tournaments", tournamentId, "player-scores"],
     enabled: !!tournamentId,
-    refetchInterval: 10000, // Auto-refresh every 10 seconds for real-time updates
+    refetchInterval: 5000, // Auto-refresh every 5 seconds for real-time updates
   });
 
   // Calculate which holes to display based on current view
