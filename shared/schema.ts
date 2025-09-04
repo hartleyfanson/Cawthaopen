@@ -140,6 +140,7 @@ export const tournamentHoleTees = pgTable("tournament_hole_tees", {
 export const tournamentRounds = pgTable("tournament_rounds", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tournamentId: varchar("tournament_id").references(() => tournaments.id).notNull(),
+  courseId: varchar("course_id").references(() => courses.id),
   roundNumber: integer("round_number").notNull(),
   roundDate: timestamp("round_date").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
@@ -156,6 +157,7 @@ export const usersRelations = relations(users, ({ many }) => ({
 export const coursesRelations = relations(courses, ({ many }) => ({
   holes: many(holes),
   tournaments: many(tournaments),
+  tournamentRounds: many(tournamentRounds),
 }));
 
 export const holesRelations = relations(holes, ({ one, many }) => ({
@@ -247,6 +249,10 @@ export const tournamentRoundsRelations = relations(tournamentRounds, ({ one }) =
   tournament: one(tournaments, {
     fields: [tournamentRounds.tournamentId],
     references: [tournaments.id],
+  }),
+  course: one(courses, {
+    fields: [tournamentRounds.courseId],
+    references: [courses.id],
   }),
 }));
 
