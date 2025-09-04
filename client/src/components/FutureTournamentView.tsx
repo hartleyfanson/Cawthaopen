@@ -330,15 +330,23 @@ export function FutureTournamentView({ tournament, tournamentId, course, selecte
                     className="flex items-center space-x-3 p-3 bg-muted rounded-lg"
                   >
                     <div className="flex-shrink-0">
-                      <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
-                        <span className="text-accent font-semibold">
-                          {player.firstName?.[0]}{player.lastName?.[0]}
-                        </span>
-                      </div>
+                      {player.player?.profileImageUrl ? (
+                        <img
+                          src={player.player.profileImageUrl}
+                          alt={`${player.player.firstName || 'Player'} ${player.player.lastName || ''}`}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+                          <span className="text-accent font-semibold">
+                            {player.player?.firstName?.[0] || 'P'}{player.player?.lastName?.[0] || ''}
+                          </span>
+                        </div>
+                      )}
                     </div>
                     <div className="flex-1">
                       <h4 className="font-semibold text-foreground">
-                        {player.firstName} {player.lastName}
+                        {player.player?.firstName || 'Player'} {player.player?.lastName || ''}
                       </h4>
                       <p className="text-sm text-muted-foreground">
                         Joined {new Date(player.joinedAt || Date.now()).toLocaleDateString()}

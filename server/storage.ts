@@ -248,10 +248,25 @@ export class DatabaseStorage implements IStorage {
     return player;
   }
 
-  async getTournamentPlayers(tournamentId: string): Promise<TournamentPlayer[]> {
+  async getTournamentPlayers(tournamentId: string) {
     return await db
-      .select()
+      .select({
+        id: tournamentPlayers.id,
+        tournamentId: tournamentPlayers.tournamentId,
+        playerId: tournamentPlayers.playerId,
+        teeSelection: tournamentPlayers.teeSelection,
+        joinedAt: tournamentPlayers.joinedAt,
+        player: {
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          email: users.email,
+          profileImageUrl: users.profileImageUrl,
+          handicap: users.handicap,
+        },
+      })
       .from(tournamentPlayers)
+      .leftJoin(users, eq(tournamentPlayers.playerId, users.id))
       .where(eq(tournamentPlayers.tournamentId, tournamentId));
   }
 
