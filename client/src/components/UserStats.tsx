@@ -30,8 +30,8 @@ export function UserStats({ userId }: UserStatsProps) {
   };
 
   const formatAverage = (value: number) => {
-    if (!value) return '0.0';
-    return Number(value).toFixed(1);
+    if (!value) return '0.00';
+    return Number(value).toFixed(2);
   };
 
   return (
