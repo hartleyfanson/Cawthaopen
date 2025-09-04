@@ -83,19 +83,33 @@ export function TournamentCard({ tournament, status }: TournamentCardProps) {
   };
 
   const getActionButton = () => {
-    switch (status) {
-      case "active":
+    // Date-based logic instead of status-based
+    const now = new Date();
+    const startDate = tournament.startDate ? new Date(tournament.startDate) : null;
+    const endDate = tournament.endDate ? new Date(tournament.endDate) : null;
+    
+    if (startDate && endDate) {
+      // Compare dates only (ignore time) for user-friendly behavior
+      const nowDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+      const endDateOnly = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+      
+      // Tournament is finished (past end date)
+      if (nowDateOnly > endDateOnly) {
         return (
           <Link href={`/tournaments/${tournament.id}/leaderboard`}>
             <Button 
               className="bg-secondary text-secondary-foreground hover:bg-accent"
-              data-testid="button-view-leaderboard"
+              data-testid="button-view-results"
             >
-              View Leaderboard
+              View Full Results
             </Button>
           </Link>
         );
-      case "upcoming":
+      }
+      
+      // Tournament is active (today is within date range)
+      if (nowDateOnly >= startDateOnly && nowDateOnly <= endDateOnly) {
         if (isUserJoined) {
           return (
             <Link href={`/tournaments/${tournament.id}/leaderboard`}>
@@ -119,20 +133,33 @@ export function TournamentCard({ tournament, status }: TournamentCardProps) {
             {joinTournamentMutation.isPending ? "Joining..." : "Join Tournament"}
           </Button>
         );
-      case "completed":
-        return (
-          <Link href={`/tournaments/${tournament.id}/leaderboard`}>
-            <Button 
-              className="bg-secondary text-secondary-foreground hover:bg-accent"
-              data-testid="button-view-results"
-            >
-              View Results
-            </Button>
-          </Link>
-        );
-      default:
-        return null;
+      }
     }
+    
+    // Tournament is upcoming (before start date) or fallback
+    if (isUserJoined) {
+      return (
+        <Link href={`/tournaments/${tournament.id}/leaderboard`}>
+          <Button 
+            className="bg-green-600 text-white hover:bg-green-700"
+            data-testid="button-tournament-joined"
+          >
+            <Check className="h-4 w-4 mr-2" />
+            Joined
+          </Button>
+        </Link>
+      );
+    }
+    return (
+      <Button 
+        onClick={handleJoinTournament}
+        disabled={joinTournamentMutation.isPending}
+        className="bg-secondary text-secondary-foreground hover:bg-accent"
+        data-testid="button-join-tournament"
+      >
+        {joinTournamentMutation.isPending ? "Joining..." : "Register"}
+      </Button>
+    );
   };
 
   return (

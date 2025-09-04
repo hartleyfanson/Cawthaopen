@@ -256,25 +256,50 @@ export default function TournamentHistory() {
                       </div>
                     )}
                     
-                    {tournament.status === 'upcoming' ? (
-                      <Link href={`/tournaments/${tournament.id}/leaderboard`}>
-                        <Button className="w-full bg-secondary text-secondary-foreground hover:bg-accent">
-                          Register
-                        </Button>
-                      </Link>
-                    ) : tournament.status === 'active' ? (
-                      <Link href={`/tournaments/${tournament.id}/leaderboard`}>
-                        <Button className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
-                          Join
-                        </Button>
-                      </Link>
-                    ) : (
-                      <Link href={`/tournaments/${tournament.id}/leaderboard`}>
-                        <Button className="w-full bg-secondary text-secondary-foreground hover:bg-accent">
-                          View Full Results
-                        </Button>
-                      </Link>
-                    )}
+                    {(() => {
+                      // Date-based logic instead of status-based
+                      const now = new Date();
+                      const startDate = tournament.startDate ? new Date(tournament.startDate) : null;
+                      const endDate = tournament.endDate ? new Date(tournament.endDate) : null;
+                      
+                      if (startDate && endDate) {
+                        // Compare dates only (ignore time) for user-friendly behavior
+                        const nowDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                        const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+                        const endDateOnly = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+                        
+                        // Tournament is finished (past end date)
+                        if (nowDateOnly > endDateOnly) {
+                          return (
+                            <Link href={`/tournaments/${tournament.id}/leaderboard`}>
+                              <Button className="w-full bg-secondary text-secondary-foreground hover:bg-accent">
+                                View Full Results
+                              </Button>
+                            </Link>
+                          );
+                        }
+                        
+                        // Tournament is active (today is within date range)
+                        if (nowDateOnly >= startDateOnly && nowDateOnly <= endDateOnly) {
+                          return (
+                            <Link href={`/tournaments/${tournament.id}/leaderboard`}>
+                              <Button className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
+                                Join Tournament
+                              </Button>
+                            </Link>
+                          );
+                        }
+                      }
+                      
+                      // Tournament is upcoming (before start date) or fallback
+                      return (
+                        <Link href={`/tournaments/${tournament.id}/leaderboard`}>
+                          <Button className="w-full bg-secondary text-secondary-foreground hover:bg-accent">
+                            Register
+                          </Button>
+                        </Link>
+                      );
+                    })()}
                   </CardContent>
                 </Card>
               ))}
