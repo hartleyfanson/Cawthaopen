@@ -81,13 +81,14 @@ function PlayerProfile() {
     enabled: !!selectedPlayerId,
   });
 
-  const { data: playerStats, isLoading: statsLoading } = useQuery<PlayerStats>({
-    queryKey: ["/api/players", selectedPlayerId, "stats"],
+  // Use same data source as leaderboard (rounds table) for all statistics
+  const { data: playerStats, isLoading: statsLoading } = useQuery<any>({
+    queryKey: ["/api/users", selectedPlayerId, "stats"],
     enabled: !!selectedPlayerId,
   });
 
   const { data: detailedStats, isLoading: detailedStatsLoading } = useQuery<any>({
-    queryKey: ["/api/users", selectedPlayerId, "stats"],
+    queryKey: ["/api/users", selectedPlayerId, "detailed-stats"],
     enabled: !!selectedPlayerId,
   });
 
@@ -119,8 +120,9 @@ function PlayerProfile() {
   }
 
   const unlockedAchievements = new Set(playerAchievements.map(pa => pa.achievementId));
-  const totalPoints = playerStats?.achievementPoints || 0;
-  const totalAchievements = playerStats?.totalAchievements || 0;
+  // Get achievement data from playerStats (which has achievement-specific data)
+  const totalPoints = 0; // Will be calculated from achievements
+  const totalAchievements = playerAchievements?.length || 0;
   const achievementProgress = achievements.length > 0 ? (totalAchievements / achievements.length) * 100 : 0;
 
   // Group achievements by category
@@ -558,35 +560,93 @@ function PlayerProfile() {
                     <CardContent className="space-y-4">
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                         <div>
-                          <div className="text-lg font-semibold text-accent">
-                            {detailedStats.greensInRegulation || "--"}%
+                          <div className="text-lg font-semibold text-accent" data-testid="summary-average-score">
+                            {playerStats?.averageScore ? parseFloat(playerStats.averageScore).toFixed(1) : "--"}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            Greens in Regulation
+                            Average Score
                           </div>
                         </div>
                         <div>
-                          <div className="text-lg font-semibold text-accent">
-                            {detailedStats.fairwaysHit || "--"}%
+                          <div className="text-lg font-semibold text-accent" data-testid="summary-handicap">
+                            {playerStats?.handicap !== null ? playerStats.handicap : "--"}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Estimated Handicap
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-semibold text-accent" data-testid="summary-fairways-hit">
+                            {playerStats?.totalFairwaysHit && playerStats?.totalFairwayAttempts ? 
+                              Math.round((playerStats.totalFairwaysHit / playerStats.totalFairwayAttempts) * 100) : "--"}%
                           </div>
                           <div className="text-sm text-muted-foreground">
                             Fairways Hit
                           </div>
                         </div>
                         <div>
-                          <div className="text-lg font-semibold text-accent">
-                            {detailedStats.puttsPerRound || "--"}
+                          <div className="text-lg font-semibold text-accent" data-testid="summary-gir">
+                            {playerStats?.totalGIR && playerStats?.totalGIRAttempts ? 
+                              Math.round((playerStats.totalGIR / playerStats.totalGIRAttempts) * 100) : "--"}%
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            Avg Putts/Round
+                            Greens in Regulation
+                          </div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                        <div>
+                          <div className="text-lg font-semibold text-accent" data-testid="summary-putts">
+                            {playerStats?.averagePutts ? parseFloat(playerStats.averagePutts).toFixed(1) : "--"}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Average Putts
                           </div>
                         </div>
                         <div>
-                          <div className="text-lg font-semibold text-accent">
-                            {detailedStats.birdiePercentage || "--"}%
+                          <div className="text-lg font-semibold text-accent" data-testid="summary-tournaments-won">
+                            {playerStats?.wins || 0}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            Birdie Rate
+                            Tournaments Won
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-semibold text-accent" data-testid="summary-rounds-played">
+                            {playerStats?.totalRounds || 0}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Rounds Played
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-semibold text-accent" data-testid="summary-tournaments-played">
+                            {playerStats?.tournamentsPlayed || 0}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Tournaments Played
+                          </div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-center">
+                        <div>
+                          <div className="text-lg font-semibold text-accent" data-testid="summary-best-finish">
+                            {playerStats?.bestFinish ? `${playerStats.bestFinish}${
+                              playerStats.bestFinish === 1 ? 'st' : 
+                              playerStats.bestFinish === 2 ? 'nd' : 
+                              playerStats.bestFinish === 3 ? 'rd' : 'th'
+                            }` : "--"}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Best Tournament Finish
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-semibold text-accent" data-testid="summary-top10-finishes">
+                            {playerStats?.top10Finishes || 0}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Top 10 Finishes
                           </div>
                         </div>
                       </div>
