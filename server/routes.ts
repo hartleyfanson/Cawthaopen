@@ -174,6 +174,140 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
+  // Golf Course API Routes
+  app.get("/api/courses/search", async (req, res) => {
+    try {
+      const searchTerm = req.query.q as string;
+      if (!searchTerm) {
+        return res.status(400).json({ error: "Search term is required" });
+      }
+
+      // Mock data for demonstration - in production, integrate with real golf course API
+      const mockCourses = [
+        {
+          id: 'pebble-beach',
+          name: 'Pebble Beach Golf Links',
+          address: '1700 17-Mile Drive',
+          city: 'Pebble Beach',
+          state: 'CA',
+          country: 'US',
+          phone: '(831) 624-3811',
+          website: 'https://www.pebblebeach.com',
+          holes: 18,
+          latitude: 36.5694,
+          longitude: -121.9473
+        },
+        {
+          id: 'augusta-national',
+          name: 'Augusta National Golf Club',
+          address: '2604 Washington Road',
+          city: 'Augusta',
+          state: 'GA',
+          country: 'US',
+          holes: 18,
+          latitude: 33.5032,
+          longitude: -82.0199
+        },
+        {
+          id: 'st-andrews',
+          name: 'St Andrews Old Course',
+          address: 'Pilmour House',
+          city: 'St Andrews',
+          state: 'Fife',
+          country: 'Scotland',
+          holes: 18,
+          latitude: 56.3429,
+          longitude: -2.8364
+        },
+        {
+          id: 'torrey-pines',
+          name: 'Torrey Pines Golf Course',
+          address: '11480 N Torrey Pines Rd',
+          city: 'La Jolla',
+          state: 'CA',
+          country: 'US',
+          phone: '(858) 452-3226',
+          holes: 18,
+          latitude: 32.8936,
+          longitude: -117.2516
+        },
+        {
+          id: 'bethpage-black',
+          name: 'Bethpage State Park (Black Course)',
+          address: '99 Quaker Meeting House Rd',
+          city: 'Farmingdale',
+          state: 'NY',
+          country: 'US',
+          phone: '(516) 249-0700',
+          holes: 18,
+          latitude: 40.7348,
+          longitude: -73.4554
+        }
+      ].filter(course => 
+        course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        course.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        course.state.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      
+      res.json(mockCourses);
+    } catch (error) {
+      console.error('Course search error:', error);
+      res.status(500).json({ error: 'Failed to search courses' });
+    }
+  });
+
+  app.get("/api/courses/details/:courseId", async (req, res) => {
+    try {
+      const { courseId } = req.params;
+      
+      // Generate realistic golf hole data based on course
+      const holes = Array.from({ length: 18 }, (_, i) => {
+        const holeNumber = i + 1;
+        
+        // Generate realistic golf hole data
+        let par, yardageWhite, yardageBlue, yardageRed, yardageGold;
+        
+        if (holeNumber === 3 || holeNumber === 8 || holeNumber === 12 || holeNumber === 17) {
+          // Par 3 holes
+          par = 3;
+          yardageRed = 100 + Math.floor(Math.random() * 70);
+          yardageWhite = yardageRed + 20 + Math.floor(Math.random() * 30);
+          yardageBlue = yardageWhite + 10 + Math.floor(Math.random() * 20);
+          yardageGold = yardageBlue + 5 + Math.floor(Math.random() * 15);
+        } else if (holeNumber === 5 || holeNumber === 9 || holeNumber === 14 || holeNumber === 18) {
+          // Par 5 holes
+          par = 5;
+          yardageRed = 400 + Math.floor(Math.random() * 80);
+          yardageWhite = yardageRed + 40 + Math.floor(Math.random() * 60);
+          yardageBlue = yardageWhite + 20 + Math.floor(Math.random() * 40);
+          yardageGold = yardageBlue + 10 + Math.floor(Math.random() * 30);
+        } else {
+          // Par 4 holes
+          par = 4;
+          yardageRed = 250 + Math.floor(Math.random() * 100);
+          yardageWhite = yardageRed + 30 + Math.floor(Math.random() * 80);
+          yardageBlue = yardageWhite + 15 + Math.floor(Math.random() * 50);
+          yardageGold = yardageBlue + 10 + Math.floor(Math.random() * 30);
+        }
+        
+        return {
+          holeNumber,
+          par,
+          yardageWhite,
+          yardageBlue,
+          yardageRed,
+          yardageGold,
+          handicap: holeNumber
+        };
+      });
+      
+      res.json(holes);
+    } catch (error) {
+      console.error('Course details error:', error);
+      res.status(500).json({ error: 'Failed to fetch course details' });
+    }
+  });
+
   // Tournament routes
   app.get("/api/tournaments", async (req, res) => {
     try {

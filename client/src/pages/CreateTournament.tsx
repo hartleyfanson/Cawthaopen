@@ -18,6 +18,7 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 import { useLocation } from "wouter";
 import { useEffect } from "react";
 import { z } from "zod";
+import { CourseSearch } from "@/components/CourseSearch";
 
 const createTournamentSchema = insertTournamentSchema.extend({
   maxPlayers: z.number().min(1).max(100),
@@ -30,6 +31,8 @@ export default function CreateTournament() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const [isCreatingManualCourse, setIsCreatingManualCourse] = useState(false);
+  const [showCourseSearch, setShowCourseSearch] = useState(false);
+  const [importedCourse, setImportedCourse] = useState<any>(null);
   const [teeSelectionMode, setTeeSelectionMode] = useState<"same" | "mixed">("same");
   const [singleTeeColor, setSingleTeeColor] = useState("white");
   const [holeTeeMappings, setHoleTeeMappings] = useState(
@@ -305,8 +308,15 @@ export default function CreateTournament() {
                           field.onChange(value);
                           if (value === "add-manually") {
                             setIsCreatingManualCourse(true);
+                            setShowCourseSearch(false);
+                            setImportedCourse(null);
+                          } else if (value === "search-courses") {
+                            setShowCourseSearch(true);
+                            setIsCreatingManualCourse(false);
                           } else {
                             setIsCreatingManualCourse(false);
+                            setShowCourseSearch(false);
+                            setImportedCourse(null);
                           }
                         }} defaultValue={field.value}>
                           <FormControl>
@@ -318,6 +328,7 @@ export default function CreateTournament() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
+                            <SelectItem value="search-courses">🔍 Search Golf Courses</SelectItem>
                             <SelectItem value="add-manually">+ Add Manually</SelectItem>
                             {loadingCourses ? (
                               <SelectItem value="loading" disabled>Loading courses...</SelectItem>
@@ -336,6 +347,53 @@ export default function CreateTournament() {
                       </FormItem>
                     )}
                   />
+
+                  {/* Course Search Section */}
+                  {showCourseSearch && (
+                    <div className="space-y-4">
+                      <CourseSearch 
+                        onCourseSelect={(course, holes) => {
+                          // Set the imported course data
+                          setImportedCourse({ course, holes });
+                          
+                          // Update the manual course data with imported information
+                          setManualCourseData({
+                            name: course.name,
+                            location: `${course.city}, ${course.state}`,
+                            description: `Imported from external course database. ${course.address || ''}`,
+                            holes: holes.map(hole => ({
+                              holeNumber: hole.holeNumber,
+                              par: hole.par,
+                              yardageWhite: hole.yardageWhite || 350,
+                              yardageBlue: hole.yardageBlue || 370,
+                              yardageRed: hole.yardageRed || 300,
+                              yardageGold: hole.yardageGold || 390,
+                              handicap: hole.handicap || hole.holeNumber
+                            }))
+                          });
+                          
+                          // Switch to manual course creation mode with pre-filled data
+                          setIsCreatingManualCourse(true);
+                          setShowCourseSearch(false);
+                          form.setValue('courseId', 'add-manually');
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Imported Course Preview */}
+                  {importedCourse && (
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                        <h4 className="font-semibold text-green-800">Course Imported Successfully</h4>
+                      </div>
+                      <p className="text-sm text-green-700">
+                        <strong>{importedCourse.course.name}</strong> has been imported with {importedCourse.holes.length} holes. 
+                        You can review and modify the course details below before creating your tournament.
+                      </p>
+                    </div>
+                  )}
 
                   {isCreatingManualCourse && (
                     <div className="space-y-4 p-4 border border-border rounded-lg bg-card">
