@@ -63,7 +63,7 @@ export function TournamentCard({ tournament, status }: TournamentCardProps) {
 
   const handleJoinTournament = (e: React.MouseEvent) => {
     e.preventDefault();
-    e.stopPropagation();
+    e.stopPropagation(); // Prevent card click when clicking join button
     if (!isUserJoined && !joinTournamentMutation.isPending) {
       joinTournamentMutation.mutate();
     }
@@ -116,14 +116,16 @@ export function TournamentCard({ tournament, status }: TournamentCardProps) {
       // Tournament is finished (past end date)
       if (nowDateOnly > endDateOnly) {
         return (
-          <Link href={`/tournaments/${tournament.id}/leaderboard`}>
-            <Button 
-              className="bg-secondary text-secondary-foreground hover:bg-accent"
-              data-testid="button-view-results"
-            >
-              View Full Results
-            </Button>
-          </Link>
+          <Button 
+            className="bg-secondary text-secondary-foreground hover:bg-accent"
+            data-testid="button-view-results"
+            onClick={(e) => {
+              e.stopPropagation();
+              window.location.href = `/tournaments/${tournament.id}/leaderboard`;
+            }}
+          >
+            View Full Results
+          </Button>
         );
       }
       
@@ -131,15 +133,14 @@ export function TournamentCard({ tournament, status }: TournamentCardProps) {
       if (nowDateOnly >= startDateOnly && nowDateOnly <= endDateOnly) {
         if (isUserJoined) {
           return (
-            <Link href={`/tournaments/${tournament.id}/leaderboard`}>
-              <Button 
-                className="bg-green-600 text-white hover:bg-green-700"
-                data-testid="button-tournament-joined"
-              >
-                <Check className="h-4 w-4 mr-2" />
-                Joined
-              </Button>
-            </Link>
+            <Button 
+              className="bg-green-600 text-white hover:bg-green-700"
+              data-testid="button-tournament-joined"
+              onClick={(e) => e.stopPropagation()} // Prevent double navigation
+            >
+              <Check className="h-4 w-4 mr-2" />
+              Joined
+            </Button>
           );
         }
         return (
@@ -158,15 +159,14 @@ export function TournamentCard({ tournament, status }: TournamentCardProps) {
     // Tournament is upcoming (before start date) or fallback
     if (isUserJoined) {
       return (
-        <Link href={`/tournaments/${tournament.id}/leaderboard`}>
-          <Button 
-            className="bg-green-600 text-white hover:bg-green-700"
-            data-testid="button-tournament-joined"
-          >
-            <Check className="h-4 w-4 mr-2" />
-            Joined
-          </Button>
-        </Link>
+        <Button 
+          className="bg-green-600 text-white hover:bg-green-700"
+          data-testid="button-tournament-joined"
+          onClick={(e) => e.stopPropagation()} // Prevent double navigation
+        >
+          <Check className="h-4 w-4 mr-2" />
+          Joined
+        </Button>
       );
     }
     return (
@@ -181,10 +181,21 @@ export function TournamentCard({ tournament, status }: TournamentCardProps) {
     );
   };
 
+  // Handle card click when user has joined
+  const handleCardClick = () => {
+    if (isUserJoined) {
+      // Navigate to tournament leaderboard when user has joined
+      window.location.href = `/tournaments/${tournament.id}/leaderboard`;
+    }
+  };
+
   return (
     <Card 
-      className="bg-primary border border-border hover:border-secondary transition-colors cursor-pointer overflow-hidden"
+      className={`bg-primary border border-border hover:border-secondary transition-colors overflow-hidden ${
+        isUserJoined ? 'cursor-pointer' : 'cursor-default'
+      }`}
       data-testid={`card-tournament-${tournament.id}`}
+      onClick={handleCardClick}
     >
       {/* Tournament Header Image */}
       {tournament.headerImageUrl && (
