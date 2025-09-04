@@ -262,6 +262,7 @@ export function Navigation() {
                         onGetUploadParameters={handleProfileImageUpload}
                         onComplete={handleProfileImageComplete}
                         buttonClassName="text-sm"
+                        directFileInput={true}
                       >
                         <Upload className="h-4 w-4 mr-2" />
                         Change Photo
