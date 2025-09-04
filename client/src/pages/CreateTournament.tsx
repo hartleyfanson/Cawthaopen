@@ -606,11 +606,6 @@ export default function CreateTournament() {
                               <Upload className="h-4 w-4 mr-2" />
                               {uploadedImageUrl ? 'Change Tournament Photo' : 'Upload Tournament Photo'}
                             </ObjectUploader>
-                            {!uploadedImageUrl && (
-                              <p className="text-sm text-muted-foreground">
-                                Add a photo to make your tournament more appealing. This will be displayed in the tournament history.
-                              </p>
-                            )}
                           </div>
                         </FormControl>
                         <FormMessage />
