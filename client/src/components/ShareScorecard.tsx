@@ -18,30 +18,20 @@ interface ShareScorecardProps {
 export function ShareScorecard({ tournamentId, roundData, playerData, selectedRound = 'all', tournamentRounds = [] }: ShareScorecardProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+  const [selectedScorecardRound, setSelectedScorecardRound] = useState<number>(1);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
 
-  // Determine which round data to use based on selectedRound
-  const isSpecificRound = typeof selectedRound === 'number';
-  const targetRoundNumber = isSpecificRound ? selectedRound : undefined;
-  
-  // Find the target round data for specific round scorecards
-  const targetRoundData = isSpecificRound && Array.isArray(tournamentRounds) 
-    ? tournamentRounds.find(r => r.roundNumber === targetRoundNumber)
+  // Find the selected round data
+  const selectedRoundData = Array.isArray(tournamentRounds) 
+    ? tournamentRounds.find(r => r.roundNumber === selectedScorecardRound)
     : null;
 
-  // Fetch the most recent complete round only for 'all' rounds view
-  const { data: recentCompleteRound } = useQuery({
-    queryKey: ["/api/players/recent-complete-round"],
-    staleTime: 30000, // Cache for 30 seconds
-    enabled: !isSpecificRound, // Only fetch when not viewing a specific round
-  });
-
-  // Use appropriate round data based on context
-  const effectiveRoundData = isSpecificRound ? (targetRoundData || roundData) : (recentCompleteRound?.round || roundData);
-  const effectiveScores = isSpecificRound ? null : (recentCompleteRound as any)?.scores;
-  const effectiveTournament = (recentCompleteRound as any)?.tournament || null;
-  const effectiveCourse = (recentCompleteRound as any)?.course || null;
+  // Use selected round data or fallback
+  const effectiveRoundData = selectedRoundData || roundData;
+  const effectiveScores = null; // Always fetch fresh data
+  const effectiveTournament = null;
+  const effectiveCourse = null;
 
   const { data: tournament } = useQuery({
     queryKey: ["/api/tournaments", tournamentId],
@@ -63,26 +53,17 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
     enabled: !!(effectiveCourse || course as any)?.id,
   });
 
-  // Fetch tournament player scores for round-specific data
+  // Fetch tournament player scores and filter by selected round
   const { data: tournamentPlayerScores } = useQuery({
     queryKey: ["/api/tournaments", tournamentId, "player-scores"],
-    enabled: isSpecificRound && !!tournamentId,
+    enabled: !!tournamentId,
     staleTime: 0,
   });
 
-  // For non-specific rounds, still use the old approach
-  const { data: scores } = useQuery({
-    queryKey: ["/api/rounds", (effectiveRoundData as any)?.id, "scores"],
-    enabled: !!(effectiveRoundData as any)?.id && !isSpecificRound,
-    staleTime: 0,
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
-  });
-
-  // For specific rounds, filter tournament scores by round and player
-  const roundSpecificScores = isSpecificRound && Array.isArray(tournamentPlayerScores) 
+  // Filter scores by selected round and current player
+  const roundSpecificScores = Array.isArray(tournamentPlayerScores) 
     ? tournamentPlayerScores.filter((score: any) => 
-        score.roundNumber === targetRoundNumber && score.playerId === playerData?.id
+        score.roundNumber === selectedScorecardRound && score.playerId === playerData?.id
       )
     : null;
 
@@ -91,23 +72,18 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
       canvasRef: !!canvasRef.current,
       effectiveRoundData: !!effectiveRoundData,
       playerData: !!playerData,
-      effectiveScores: !!effectiveScores,
-      scores: !!scores,
       roundSpecificScores: !!roundSpecificScores,
-      isSpecificRound,
-      targetRoundNumber
+      selectedScorecardRound
     });
     
-    if (!canvasRef.current || !effectiveRoundData || !playerData || !(effectiveScores || scores || roundSpecificScores)) return;
+    if (!canvasRef.current || !effectiveRoundData || !playerData || !roundSpecificScores || roundSpecificScores.length === 0) return;
 
     setIsGenerating(true);
     
     try {
-      // Calculate fresh totals from current scores data
-      const currentScores = effectiveScores || scores || roundSpecificScores;
-      console.log('Current scores for scorecard:', currentScores);
-      console.log('Round specific scores:', roundSpecificScores);
-      console.log('Tournament player scores:', tournamentPlayerScores);
+      // Use round-specific scores
+      const currentScores = roundSpecificScores;
+      console.log('Using scores for Round', selectedScorecardRound, ':', currentScores);
       const totalStrokes = Array.isArray(currentScores) ? currentScores.reduce((sum: number, score: any) => sum + (score.strokes || score.scores?.strokes), 0) : 0;
       const totalPutts = Array.isArray(currentScores) ? currentScores.reduce((sum: number, score: any) => sum + (score.putts || score.scores?.putts), 0) : 0;
       const fairwaysHit = Array.isArray(currentScores) ? currentScores.filter((score: any) => score.fairwayHit || score.scores?.fairwayHit).length : 0;
@@ -403,10 +379,30 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
         </DialogHeader>
         
         <div className="space-y-6">
+          {/* Round Selection */}
+          {Array.isArray(tournamentRounds) && tournamentRounds.length > 1 && (
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-foreground">
+                Select Round for Scorecard:
+              </label>
+              <select 
+                value={selectedScorecardRound}
+                onChange={(e) => setSelectedScorecardRound(Number(e.target.value))}
+                className="w-full p-2 border border-border rounded-md bg-background text-foreground"
+              >
+                {tournamentRounds.map((round: any) => (
+                  <option key={round.id} value={round.roundNumber}>
+                    Round {round.roundNumber}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          
           <div className="text-center">
             <Button 
               onClick={generateScorecard}
-              disabled={isGenerating}
+              disabled={isGenerating || !roundSpecificScores || roundSpecificScores.length === 0}
               className="bg-secondary text-secondary-foreground hover:bg-accent"
               data-testid="button-generate-scorecard"
             >
@@ -416,9 +412,14 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
                   Generating...
                 </>
               ) : (
-                'Generate Scorecard'
+                `Generate Round ${selectedScorecardRound} Scorecard`
               )}
             </Button>
+            {(!roundSpecificScores || roundSpecificScores.length === 0) && (
+              <p className="text-sm text-muted-foreground mt-2">
+                No scores found for Round {selectedScorecardRound}
+              </p>
+            )}
           </div>
           
           {generatedImageUrl && (
