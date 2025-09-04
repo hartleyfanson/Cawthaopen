@@ -55,9 +55,10 @@ export default function TournamentLeaderboard() {
     enabled: !!user && !!id,
   });
 
+  // Fetch current round data based on selected round (for scorecard generation)
   const { data: currentRound } = useQuery({
     queryKey: ["/api/rounds", id, selectedRound === 'all' ? "1" : selectedRound.toString()],
-    enabled: !!user && !!id && selectedRound !== 'all',
+    enabled: !!user && !!id,
   });
 
   const { data: currentRoundScores } = useQuery({
