@@ -1,7 +1,8 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { AchievementDetailsModal } from "@/components/AchievementDetailsModal";
 import * as LucideIcons from "lucide-react";
+import { useState } from "react";
 import type { Achievement, PlayerAchievement } from "@shared/schema";
 
 interface AchievementBadgeProps {
@@ -19,6 +20,8 @@ export function AchievementBadge({
   className = "",
   size = "md"
 }: AchievementBadgeProps) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
   // Get the icon component dynamically
   const IconComponent = (LucideIcons as any)[achievement.badgeIcon] || LucideIcons.Award;
   
@@ -57,75 +60,64 @@ export function AchievementBadge({
   };
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Card className={`
-            ${sizeClasses[size]} 
-            ${className} 
-            ${getRarityBorder(achievement.rarity)} 
-            ${isUnlocked ? 'opacity-100' : 'opacity-40 grayscale'} 
-            border-2 transition-all duration-200 hover:scale-105 cursor-pointer
-            ${achievement.rarity === 'legendary' ? 'shadow-lg' : 'shadow-md'}
+    <>
+      <Card 
+        className={`
+          ${sizeClasses[size]} 
+          ${className} 
+          ${getRarityBorder(achievement.rarity || 'common')} 
+          ${isUnlocked ? 'opacity-100' : 'opacity-40 grayscale'} 
+          border-2 transition-all duration-200 hover:scale-105 cursor-pointer
+          ${(achievement.rarity || 'common') === 'legendary' ? 'shadow-lg' : 'shadow-md'}
+        `}
+        onClick={() => setIsModalOpen(true)}
+        data-testid={`achievement-badge-${achievement.id}`}
+      >
+        <CardContent className="p-2 flex flex-col items-center justify-center h-full relative">
+          {/* Rarity indicator */}
+          {(achievement.rarity || 'common') !== 'common' && (
+            <Badge 
+              variant="secondary" 
+              className={`absolute top-1 right-1 text-xs px-1 py-0 ${
+                (achievement.rarity || 'common') === 'legendary' ? 'bg-yellow-200 text-yellow-800' :
+                (achievement.rarity || 'common') === 'epic' ? 'bg-purple-200 text-purple-800' :
+                'bg-blue-200 text-blue-800'
+              }`}
+            >
+              {(achievement.rarity || 'common').charAt(0).toUpperCase()}
+            </Badge>
+          )}
+          
+          {/* Icon with badge color */}
+          <div className={`
+            rounded-full p-2 mb-1
+            ${getBadgeColor(achievement.badgeColor || 'blue')}
+            ${isUnlocked ? '' : 'bg-gray-400 text-gray-600'}
           `}>
-            <CardContent className="p-2 flex flex-col items-center justify-center h-full relative">
-              {/* Rarity indicator */}
-              {achievement.rarity !== 'common' && (
-                <Badge 
-                  variant="secondary" 
-                  className={`absolute top-1 right-1 text-xs px-1 py-0 ${
-                    achievement.rarity === 'legendary' ? 'bg-yellow-200 text-yellow-800' :
-                    achievement.rarity === 'epic' ? 'bg-purple-200 text-purple-800' :
-                    'bg-blue-200 text-blue-800'
-                  }`}
-                >
-                  {achievement.rarity.charAt(0).toUpperCase()}
-                </Badge>
-              )}
-              
-              {/* Icon with badge color */}
-              <div className={`
-                rounded-full p-2 mb-1
-                ${getBadgeColor(achievement.badgeColor)}
-                ${isUnlocked ? '' : 'bg-gray-400 text-gray-600'}
-              `}>
-                <IconComponent size={iconSizes[size]} />
-              </div>
-              
-              {/* Achievement name */}
-              <div className="text-center">
-                <p className={`font-semibold text-xs leading-tight ${size === 'sm' ? 'text-xs' : 'text-sm'}`}>
-                  {achievement.name}
-                </p>
-                {unlockedAt && size !== 'sm' && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {new Date(unlockedAt).toLocaleDateString()}
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TooltipTrigger>
-        <TooltipContent side="bottom" className="max-w-64">
+            <IconComponent size={iconSizes[size]} />
+          </div>
+          
+          {/* Achievement name */}
           <div className="text-center">
-            <p className="font-semibold mb-1">{achievement.name}</p>
-            <p className="text-sm text-muted-foreground mb-2">{achievement.description}</p>
-            <div className="flex justify-between items-center text-xs">
-              <Badge variant="outline" className="text-xs">
-                {achievement.category}
-              </Badge>
-              <span className="text-muted-foreground">
-                {achievement.points} pts
-              </span>
-            </div>
-            {unlockedAt && (
-              <p className="text-xs text-muted-foreground mt-2">
-                Unlocked: {new Date(unlockedAt).toLocaleDateString()}
+            <p className={`font-semibold text-xs leading-tight ${size === 'sm' ? 'text-xs' : 'text-sm'}`}>
+              {achievement.name}
+            </p>
+            {unlockedAt && size !== 'sm' && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {new Date(unlockedAt).toLocaleDateString()}
               </p>
             )}
           </div>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+        </CardContent>
+      </Card>
+
+      <AchievementDetailsModal
+        achievement={achievement}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        isUnlocked={isUnlocked}
+        unlockedAt={unlockedAt}
+      />
+    </>
   );
 }
