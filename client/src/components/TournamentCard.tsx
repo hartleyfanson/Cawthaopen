@@ -2,6 +2,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { isUnauthorizedError } from "@/lib/authUtils";
+import { Check } from "lucide-react";
 
 interface TournamentCardProps {
   tournament: any;
@@ -9,6 +15,60 @@ interface TournamentCardProps {
 }
 
 export function TournamentCard({ tournament, status }: TournamentCardProps) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Fetch tournament players to check if current user has joined
+  const { data: tournamentPlayers } = useQuery({
+    queryKey: ["/api/tournaments", tournament.id, "players"],
+    enabled: !!user && !!tournament.id && status === "upcoming",
+  });
+
+  // Check if current user is already joined
+  const isUserJoined = Array.isArray(tournamentPlayers) && 
+    tournamentPlayers.some((player: any) => player.playerId === (user as any)?.id);
+
+  const joinTournamentMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", `/api/tournaments/${tournament.id}/join`, { teeSelection: "white" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tournaments", tournament.id, "players"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tournaments", tournament.id, "leaderboard"] });
+      toast({
+        title: "Tournament Joined",
+        description: "You have successfully joined the tournament!",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to join tournament",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleJoinTournament = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isUserJoined && !joinTournamentMutation.isPending) {
+      joinTournamentMutation.mutate();
+    }
+  };
+
   const getStatusBadge = () => {
     switch (status) {
       case "active":
@@ -36,15 +96,28 @@ export function TournamentCard({ tournament, status }: TournamentCardProps) {
           </Link>
         );
       case "upcoming":
+        if (isUserJoined) {
+          return (
+            <Link href={`/tournaments/${tournament.id}/leaderboard`}>
+              <Button 
+                className="bg-green-600 text-white hover:bg-green-700"
+                data-testid="button-tournament-joined"
+              >
+                <Check className="h-4 w-4 mr-2" />
+                Joined
+              </Button>
+            </Link>
+          );
+        }
         return (
-          <Link href={`/tournaments/${tournament.id}/leaderboard`}>
-            <Button 
-              className="bg-secondary text-secondary-foreground hover:bg-accent"
-              data-testid="button-join-tournament"
-            >
-              Join Tournament
-            </Button>
-          </Link>
+          <Button 
+            onClick={handleJoinTournament}
+            disabled={joinTournamentMutation.isPending}
+            className="bg-secondary text-secondary-foreground hover:bg-accent"
+            data-testid="button-join-tournament"
+          >
+            {joinTournamentMutation.isPending ? "Joining..." : "Join Tournament"}
+          </Button>
         );
       case "completed":
         return (

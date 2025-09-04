@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Navigation } from "@/components/Navigation";
 import { LeaderboardTable } from "@/components/LeaderboardTable";
 import { ShareScorecard } from "@/components/ShareScorecard";
+import { FutureTournamentView } from "@/components/FutureTournamentView";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
@@ -111,6 +112,10 @@ export default function TournamentLeaderboard() {
   // Check if current user is already joined
   const isUserJoined = Array.isArray(tournamentPlayers) && 
     tournamentPlayers.some((player: any) => player.playerId === (user as any)?.id);
+
+  // Check if tournament is future-dated
+  const isFutureTournament = (tournament as any)?.status === "upcoming" || 
+    (tournament as any)?.startDate && new Date((tournament as any)?.startDate) > new Date();
 
   if (isLoading || loadingTournament) {
     return (
@@ -220,10 +225,17 @@ export default function TournamentLeaderboard() {
         </div>
       </section>
 
-      {/* Leaderboard */}
+      {/* Tournament Content */}
       <section className="py-12 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {loadingLeaderboard ? (
+          {isFutureTournament ? (
+            // Show future tournament view with course scorecard and players
+            <FutureTournamentView 
+              tournament={tournament}
+              tournamentId={id || ''}
+              course={course}
+            />
+          ) : loadingLeaderboard ? (
             <Card className="bg-muted">
               <CardContent className="p-8 text-center">
                 <div className="text-muted-foreground">Loading leaderboard...</div>
