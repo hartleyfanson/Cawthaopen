@@ -117,6 +117,7 @@ export function CourseSearch({ onCourseSelect, isLoading = false }: CourseSearch
               data-testid="input-course-search"
             />
             <Button 
+              type="button"
               onClick={handleSearch} 
               disabled={isSearching || !searchTerm.trim()}
               data-testid="button-search-courses"
@@ -161,6 +162,7 @@ export function CourseSearch({ onCourseSelect, isLoading = false }: CourseSearch
                         </div>
                       </div>
                       <Button
+                        type="button"
                         onClick={() => handleCourseSelect(course)}
                         disabled={isLoadingDetails && selectedCourse?.id === course.id}
                         data-testid={`button-select-course-${course.id}`}
@@ -182,7 +184,7 @@ export function CourseSearch({ onCourseSelect, isLoading = false }: CourseSearch
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span>Course Preview: {selectedCourse.name}</span>
-              <Button onClick={handleImportCourse} className="ml-4" data-testid="button-import-course">
+              <Button type="button" onClick={handleImportCourse} className="ml-4" data-testid="button-import-course">
                 <Download className="h-4 w-4 mr-2" />
                 Import Course
               </Button>
