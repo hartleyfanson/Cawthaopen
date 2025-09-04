@@ -217,17 +217,17 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
                   </div>
                   
                   <div className="flex items-center space-x-4 text-sm font-medium">
-                    {/* Always show all four values: IN, OUT, TOTAL, NET */}
-                    <div className="text-center">
-                      <div className="text-xs text-muted-foreground">IN</div>
-                      <div className={`font-bold ${isLeader ? 'text-primary' : 'text-foreground'}`}>
-                        {backNineTotal > 0 ? backNineTotal : '-'}
-                      </div>
-                    </div>
+                    {/* Always show all four values: OUT, IN, TOTAL, NET */}
                     <div className="text-center">
                       <div className="text-xs text-muted-foreground">OUT</div>
                       <div className={`font-bold ${isLeader ? 'text-primary' : 'text-foreground'}`}>
                         {frontNineTotal > 0 ? frontNineTotal : '-'}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs text-muted-foreground">IN</div>
+                      <div className={`font-bold ${isLeader ? 'text-primary' : 'text-foreground'}`}>
+                        {backNineTotal > 0 ? backNineTotal : '-'}
                       </div>
                     </div>
                     <div className="text-center">
