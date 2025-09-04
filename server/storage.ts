@@ -138,7 +138,12 @@ export class DatabaseStorage implements IStorage {
 
   // Course operations
   async getCourses(): Promise<Course[]> {
-    return await db.select().from(courses).orderBy(asc(courses.name));
+    const allCourses = await db.select().from(courses).orderBy(asc(courses.name));
+    // Filter out Cawthra and Meadowbrook from dropdown
+    return allCourses.filter(course => 
+      !course.name.toLowerCase().includes('cawthra') && 
+      !course.name.toLowerCase().includes('meadowbrook')
+    );
   }
 
   async getCourse(id: string): Promise<Course | undefined> {
