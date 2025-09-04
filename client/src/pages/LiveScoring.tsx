@@ -20,8 +20,8 @@ export default function LiveScoring() {
   
   const [selectedRound, setSelectedRound] = useState(1);
   const [currentHole, setCurrentHole] = useState(1);
-  const [strokes, setStrokes] = useState(4);
-  const [putts, setPutts] = useState(2);
+  const [strokes, setStrokes] = useState<number | null>(null);
+  const [putts, setPutts] = useState<number | null>(null);
   const [fairwayHit, setFairwayHit] = useState(false);
   const [greenInRegulation, setGreenInRegulation] = useState(false);
   const [powerupUsed, setPowerupUsed] = useState(false);
@@ -31,8 +31,8 @@ export default function LiveScoring() {
   const [cachedScores, setCachedScores] = useState<Array<{
     holeNumber: number;
     holeId: string;
-    strokes: number;
-    putts: number;
+    strokes: number | null;
+    putts: number | null;
     fairwayHit: boolean;
     greenInRegulation: boolean;
     powerupUsed: boolean;
@@ -215,9 +215,9 @@ export default function LiveScoring() {
         setPowerupUsed(existingScore.powerupUsed);
         setPowerupNotes(existingScore.powerupNotes);
       } else {
-        // Use default values for new holes
-        setStrokes(currentHoleData.par);
-        setPutts(2);
+        // Reset to blank for new holes
+        setStrokes(null);
+        setPutts(null);
         setFairwayHit(false);
         setGreenInRegulation(false);
         setPowerupUsed(false);
@@ -247,103 +247,11 @@ export default function LiveScoring() {
     }
   }, [existingScores, holes]);
 
-  // Cache current hole score and move to next hole
-  const cacheScoreAndContinue = () => {
-    if (!currentHoleData) return;
-    
-    const holeScore = {
-      holeNumber: currentHole,
-      holeId: currentHoleData.id,
-      strokes,
-      putts,
-      fairwayHit: currentHoleData.par === 3 ? false : fairwayHit, // Always false for par 3s
-      greenInRegulation: greenInRegulation, // Now allowed for par 3s
-      powerupUsed,
-      powerupNotes: powerupUsed ? powerupNotes : "",
-    };
-    
-    // Update cached scores (replace if hole already exists)
-    setCachedScores(prev => {
-      const filtered = prev.filter(score => score.holeNumber !== currentHole);
-      return [...filtered, holeScore].sort((a, b) => a.holeNumber - b.holeNumber);
-    });
-    
-    // Move to next hole if not on 18
-    if (currentHole < 18) {
-      nextHole();
-    }
-  };
   
-  // Save all cached scores at once
-  const saveCompleteRound = async () => {
-    try {
-      // First cache the current hole (hole 18)
-      cacheScoreAndContinue();
-      
-      let roundToUse = currentRoundData;
-      
-      if (!roundToUse) {
-        // Create round first
-        roundToUse = await createRoundMutation.mutateAsync({
-          tournamentId: id,
-          roundNumber: selectedRound,
-        });
-      }
 
-      // Save all 18 hole scores
-      const allScores = [...cachedScores, {
-        holeNumber: currentHole,
-        holeId: currentHoleData?.id,
-        strokes,
-        putts,
-        fairwayHit: currentHoleData?.par === 3 ? false : fairwayHit,
-        greenInRegulation: greenInRegulation, // Now allowed for par 3s
-        powerupUsed,
-        powerupNotes: powerupUsed ? powerupNotes : "",
-      }];
-      
-      // Save all scores sequentially
-      for (const score of allScores) {
-        await createScoreMutation.mutateAsync({
-          roundId: (roundToUse as any).id,
-          holeId: score.holeId,
-          strokes: score.strokes,
-          putts: score.putts,
-          fairwayHit: score.fairwayHit,
-          greenInRegulation: score.greenInRegulation,
-          powerupUsed: score.powerupUsed,
-          powerupNotes: score.powerupNotes || null,
-        });
-      }
-      
-      toast({
-        title: "Round Complete!",
-        description: "All scores have been saved successfully. Returning to leaderboard.",
-      });
-
-      // Clear saved scoring state since round is complete
-      clearSavedState();
-
-      // Invalidate caches to trigger real-time leaderboard updates
-      queryClient.invalidateQueries({ queryKey: ["/api/tournaments", id, "leaderboard"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tournaments", id, "player-scores"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/rounds", (roundToUse as any).id, "scores"] });
-      
-      // Navigate back to leaderboard
-      setLocation(`/tournaments/${id}/leaderboard`);
-      
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save round. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Save individual hole score and move to next hole
+  // Save individual hole score
   const saveHoleScore = async () => {
-    if (!currentHoleData) return;
+    if (!currentHoleData || strokes === null || putts === null) return;
     
     try {
       let roundToUse = currentRoundData;
@@ -369,12 +277,49 @@ export default function LiveScoring() {
       });
 
       // Cache this score for local navigation
-      cacheScoreAndContinue();
+      const holeScore = {
+        holeNumber: currentHole,
+        holeId: currentHoleData.id,
+        strokes,
+        putts,
+        fairwayHit: currentHoleData.par === 3 ? false : fairwayHit,
+        greenInRegulation,
+        powerupUsed,
+        powerupNotes: powerupUsed ? powerupNotes : "",
+      };
       
-      toast({
-        title: "Score Saved",
-        description: `Hole ${currentHole} score saved successfully`,
+      setCachedScores(prev => {
+        const filtered = prev.filter(score => score.holeNumber !== currentHole);
+        return [...filtered, holeScore].sort((a, b) => a.holeNumber - b.holeNumber);
       });
+      
+      if (currentHole === 18) {
+        toast({
+          title: "Round Complete!",
+          description: "All scores have been saved. Returning to leaderboard.",
+        });
+        
+        // Clear saved scoring state since round is complete
+        clearSavedState();
+        
+        // Invalidate caches to trigger real-time leaderboard updates
+        queryClient.invalidateQueries({ queryKey: ["/api/tournaments", id, "leaderboard"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/tournaments", id, "player-scores"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/rounds"] });
+        
+        // Navigate back to leaderboard
+        setLocation(`/tournaments/${id}/leaderboard`);
+      } else {
+        toast({
+          title: "Score Saved",
+          description: `Hole ${currentHole} score saved successfully`,
+        });
+        
+        // Move to next hole
+        if (currentHole < 18) {
+          setCurrentHole(currentHole + 1);
+        }
+      }
       
     } catch (error) {
       toast({
@@ -476,7 +421,13 @@ export default function LiveScoring() {
                     </label>
                     <div className="flex items-center justify-center space-x-4 bg-muted rounded-lg p-4">
                       <Button
-                        onClick={() => setStrokes(Math.max(1, strokes - 1))}
+                        onClick={() => {
+                          if (strokes === null) {
+                            setStrokes(currentHoleData?.par ? currentHoleData.par - 1 : 3);
+                          } else {
+                            setStrokes(Math.max(1, strokes - 1));
+                          }
+                        }}
                         size="icon"
                         className="w-12 h-12 bg-primary text-accent rounded-full hover:bg-primary/80"
                         data-testid="button-strokes-minus"
@@ -487,10 +438,16 @@ export default function LiveScoring() {
                         className="text-4xl font-bold text-accent w-16 text-center"
                         data-testid="text-strokes"
                       >
-                        {strokes}
+                        {strokes ?? '-'}
                       </span>
                       <Button
-                        onClick={() => setStrokes(strokes + 1)}
+                        onClick={() => {
+                          if (strokes === null) {
+                            setStrokes(currentHoleData?.par ? currentHoleData.par + 1 : 5);
+                          } else {
+                            setStrokes(strokes + 1);
+                          }
+                        }}
                         size="icon"
                         className="w-12 h-12 bg-primary text-accent rounded-full hover:bg-primary/80"
                         data-testid="button-strokes-plus"
@@ -506,7 +463,13 @@ export default function LiveScoring() {
                     </label>
                     <div className="flex items-center justify-center space-x-4 bg-muted rounded-lg p-4">
                       <Button
-                        onClick={() => setPutts(Math.max(0, putts - 1))}
+                        onClick={() => {
+                          if (putts === null) {
+                            setPutts(1);
+                          } else {
+                            setPutts(Math.max(0, putts - 1));
+                          }
+                        }}
                         size="icon"
                         className="w-12 h-12 bg-primary text-accent rounded-full hover:bg-primary/80"
                         data-testid="button-putts-minus"
@@ -517,10 +480,16 @@ export default function LiveScoring() {
                         className="text-2xl font-bold text-accent w-16 text-center"
                         data-testid="text-putts"
                       >
-                        {putts}
+                        {putts ?? '-'}
                       </span>
                       <Button
-                        onClick={() => setPutts(putts + 1)}
+                        onClick={() => {
+                          if (putts === null) {
+                            setPutts(2);
+                          } else {
+                            setPutts(putts + 1);
+                          }
+                        }}
                         size="icon"
                         className="w-12 h-12 bg-primary text-accent rounded-full hover:bg-primary/80"
                         data-testid="button-putts-plus"
@@ -601,39 +570,14 @@ export default function LiveScoring() {
                   {Array.isArray(existingScores) && existingScores.length > 0 ? 'Editing Mode' : `Hole ${cachedScores.length}/18 scored`}
                 </div>
                 
-                {currentHole === 18 ? (
-                  <Button
-                    onClick={saveCompleteRound}
-                    disabled={createScoreMutation.isPending}
-                    className="bg-accent text-accent-foreground hover:bg-accent/90 font-semibold"
-                    data-testid="button-save-complete-round"
-                  >
-                    {createScoreMutation.isPending ? "Saving Round..." : "Save & Complete Round"}
-                  </Button>
-                ) : (
-                  <div className="flex space-x-2">
-                    <Button
-                      onClick={saveHoleScore}
-                      disabled={createScoreMutation.isPending}
-                      size="sm"
-                      variant="outline"
-                      className="flex items-center space-x-1 px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm"
-                      data-testid="button-save-hole"
-                    >
-                      {createScoreMutation.isPending ? "Saving..." : "Save Hole"}
-                    </Button>
-                    <Button
-                      onClick={cacheScoreAndContinue}
-                      size="sm"
-                      className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm bg-secondary text-secondary-foreground hover:bg-accent"
-                      data-testid="button-next-hole"
-                    >
-                      <span className="hidden sm:inline">Next Hole</span>
-                      <span className="sm:hidden">Next</span>
-                      <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
-                    </Button>
-                  </div>
-                )}
+                <Button
+                  onClick={saveHoleScore}
+                  disabled={createScoreMutation.isPending || strokes === null || putts === null}
+                  className="bg-accent text-accent-foreground hover:bg-accent/90 font-semibold"
+                  data-testid={currentHole === 18 ? "button-submit-round" : "button-save-hole"}
+                >
+                  {createScoreMutation.isPending ? "Saving..." : (currentHole === 18 ? "Submit Round" : "Save Hole")}
+                </Button>
               </div>
             </CardContent>
           </Card>
