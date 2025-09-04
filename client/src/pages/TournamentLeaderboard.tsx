@@ -291,9 +291,14 @@ export default function TournamentLeaderboard() {
               const startDate = (tournament as any)?.startDate ? new Date((tournament as any).startDate) : null;
               const endDate = (tournament as any)?.endDate ? new Date((tournament as any).endDate) : null;
               
-              const isTournamentActive = startDate && endDate && 
-                now >= startDate && now <= endDate && 
-                isUserJoined;
+              if (!startDate || !endDate || !isUserJoined) return false;
+              
+              // Compare dates only (ignore time) for more user-friendly behavior
+              const nowDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+              const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+              const endDateOnly = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+              
+              const isTournamentActive = nowDateOnly >= startDateOnly && nowDateOnly <= endDateOnly;
                 
               return isTournamentActive;
             })() && (
