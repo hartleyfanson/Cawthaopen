@@ -168,6 +168,18 @@ export function Navigation() {
                 Tournaments
               </span>
             </Link>
+            <Link href="/tournaments/create">
+              <span 
+                className={`transition-colors cursor-pointer ${
+                  isActive("/tournaments/create")
+                    ? "text-secondary" 
+                    : "text-primary-foreground hover:text-secondary"
+                }`}
+                data-testid="nav-create"
+              >
+                Create Tournament
+              </span>
+            </Link>
             <Link href="/achievements">
               <span 
                 className={`transition-colors cursor-pointer ${
@@ -345,6 +357,17 @@ export function Navigation() {
                   }`}
                 >
                   Tournaments
+                </span>
+              </Link>
+              <Link href="/tournaments/create" onClick={() => setIsMobileMenuOpen(false)}>
+                <span 
+                  className={`block px-3 py-2 rounded-md text-base font-medium transition-colors cursor-pointer ${
+                    isActive("/tournaments/create")
+                      ? "bg-secondary text-secondary-foreground" 
+                      : "text-primary-foreground hover:bg-primary/50"
+                  }`}
+                >
+                  Create Tournament
                 </span>
               </Link>
               <Link href="/achievements" onClick={() => setIsMobileMenuOpen(false)}>
