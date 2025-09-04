@@ -43,24 +43,95 @@ function AllRoundsInfo({ tournament, tournamentRounds }: { tournament: any; tour
       : `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
     : 'Dates TBD';
 
-  return (
-    <div className="text-xl text-secondary space-y-2">
-      {/* All Courses Display */}
-      <div className="flex flex-wrap items-center gap-2">
-        {allCourses && allCourses.filter(Boolean).map((course: any, index: number) => (
-          <span key={course.id} className="flex items-center">
-            {course.name} • {course.location}
-            {index < allCourses.filter(Boolean).length - 1 && (
-              <span className="mx-2 text-accent font-bold">|</span>
-            )}
-          </span>
-        ))}
-      </div>
+  // Group rounds by course and date for detailed display
+  const coursesByDate = useMemo(() => {
+    if (!allCourses || !tournamentRounds) return [];
+    
+    const groupedData: Array<{ courseId: string; courseName: string; courseLocation: string; dates: string[]; roundNumbers: number[] }> = [];
+    
+    tournamentRounds.forEach(round => {
+      const courseId = round.courseId || (tournament as any)?.courseId;
+      const course = allCourses.find(c => c?.id === courseId);
+      if (!course) return;
       
-      {/* Date Range */}
-      <p className="text-lg">
-        All Rounds • {dateRangeText}
-      </p>
+      const existingEntry = groupedData.find(entry => entry.courseId === courseId);
+      if (existingEntry) {
+        if (round.roundDate && !existingEntry.dates.includes(round.roundDate)) {
+          existingEntry.dates.push(round.roundDate);
+        }
+        existingEntry.roundNumbers.push(round.roundNumber);
+      } else {
+        groupedData.push({
+          courseId,
+          courseName: course.name,
+          courseLocation: course.location,
+          dates: round.roundDate ? [round.roundDate] : [],
+          roundNumbers: [round.roundNumber]
+        });
+      }
+    });
+    
+    // Sort dates within each course entry
+    groupedData.forEach(entry => {
+      entry.dates.sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+      entry.roundNumbers.sort((a, b) => a - b);
+    });
+    
+    return groupedData;
+  }, [allCourses, tournamentRounds, tournament]);
+
+  const hasMultipleCourses = coursesByDate.length > 1;
+  const hasMultipleDates = coursesByDate.some(entry => entry.dates.length > 1) || 
+    (coursesByDate.length > 1 && new Set(coursesByDate.flatMap(entry => entry.dates)).size > 1);
+
+  return (
+    <div className="text-xl text-secondary space-y-3">
+      {/* Tournament Name */}
+      <h2 className="text-2xl font-bold text-accent mb-2">{(tournament as any)?.name}</h2>
+      
+      {/* Course and Date Information */}
+      {hasMultipleCourses || hasMultipleDates ? (
+        <div className="space-y-2">
+          {coursesByDate.map((courseData, index) => (
+            <div key={courseData.courseId} className="bg-primary/10 rounded-lg p-3 border border-primary/20">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div className="font-medium">
+                  {courseData.courseName} • {courseData.courseLocation}
+                </div>
+                <div className="flex flex-wrap gap-2 text-sm">
+                  {courseData.dates.map((date, dateIndex) => (
+                    <span key={dateIndex} className="bg-accent/20 text-accent px-2 py-1 rounded-md font-medium">
+                      Round{courseData.roundNumbers.length > 1 ? 's' : ''} {courseData.roundNumbers.join(', ')} • {new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  ))}
+                  {courseData.dates.length === 0 && (
+                    <span className="bg-accent/20 text-accent px-2 py-1 rounded-md font-medium">
+                      Round{courseData.roundNumbers.length > 1 ? 's' : ''} {courseData.roundNumbers.join(', ')} • Date TBD
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+          <p className="text-lg mt-3 pt-2 border-t border-primary/20">
+            All Rounds • {dateRangeText}
+          </p>
+        </div>
+      ) : (
+        // Single course/date display (original format)
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {coursesByDate.map((courseData, index) => (
+              <span key={courseData.courseId} className="flex items-center">
+                {courseData.courseName} • {courseData.courseLocation}
+              </span>
+            ))}
+          </div>
+          <p className="text-lg">
+            All Rounds • {dateRangeText}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -224,42 +295,50 @@ export default function TournamentLeaderboard() {
               {(tournament as any)?.name || 'Tournament Leaderboard'}
             </h2>
             {/* Tournament Info with All Courses and Date Range */}
-            {selectedRound === 'all' && tournamentRounds && Array.isArray(tournamentRounds) && tournamentRounds.length > 1 ? (
-              <AllRoundsInfo 
-                tournament={tournament} 
-                tournamentRounds={tournamentRounds as any[]} 
-              />
-            ) : selectedRound !== 'all' && tournamentRounds && Array.isArray(tournamentRounds) ? (
-              <div className="text-xl text-secondary space-y-1">
-                <p>{(course as any)?.name || 'Course'} • {(course as any)?.location || 'Location'}</p>
-                <p className="text-lg">
-                  Round {selectedRound} • {(tournamentRounds as any[]).find((r: any) => r.roundNumber === selectedRound)?.roundDate 
-                    ? new Date((tournamentRounds as any[]).find((r: any) => r.roundNumber === selectedRound)?.roundDate).toLocaleDateString('en-US', { 
-                        weekday: 'long',
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
-                      })
-                    : 'Date TBD'
-                  }
-                </p>
-              </div>
-            ) : (
-              <div className="text-xl text-secondary space-y-1">
-                <p>{(course as any)?.name || 'Course'} • {(course as any)?.location || 'Location'}</p>
-                <p className="text-lg">
-                  {selectedRound === 'all' ? 'All Rounds Combined' : (tournament as any)?.startDate 
-                    ? new Date((tournament as any).startDate).toLocaleDateString('en-US', { 
-                        weekday: 'long',
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
-                      })
-                    : 'Date TBD'
-                  }
-                </p>
-              </div>
-            )}
+            {(() => {
+              if (selectedRound === 'all' && tournamentRounds && Array.isArray(tournamentRounds) && tournamentRounds.length > 1) {
+                return (
+                  <AllRoundsInfo 
+                    tournament={tournament} 
+                    tournamentRounds={tournamentRounds as any[]} 
+                  />
+                );
+              } else if (selectedRound !== 'all' && tournamentRounds && Array.isArray(tournamentRounds)) {
+                return (
+                  <div className="text-xl text-secondary space-y-1">
+                    <p>{(course as any)?.name || 'Course'} • {(course as any)?.location || 'Location'}</p>
+                    <p className="text-lg">
+                      Round {selectedRound} • {(tournamentRounds as any[]).find((r: any) => r.roundNumber === selectedRound)?.roundDate 
+                        ? new Date((tournamentRounds as any[]).find((r: any) => r.roundNumber === selectedRound)?.roundDate).toLocaleDateString('en-US', { 
+                            weekday: 'long',
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                          })
+                        : 'Date TBD'
+                      }
+                    </p>
+                  </div>
+                );
+              } else {
+                return (
+                  <div className="text-xl text-secondary space-y-1">
+                    <p>{(course as any)?.name || 'Course'} • {(course as any)?.location || 'Location'}</p>
+                    <p className="text-lg">
+                      {selectedRound === 'all' ? 'All Rounds Combined' : (tournament as any)?.startDate 
+                        ? new Date((tournament as any).startDate).toLocaleDateString('en-US', { 
+                            weekday: 'long',
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                          })
+                        : 'Date TBD'
+                      }
+                    </p>
+                  </div>
+                );
+              }
+            })()}
             
             {/* Round Selection - show only if tournament has multiple rounds */}
             {tournamentRounds && Array.isArray(tournamentRounds) && tournamentRounds.length > 1 && (
