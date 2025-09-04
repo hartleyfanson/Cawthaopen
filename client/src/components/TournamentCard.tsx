@@ -173,7 +173,7 @@ export function TournamentCard({ tournament, status }: TournamentCardProps) {
         )}
         
         <p className="text-muted-foreground mb-2">
-          {tournament.course?.name} • {tournament.course?.location}
+          {tournament.course?.name} {tournament.course?.location}
         </p>
         
         {tournament.description && (
