@@ -33,12 +33,12 @@ export function FutureTournamentView({ tournament, tournamentId, course, selecte
   // Helper function to get yardage based on tee selection
   const getHoleYardage = (hole: any) => {
     const teeSelection = Array.isArray(teeSelections) 
-      ? teeSelections.find((ts: any) => ts.holeId === hole.id)
+      ? teeSelections.find((ts: any) => ts.holeNumber === hole.holeNumber)
       : null;
     
     const teeColor = teeSelection?.teeColor || 'white';
     
-    switch (teeColor) {
+    switch (teeColor.toLowerCase()) {
       case 'gold': return hole.yardageGold || hole.yardageWhite;
       case 'blue': return hole.yardageBlue || hole.yardageWhite;
       case 'red': return hole.yardageRed || hole.yardageWhite;
