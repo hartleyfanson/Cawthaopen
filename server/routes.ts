@@ -84,6 +84,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get player's most recent complete round for scorecard generation
+  app.get('/api/players/recent-complete-round', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      const recentRound = await storage.getMostRecentCompleteRound(userId);
+      if (!recentRound) {
+        return res.status(404).json({ message: "No complete rounds found" });
+      }
+      res.json(recentRound);
+    } catch (error) {
+      console.error("Error fetching recent complete round:", error);
+      res.status(500).json({ message: "Failed to fetch recent complete round" });
+    }
+  });
+
   // Object storage routes for protected uploads
   app.get("/objects/:objectPath(*)", isAuthenticated, async (req, res) => {
     const userId = (req.user as any)?.claims?.sub;

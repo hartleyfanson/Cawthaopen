@@ -26,15 +26,15 @@ export function AchievementBadge({
   const IconComponent = (LucideIcons as any)[achievement.badgeIcon] || LucideIcons.Award;
   
   const sizeClasses = {
-    sm: "w-14 h-16 sm:w-16 sm:h-20",
-    md: "w-16 h-20 sm:w-20 sm:h-24", 
-    lg: "w-20 h-24 sm:w-24 sm:h-28"
+    sm: "w-12 h-14 xs:w-14 xs:h-16 sm:w-16 sm:h-20",
+    md: "w-14 h-16 xs:w-16 xs:h-20 sm:w-18 sm:h-22 md:w-20 md:h-24", 
+    lg: "w-16 h-20 xs:w-18 xs:h-22 sm:w-20 sm:h-24 md:w-24 md:h-28"
   };
 
   const iconSizes = {
-    sm: 16,
-    md: 20,
-    lg: 24
+    sm: 14,
+    md: 18,
+    lg: 22
   };
 
   const getBadgeColor = (color: string) => {
@@ -73,12 +73,12 @@ export function AchievementBadge({
         onClick={() => setIsModalOpen(true)}
         data-testid={`achievement-badge-${achievement.id}`}
       >
-        <CardContent className="p-1.5 flex flex-col items-center justify-center h-full relative overflow-hidden">
+        <CardContent className="p-1 xs:p-1.5 sm:p-2 flex flex-col items-center justify-center h-full relative overflow-hidden">
           {/* Rarity indicator */}
           {(achievement.rarity || 'common') !== 'common' && (
             <Badge 
               variant="secondary" 
-              className={`absolute top-1 right-1 text-xs px-1 py-0 ${
+              className={`absolute top-0.5 right-0.5 sm:top-1 sm:right-1 text-[10px] xs:text-xs px-0.5 xs:px-1 py-0 min-w-0 ${
                 (achievement.rarity || 'common') === 'legendary' ? 'bg-yellow-200 text-yellow-800' :
                 (achievement.rarity || 'common') === 'epic' ? 'bg-purple-200 text-purple-800' :
                 'bg-blue-200 text-blue-800'
@@ -90,7 +90,7 @@ export function AchievementBadge({
           
           {/* Icon with badge color */}
           <div className={`
-            rounded-full p-2 mb-1
+            rounded-full p-1 xs:p-1.5 sm:p-2 mb-0.5 xs:mb-1 flex-shrink-0
             ${getBadgeColor(achievement.badgeColor || 'blue')}
             ${isUnlocked ? '' : 'bg-gray-400 text-gray-600'}
           `}>
@@ -98,12 +98,16 @@ export function AchievementBadge({
           </div>
           
           {/* Achievement name */}
-          <div className="text-center w-full px-1">
-            <p className={`font-semibold leading-tight text-center overflow-hidden ${size === 'sm' ? 'text-xs line-clamp-2' : 'text-sm line-clamp-2'}`}>
+          <div className="text-center w-full px-0.5 xs:px-1 flex-grow flex flex-col justify-center min-h-0">
+            <p className={`font-semibold leading-tight text-center overflow-hidden ${
+              size === 'sm' ? 'text-[10px] xs:text-xs line-clamp-2' : 
+              size === 'md' ? 'text-xs xs:text-sm line-clamp-2' :
+              'text-sm line-clamp-2'
+            }`}>
               {achievement.name}
             </p>
             {unlockedAt && size !== 'sm' && (
-              <p className="text-xs text-muted-foreground mt-1 truncate">
+              <p className="text-[10px] xs:text-xs text-muted-foreground mt-0.5 xs:mt-1 truncate">
                 {new Date(unlockedAt).toLocaleDateString()}
               </p>
             )}

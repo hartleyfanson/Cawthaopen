@@ -19,45 +19,58 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
 
+  // Fetch the most recent complete round for scorecard generation
+  const { data: recentCompleteRound } = useQuery({
+    queryKey: ["/api/players/recent-complete-round"],
+    staleTime: 30000, // Cache for 30 seconds
+  });
+
+  // Use recent complete round data or fallback to provided roundData
+  const effectiveRoundData = recentCompleteRound?.round || roundData;
+  const effectiveScores = recentCompleteRound?.scores || null;
+  const effectiveTournament = recentCompleteRound?.tournament || null;
+  const effectiveCourse = recentCompleteRound?.course || null;
+
   const { data: tournament } = useQuery({
     queryKey: ["/api/tournaments", tournamentId],
-    enabled: !!tournamentId,
+    enabled: !!tournamentId && !effectiveTournament,
   });
 
   const { data: galleryPhotos } = useQuery({
-    queryKey: ["/api/tournaments", tournamentId, "gallery"],
-    enabled: !!tournamentId,
+    queryKey: ["/api/tournaments", effectiveTournament?.id || tournamentId, "gallery"],
+    enabled: !!(effectiveTournament?.id || tournamentId),
   });
 
   const { data: course } = useQuery({
-    queryKey: ["/api/courses", (tournament as any)?.courseId],
-    enabled: !!(tournament as any)?.courseId,
+    queryKey: ["/api/courses", (effectiveTournament || tournament as any)?.courseId],
+    enabled: !!(effectiveTournament || tournament as any)?.courseId && !effectiveCourse,
   });
 
   const { data: holes } = useQuery({
-    queryKey: ["/api/courses", (tournament as any)?.courseId, "holes"],
-    enabled: !!(tournament as any)?.courseId,
+    queryKey: ["/api/courses", (effectiveCourse || course as any)?.id, "holes"],
+    enabled: !!(effectiveCourse || course as any)?.id,
   });
 
   const { data: scores } = useQuery({
-    queryKey: ["/api/rounds", (roundData as any)?.id, "scores"],
-    enabled: !!(roundData as any)?.id,
+    queryKey: ["/api/rounds", (effectiveRoundData as any)?.id, "scores"],
+    enabled: !!(effectiveRoundData as any)?.id && !effectiveScores,
     staleTime: 0, // Always fetch fresh data
     refetchOnMount: true, // Refetch when component mounts
     refetchOnWindowFocus: true, // Refetch when window regains focus
   });
 
   const generateScorecard = async () => {
-    if (!canvasRef.current || !roundData || !playerData || !scores) return;
+    if (!canvasRef.current || !effectiveRoundData || !playerData || !(effectiveScores || scores)) return;
 
     setIsGenerating(true);
     
     try {
-      // Calculate fresh totals from current scores data
-      const totalStrokes = Array.isArray(scores) ? scores.reduce((sum: number, score: any) => sum + score.strokes, 0) : 0;
-      const totalPutts = Array.isArray(scores) ? scores.reduce((sum: number, score: any) => sum + score.putts, 0) : 0;
-      const fairwaysHit = Array.isArray(scores) ? scores.filter((score: any) => score.fairwayHit).length : 0;
-      const greensInRegulation = Array.isArray(scores) ? scores.filter((score: any) => score.greenInRegulation).length : 0;
+      // Calculate fresh totals from current scores data (prefer recent complete round data)
+      const currentScores = effectiveScores || scores;
+      const totalStrokes = Array.isArray(currentScores) ? currentScores.reduce((sum: number, score: any) => sum + (score.strokes || score.scores?.strokes), 0) : 0;
+      const totalPutts = Array.isArray(currentScores) ? currentScores.reduce((sum: number, score: any) => sum + (score.putts || score.scores?.putts), 0) : 0;
+      const fairwaysHit = Array.isArray(currentScores) ? currentScores.filter((score: any) => score.fairwayHit || score.scores?.fairwayHit).length : 0;
+      const greensInRegulation = Array.isArray(currentScores) ? currentScores.filter((score: any) => score.greenInRegulation || score.scores?.greenInRegulation).length : 0;
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
@@ -158,8 +171,8 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 20px sans-serif';
       ctx.textAlign = 'center';
-      const courseName = (course as any)?.name || 'Championship Course';
-      const tournamentName = (tournament as any)?.name || 'Tournament';
+      const courseName = (effectiveCourse || course as any)?.name || 'Championship Course';
+      const tournamentName = (effectiveTournament || tournament as any)?.name || 'Tournament';
       ctx.fillText(courseName, canvas.width / 2, cardY + 195);
       ctx.fillText(tournamentName, canvas.width / 2, cardY + 225);
 
@@ -174,7 +187,7 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
       ctx.fillText(playerName, canvas.width / 2, playerY);
 
       // Score summary (large centered display) - using fresh calculated totals
-      const coursePar = Array.isArray(holes) ? holes.reduce((sum: number, hole: any) => sum + hole.par, 0) : 72;
+      const coursePar = Array.isArray(holes) ? holes.reduce((sum: number, hole: any) => sum + (hole.par || hole.holes?.par), 0) : 72;
       const scoreToPar = totalStrokes - coursePar;
       const scoreText = scoreToPar === 0 ? 'EVEN' : 
                        scoreToPar > 0 ? `+${scoreToPar}` : 
@@ -191,7 +204,7 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
       ctx.fillText(`Total: ${totalStrokes}`, canvas.width / 2, playerY + 105);
 
       // Calculate fairway stats (only par 4s and 5s count)
-      const par4And5Holes = Array.isArray(holes) ? holes.filter((hole: any) => hole.par === 4 || hole.par === 5) : [];
+      const par4And5Holes = Array.isArray(holes) ? holes.filter((hole: any) => (hole.par || hole.holes?.par) === 4 || (hole.par || hole.holes?.par) === 5) : [];
       const fairwayDenominator = par4And5Holes.length;
       
       // Stats section (much larger and bold)
@@ -213,12 +226,14 @@ export function ShareScorecard({ tournamentId, roundData, playerData }: ShareSco
       // Round Notes section (if any notes exist) - adjusted for larger stats
       const notesY = statsY + 120;
       const roundNotes: string[] = [];
-      if (Array.isArray(scores)) {
-        scores.forEach((score: any) => {
-          if (score.powerupNotes && score.powerupNotes.trim()) {
-            const hole = Array.isArray(holes) ? holes.find((h: any) => h.id === score.holeId) : null;
+      if (Array.isArray(currentScores)) {
+        currentScores.forEach((score: any) => {
+          const actualScore = score.scores || score;
+          if (actualScore.powerupNotes && actualScore.powerupNotes.trim()) {
+            const hole = Array.isArray(holes) ? holes.find((h: any) => (h.id || h.holes?.id) === actualScore.holeId) : null;
             if (hole) {
-              roundNotes.push(`Hole ${hole.holeNumber}: "${score.powerupNotes}"`);
+              const holeNumber = hole.holeNumber || hole.holes?.holeNumber;
+              roundNotes.push(`Hole ${holeNumber}: "${actualScore.powerupNotes}"`);
             }
           }
         });

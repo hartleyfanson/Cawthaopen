@@ -263,6 +263,39 @@ export class DatabaseStorage implements IStorage {
       .orderBy(asc(holes.holeNumber));
   }
 
+  async getMostRecentCompleteRound(playerId: string): Promise<{ round: Round; scores: any[]; tournament: Tournament; course: Course } | null> {
+    // Get all rounds for the player, ordered by most recent
+    const allRounds = await db
+      .select()
+      .from(rounds)
+      .innerJoin(tournaments, eq(rounds.tournamentId, tournaments.id))
+      .innerJoin(courses, eq(tournaments.courseId, courses.id))
+      .where(eq(rounds.playerId, playerId))
+      .orderBy(desc(rounds.createdAt));
+
+    // For each round, check if it has 18 complete scores
+    for (const result of allRounds) {
+      const roundScores = await db
+        .select()
+        .from(scores)
+        .innerJoin(holes, eq(scores.holeId, holes.id))
+        .where(eq(scores.roundId, result.rounds.id))
+        .orderBy(asc(holes.holeNumber));
+
+      // Check if this round has complete 18-hole data
+      if (roundScores.length === 18) {
+        return { 
+          round: result.rounds, 
+          scores: roundScores, 
+          tournament: result.tournaments,
+          course: result.courses
+        };
+      }
+    }
+
+    return null;
+  }
+
   async getHole(holeId: string): Promise<Hole | undefined> {
     const [hole] = await db
       .select()
@@ -597,8 +630,8 @@ export class DatabaseStorage implements IStorage {
 
     if (achievement.length > 0) {
       await this.upsertPlayerStats(data.playerId, {
-        totalAchievements: sql`total_achievements + 1`,
-        achievementPoints: sql`achievement_points + ${achievement[0].points}`,
+        totalAchievements: sql`${playerStats.totalAchievements} + 1`,
+        achievementPoints: sql`${playerStats.achievementPoints} + ${achievement[0].points}`,
       } as any);
     }
 
