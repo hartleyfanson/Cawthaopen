@@ -50,19 +50,18 @@ const createTournamentSchema = insertTournamentSchema.extend({
     z.date(),
   ),
 
-  // courseId MUST be a number now (selected from search or list)
-  courseId: z.coerce.number().int().positive(),
+  // courseId MUST be a string now (from API search)
+  courseId: z.string().min(1, "Please select a course"),
 
   handicapAllowance: z.coerce.string(),
   headerImageUrl: z.string().optional(), // optional = image not required
-});
+}).omit({ createdBy: true }); // omit createdBy as it will be set server-side
 
 export default function CreateTournament() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
-  const [showCourseSearch, setShowCourseSearch] = useState(false);
   const [teeSelectionMode, setTeeSelectionMode] = useState<"same" | "mixed">(
     "same",
   );
@@ -141,7 +140,7 @@ export default function CreateTournament() {
     defaultValues: {
       name: "",
       description: "",
-      courseId: undefined as unknown as number,
+      courseId: "",
       startDate: new Date(Date.now() + 60 * 60 * 1000), // +1 hour
       endDate: new Date(Date.now() + 3 * 60 * 60 * 1000), // +3 hours
       status: "upcoming",
@@ -183,10 +182,6 @@ export default function CreateTournament() {
     }
   }, [isAuthenticated, isLoading, toast]);
 
-  const { data: courses, isLoading: loadingCourses } = useQuery({
-    queryKey: ["/api/courses"],
-    enabled: !!user,
-  });
 
   const createTournamentMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -246,18 +241,14 @@ export default function CreateTournament() {
       return;
     }
 
-    // Validate course selection (must be a positive number)
-    if (
-      !data.courseId ||
-      Number.isNaN(Number(data.courseId)) ||
-      Number(data.courseId) <= 0
-    ) {
+    // Validate course selection
+    if (!data.courseId || data.courseId.trim() === "") {
       form.setError("courseId", { message: "Please select a course" });
       return;
     }
 
     try {
-      const courseId = Number(data.courseId);
+      const courseId = data.courseId;
 
       // Prepare tee mappings based on selection mode
       const teeSelections =
@@ -403,80 +394,38 @@ export default function CreateTournament() {
                         <FormLabel className="text-foreground">
                           Golf Course
                         </FormLabel>
-                        <Select
-                          value={
-                            form.watch("courseId") &&
-                            Number(form.watch("courseId")) > 0
-                              ? String(form.watch("courseId"))
-                              : undefined
-                          }
-                          onValueChange={(value) => {
-                            if (value === "search-courses") {
-                              setShowCourseSearch(true);
-                              return;
-                            }
-                            form.setValue("courseId", Number(value), {
-                              shouldValidate: true,
-                              shouldDirty: true,
-                            });
-                            setShowCourseSearch(false);
-                          }}
-                        >
-                          <FormControl>
-                            <SelectTrigger
-                              className="bg-background border-border"
-                              data-testid="select-course"
-                            >
-                              <SelectValue placeholder="Select a golf course" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="search-courses">
-                              🔍 Search Golf Courses
-                            </SelectItem>
-                            {loadingCourses ? (
-                              <SelectItem value="loading" disabled>
-                                Loading courses...
-                              </SelectItem>
-                            ) : Array.isArray(courses) && courses.length ? (
-                              courses.map((course: any) => (
-                                <SelectItem
-                                  key={course.id}
-                                  value={String(course.id)}
-                                >
-                                  {course.name} - {course.location}
-                                </SelectItem>
-                              ))
+                        <FormControl>
+                          <div className="space-y-4">
+                            {form.watch("courseId") ? (
+                              <div className="p-3 bg-muted rounded-lg border border-border">
+                                <p className="text-sm text-muted-foreground">Selected course:</p>
+                                <p className="font-medium">Course ID: {form.watch("courseId")}</p>
+                              </div>
                             ) : (
-                              <SelectItem value="no-courses" disabled>
-                                No courses available
-                              </SelectItem>
+                              <p className="text-sm text-muted-foreground">Search for a golf course below</p>
                             )}
-                          </SelectContent>
-                        </Select>
+                          </div>
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
                   {/* Course Search Section */}
-                  {showCourseSearch && (
-                    <div className="space-y-4">
-                      <CourseSearch
-                        onCourseSelect={(course, holes) => {
-                          form.setValue("courseId", Number(course.id), {
-                            shouldValidate: true,
-                            shouldDirty: true,
-                          });
-                          setShowCourseSearch(false);
-                          toast({
-                            title: "Course selected",
-                            description: `${course.name} set for this tournament.`,
-                          });
-                        }}
-                      />
-                    </div>
-                  )}
+                  <div className="space-y-4">
+                    <CourseSearch
+                      onCourseSelect={(course, holes) => {
+                        form.setValue("courseId", course.id, {
+                          shouldValidate: true,
+                          shouldDirty: true,
+                        });
+                        toast({
+                          title: "Course selected",
+                          description: `${course.name} set for this tournament.`,
+                        });
+                      }}
+                    />
+                  </div>
 
                   {/* Tournament Photo Upload */}
                   <FormField
