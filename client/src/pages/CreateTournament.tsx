@@ -51,8 +51,15 @@ const createTournamentSchema = insertTournamentSchema
       z.date(),
     ),
 
-    // courseId must be a positive integer
-    courseId: z.coerce.number().int().positive(),
+    // courseId must be a positive integer, handle undefined/null values
+    courseId: z.preprocess(
+      (val) => {
+        if (val === null || val === undefined || val === '') return undefined;
+        const num = Number(val);
+        return isNaN(num) ? undefined : num;
+      },
+      z.number().int().positive("Please select a course")
+    ),
 
     handicapAllowance: z.coerce.string(),
     headerImageUrl: z.string().optional(), // optional = image not required
@@ -143,7 +150,7 @@ export default function CreateTournament() {
     defaultValues: {
       name: "",
       description: "",
-      courseId: undefined as unknown as number,
+      courseId: null as unknown as number,
       startDate: new Date(Date.now() + 60 * 60 * 1000), // +1 hour
       endDate: new Date(Date.now() + 3 * 60 * 60 * 1000), // +3 hours
       status: "upcoming",
