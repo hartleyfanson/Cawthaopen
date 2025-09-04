@@ -78,11 +78,11 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
       canvasRef: !!canvasRef.current,
       effectiveRoundData: !!effectiveRoundData,
       playerData: !!playerData,
-      roundSpecificScores: !!roundSpecificScores,
+      currentPlayerRoundData: !!currentPlayerRoundData,
       selectedScorecardRound
     });
     
-    if (!canvasRef.current || !effectiveRoundData || !playerData || !roundSpecificScores || roundSpecificScores.length === 0) return;
+    if (!canvasRef.current || !effectiveRoundData || !playerData || !currentPlayerRoundData) return;
 
     setIsGenerating(true);
     
@@ -424,7 +424,7 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
           <div className="text-center">
             <Button 
               onClick={generateScorecard}
-              disabled={isGenerating || !roundSpecificScores || roundSpecificScores.length === 0}
+              disabled={isGenerating || !currentPlayerRoundData}
               className="bg-secondary text-secondary-foreground hover:bg-accent"
               data-testid="button-generate-scorecard"
             >
@@ -437,7 +437,7 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
                 `Generate Round ${selectedScorecardRound} Scorecard`
               )}
             </Button>
-            {(!roundSpecificScores || roundSpecificScores.length === 0) && (
+            {!currentPlayerRoundData && (
               <p className="text-sm text-muted-foreground mt-2">
                 No scores found for Round {selectedScorecardRound}
               </p>
