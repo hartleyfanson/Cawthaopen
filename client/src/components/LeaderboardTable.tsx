@@ -148,10 +148,96 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
     return Math.max(0, 36 + diff); // 36 points for playing to handicap
   };
 
-  // Calculate Callaway score
+  // Calculate Callaway score using proper Callaway system logic
   const calculateCallawayScore = (totalScore: number, handicap: number, playerId: string) => {
-    // Simplified callaway - deduct handicap strokes from total
-    return Math.round(totalScore - handicap);
+    const playerData = processedPlayerData[playerId];
+    if (!playerData || playerData.holesCompleted < 18) return totalScore;
+
+    // Apply double par maximum rule to each hole score
+    const adjustedHoleScores: number[] = [];
+    let adjustedTotalScore = 0;
+
+    for (let holeNumber = 1; holeNumber <= 18; holeNumber++) {
+      const holeScore = playerData.scores[holeNumber];
+      if (holeScore?.strokes) {
+        const hole = allHoles.find((h: any) => h.holeNumber === holeNumber);
+        const doublePar = hole ? hole.par * 2 : 8; // Default double par if hole not found
+        const cappedScore = Math.min(holeScore.strokes, doublePar);
+        adjustedHoleScores.push(cappedScore);
+        adjustedTotalScore += cappedScore;
+      }
+    }
+
+    if (adjustedHoleScores.length !== 18) return totalScore;
+
+    // Determine handicap deduction based on adjusted gross score
+    const getCallawayDeduction = (grossScore: number): number => {
+      if (grossScore <= 72) return 0; // Scratch
+      if (grossScore <= 75) return 0.5; // 1/2 of Worst Hole
+      if (grossScore <= 80) return 1; // Worst Hole
+      if (grossScore <= 85) return 1.5; // 1 1/2 Worst Holes
+      if (grossScore <= 90) return 2; // 2 Worst Holes
+      if (grossScore <= 95) return 2.5; // 2 1/2 Worst Holes
+      if (grossScore <= 100) return 3; // 3 Worst Holes
+      if (grossScore <= 105) return 3.5; // 3 1/2 Worst Holes
+      if (grossScore <= 110) return 4; // 4 Worst Holes
+      if (grossScore <= 115) return 4.5; // 4 1/2 Worst Holes
+      if (grossScore <= 120) return 5; // 5 Worst Holes
+      if (grossScore <= 125) return 5.5; // 5 1/2 Worst Holes
+      if (grossScore <= 130) return 6; // 6 Worst Holes
+      return 6; // Cap at 6 worst holes
+    };
+
+    const deductionAmount = getCallawayDeduction(adjustedTotalScore);
+    
+    if (deductionAmount === 0) {
+      return adjustedTotalScore + handicap; // Apply handicap adjustment
+    }
+
+    // Calculate par values for each hole to determine "worst" holes (strokes over par)
+    const holeDeficits: { holeIndex: number; deficit: number; strokes: number }[] = [];
+    
+    for (let i = 0; i < 18; i++) {
+      const hole = allHoles.find((h: any) => h.holeNumber === i + 1);
+      if (hole && adjustedHoleScores[i]) {
+        const deficit = adjustedHoleScores[i] - hole.par;
+        if (deficit > 0) { // Only consider holes over par as "worst"
+          holeDeficits.push({
+            holeIndex: i,
+            deficit: deficit,
+            strokes: adjustedHoleScores[i]
+          });
+        }
+      }
+    }
+
+    // Sort by worst holes (highest deficit first, then highest strokes)
+    holeDeficits.sort((a, b) => {
+      if (b.deficit !== a.deficit) {
+        return b.deficit - a.deficit;
+      }
+      return b.strokes - a.strokes;
+    });
+
+    // Calculate deduction
+    let totalDeduction = 0;
+    const wholeHoles = Math.floor(deductionAmount);
+    const hasHalfHole = deductionAmount % 1 === 0.5;
+
+    // Deduct worst holes
+    for (let i = 0; i < wholeHoles && i < holeDeficits.length; i++) {
+      totalDeduction += holeDeficits[i].deficit;
+    }
+
+    // Handle half hole deduction
+    if (hasHalfHole && wholeHoles < holeDeficits.length) {
+      totalDeduction += Math.floor(holeDeficits[wholeHoles].deficit / 2);
+    }
+
+    // Apply handicap adjustment (-2 to +2 range)
+    const callawayScore = adjustedTotalScore - totalDeduction + handicap;
+    
+    return Math.round(callawayScore);
   };
 
   // Calculate if a score is under par or over par
