@@ -130,7 +130,7 @@ export function Navigation() {
                       Edit Profile
                     </DropdownMenuItem>
                   </Link>
-                  <Link href="/achievements">
+                  <Link href="/achievements?tab=stats">
                     <DropdownMenuItem className="cursor-pointer" data-testid="menu-view-statistics">
                       <BarChart3 className="mr-2 h-4 w-4" />
                       View Statistics & Achievements

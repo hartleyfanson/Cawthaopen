@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "wouter";
+import { useParams, useSearch } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,17 @@ interface PlayerAchievementWithDetails extends PlayerAchievement {
 
 function PlayerProfile() {
   const { playerId } = useParams();
+  const searchParams = useSearch();
   const [activeTab, setActiveTab] = useState("overview");
+
+  // Check for tab parameter in URL and set active tab
+  useEffect(() => {
+    const urlParams = new URLSearchParams(searchParams);
+    const tabParam = urlParams.get('tab');
+    if (tabParam && ['overview', 'achievements', 'stats'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
 
   // Fetch player data
   const { data: player, isLoading: playerLoading } = useQuery<User>({
@@ -39,7 +49,7 @@ function PlayerProfile() {
     enabled: !!(playerId || player?.id),
   });
 
-  const { data: detailedStats, isLoading: detailedStatsLoading } = useQuery({
+  const { data: detailedStats, isLoading: detailedStatsLoading } = useQuery<any>({
     queryKey: ["/api/users", playerId || player?.id, "stats"],
     enabled: !!(playerId || player?.id),
   });
