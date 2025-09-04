@@ -78,8 +78,9 @@ export function CourseSearch({ onCourseSelect, isLoading = false }: CourseSearch
         title: "Course Selected",
         description: `${course.name} has been selected with ${result.data.length} holes.`,
       });
-      // Keep the preview visible but clear search results
+      // Clear search results and selected course to hide preview
       setSearchTerm("");
+      setSelectedCourse(null);
     }
   };
 

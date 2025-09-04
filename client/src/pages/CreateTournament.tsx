@@ -387,6 +387,170 @@ export default function CreateTournament() {
                     )}
                   />
 
+                  {/* Tournament Photo Upload */}
+                  <FormField
+                    control={form.control}
+                    name="headerImageUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-foreground">
+                          Tournament Photo
+                        </FormLabel>
+                        <FormControl>
+                          <div className="space-y-4">
+                            {uploadedImageUrl && (
+                              <div className="relative w-full h-48 bg-muted rounded-lg overflow-hidden">
+                                <img
+                                  src={uploadedImageUrl}
+                                  alt="Tournament photo preview"
+                                  className="w-full h-full object-cover"
+                                />
+                                <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1">
+                                  <Image className="h-4 w-4" />
+                                </div>
+                              </div>
+                            )}
+                            <ObjectUploader
+                              maxNumberOfFiles={1}
+                              maxFileSize={10485760} // 10MB
+                              onGetUploadParameters={handlePhotoUpload}
+                              onComplete={handlePhotoComplete}
+                              onError={(error) => {
+                                toast({
+                                  title: "Upload Error",
+                                  description: String(error),
+                                  variant: "destructive",
+                                });
+                              }}
+                              buttonClassName="w-full bg-secondary text-secondary-foreground hover:bg-accent"
+                              directFileInput={true}
+                            >
+                              <Upload className="h-4 w-4 mr-2" />
+                              {uploadedImageUrl
+                                ? "Change Tournament Photo"
+                                : "Upload Tournament Photo"}
+                            </ObjectUploader>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="startDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-foreground">
+                            Start Date
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="datetime-local"
+                              className="bg-background border-border"
+                              data-testid="input-start-date"
+                              {...field}
+                              value={
+                                field.value instanceof Date
+                                  ? field.value.toISOString().slice(0, 16)
+                                  : (field.value ?? "")
+                              }
+                              onChange={(e) =>
+                                field.onChange(new Date(e.target.value))
+                              }
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="endDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-foreground">
+                            End Date
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="datetime-local"
+                              className="bg-background border-border"
+                              data-testid="input-end-date"
+                              {...field}
+                              value={
+                                field.value instanceof Date
+                                  ? field.value.toISOString().slice(0, 16)
+                                  : (field.value ?? "")
+                              }
+                              onChange={(e) =>
+                                field.onChange(new Date(e.target.value))
+                              }
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="maxPlayers"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-foreground">
+                            Maximum Players
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="1"
+                              max="100"
+                              className="bg-background border-border"
+                              data-testid="input-max-players"
+                              {...field}
+                              onChange={(e) =>
+                                field.onChange(parseInt(e.target.value))
+                              }
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="numberOfRounds"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-foreground">
+                            Number of Rounds
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="1"
+                              max="4"
+                              className="bg-background border-border"
+                              data-testid="input-number-of-rounds"
+                              {...field}
+                              onChange={(e) =>
+                                field.onChange(parseInt(e.target.value))
+                              }
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
                   <FormField
                     control={form.control}
                     name="courseId"
@@ -421,7 +585,22 @@ export default function CreateTournament() {
                                       ) || "TBD"}
                                     </p>
                                   </div>
-                                  <div className="text-right">
+                                  <div className="flex items-center gap-2">
+                                    <Button 
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        setSelectedCourse(null);
+                                        form.setValue("courseId", "", {
+                                          shouldValidate: false,
+                                          shouldDirty: true,
+                                        });
+                                      }}
+                                      data-testid="button-change-course"
+                                    >
+                                      Change Course
+                                    </Button>
                                     <div className="h-8 w-8 bg-green-600 rounded-full flex items-center justify-center">
                                       <span className="text-white text-xs">
                                         ✓
@@ -487,58 +666,88 @@ export default function CreateTournament() {
                     />
                   </div>
 
-                  {/* Tournament Photo Upload */}
-                  <FormField
-                    control={form.control}
-                    name="headerImageUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-foreground">
-                          Tournament Photo
-                        </FormLabel>
-                        <FormControl>
-                          <div className="space-y-4">
-                            {uploadedImageUrl && (
-                              <div className="relative w-full h-48 bg-muted rounded-lg overflow-hidden">
-                                <img
-                                  src={uploadedImageUrl}
-                                  alt="Tournament photo preview"
-                                  className="w-full h-full object-cover"
-                                />
-                                <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1">
-                                  <Image className="h-4 w-4" />
-                                </div>
-                              </div>
-                            )}
-                            <ObjectUploader
-                              maxNumberOfFiles={1}
-                              maxFileSize={10485760} // 10MB
-                              onGetUploadParameters={handlePhotoUpload}
-                              onComplete={handlePhotoComplete}
-                              onError={(error) => {
-                                toast({
-                                  title: "Upload Error",
-                                  description: String(error),
-                                  variant: "destructive",
-                                });
-                              }}
-                              buttonClassName="w-full bg-secondary text-secondary-foreground hover:bg-accent"
-                              directFileInput={true}
-                            >
-                              <Upload className="h-4 w-4 mr-2" />
-                              {uploadedImageUrl
-                                ? "Change Tournament Photo"
-                                : "Upload Tournament Photo"}
-                            </ObjectUploader>
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {/* Round Dates and Configuration Section */}
+                  {numberOfRounds > 1 && (
+                    <div className="space-y-4 p-4 border border-border rounded-lg bg-card">
+                      <h3 className="text-lg font-semibold text-foreground">
+                        Multi-Round Configuration
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Configure each round individually with dates, course, and tee selections
+                      </p>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
+                      <div className="space-y-6">
+                        {Array.from({ length: numberOfRounds }, (_, i) => (
+                          <div key={i} className="p-4 bg-muted/20 rounded-lg border">
+                            <h4 className="font-medium text-foreground mb-4">
+                              Round {i + 1} Configuration
+                            </h4>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <label className="text-sm font-medium text-foreground mb-2 block">
+                                  Round {i + 1} Date
+                                </label>
+                                <Input
+                                  type="datetime-local"
+                                  value={
+                                    roundDates[i]?.toISOString().slice(0, 16) || ""
+                                  }
+                                  onChange={(e) => {
+                                    const newDates = [...roundDates];
+                                    newDates[i] = new Date(e.target.value);
+                                    setRoundDates(newDates);
+                                  }}
+                                  className="bg-background border-border"
+                                  data-testid={`input-round-${i + 1}-date`}
+                                />
+                              </div>
+                              
+                              <div>
+                                <label className="text-sm font-medium text-foreground mb-2 block">
+                                  Course for Round {i + 1}
+                                </label>
+                                <div className="text-sm text-muted-foreground p-2 bg-background rounded border">
+                                  {selectedCourse ? selectedCourse.name : "Select course above first"}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  For now, all rounds use the same course. Future versions will support per-round course selection.
+                                </p>
+                              </div>
+                            </div>
+                            
+                            <div className="mt-4">
+                              <label className="text-sm font-medium text-foreground mb-2 block">
+                                Tee Configuration for Round {i + 1}
+                              </label>
+                              <Select
+                                value={singleTeeColor}
+                                onValueChange={setSingleTeeColor}
+                              >
+                                <SelectTrigger
+                                  className="bg-background border-border"
+                                  data-testid={`select-round-${i + 1}-tee-color`}
+                                >
+                                  <SelectValue placeholder="Select tee color for this round" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="white">White Tees</SelectItem>
+                                  <SelectItem value="blue">Blue Tees</SelectItem>
+                                  <SelectItem value="red">Red Tees</SelectItem>
+                                  <SelectItem value="gold">Gold Tees</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Single Round Dates for single round tournaments */}
+                  {numberOfRounds === 1 && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
                       control={form.control}
                       name="startDate"
                       render={({ field }) => (
