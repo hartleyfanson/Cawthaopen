@@ -88,8 +88,7 @@ export function TournamentCard({ tournament, status }: TournamentCardProps) {
         return (
           <Link href={`/tournaments/${tournament.id}/leaderboard`}>
             <Button 
-              size="lg"
-              className="bg-secondary text-secondary-foreground hover:bg-accent text-base font-semibold px-6 py-3"
+              className="bg-secondary text-secondary-foreground hover:bg-accent"
               data-testid="button-view-leaderboard"
             >
               View Leaderboard
@@ -101,8 +100,7 @@ export function TournamentCard({ tournament, status }: TournamentCardProps) {
           return (
             <Link href={`/tournaments/${tournament.id}/leaderboard`}>
               <Button 
-                size="lg"
-                className="bg-green-600 text-white hover:bg-green-700 text-base font-semibold px-6 py-3"
+                className="bg-green-600 text-white hover:bg-green-700"
                 data-testid="button-tournament-joined"
               >
                 <Check className="h-4 w-4 mr-2" />
@@ -115,8 +113,7 @@ export function TournamentCard({ tournament, status }: TournamentCardProps) {
           <Button 
             onClick={handleJoinTournament}
             disabled={joinTournamentMutation.isPending}
-            size="lg"
-            className="bg-secondary text-secondary-foreground hover:bg-accent text-base font-semibold px-6 py-3"
+            className="bg-secondary text-secondary-foreground hover:bg-accent"
             data-testid="button-join-tournament"
           >
             {joinTournamentMutation.isPending ? "Joining..." : "Join Tournament"}
@@ -126,8 +123,7 @@ export function TournamentCard({ tournament, status }: TournamentCardProps) {
         return (
           <Link href={`/tournaments/${tournament.id}/leaderboard`}>
             <Button 
-              size="lg"
-              className="bg-secondary text-secondary-foreground hover:bg-accent text-base font-semibold px-6 py-3"
+              className="bg-secondary text-secondary-foreground hover:bg-accent"
               data-testid="button-view-results"
             >
               View Results
@@ -161,7 +157,7 @@ export function TournamentCard({ tournament, status }: TournamentCardProps) {
       <CardContent className="p-4 relative pb-16">
         {!tournament.headerImageUrl && (
           <div className="flex justify-between items-start mb-3">
-            <h4 className="text-lg font-semibold text-primary-foreground">
+            <h4 className="text-xl font-bold text-primary-foreground">
               {tournament.name}
             </h4>
             {getStatusBadge()}
@@ -170,37 +166,38 @@ export function TournamentCard({ tournament, status }: TournamentCardProps) {
         
         {tournament.headerImageUrl && (
           <div className="mb-3">
-            <h4 className="text-lg font-semibold text-primary-foreground">
+            <h4 className="text-xl font-bold text-primary-foreground">
               {tournament.name}
             </h4>
           </div>
         )}
         
-        <p className="text-muted-foreground mb-2">
+        <p className="text-base font-medium text-muted-foreground mb-2">
           {tournament.course?.name} {tournament.course?.location}
         </p>
         
         {tournament.description && (
-          <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+          <p className="text-base text-muted-foreground mb-3 line-clamp-2">
             {tournament.description}
           </p>
         )}
         
-        <div className="mb-6">
+        <div className="mb-4">
           <span className="text-sm text-muted-foreground">
             {tournament.playerCount || 0} Players
           </span>
         </div>
         
-        {tournament.startDate && (
-          <div className="mb-2 text-xs text-muted-foreground">
-            Starts: {new Date(tournament.startDate).toLocaleDateString()}
+        {/* Action button and start date aligned at bottom */}
+        <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
+          {tournament.startDate && (
+            <div className="text-xs text-muted-foreground">
+              Starts: {new Date(tournament.startDate).toLocaleDateString()}
+            </div>
+          )}
+          <div>
+            {getActionButton()}
           </div>
-        )}
-        
-        {/* Action button positioned in bottom right */}
-        <div className="absolute bottom-4 right-4">
-          {getActionButton()}
         </div>
       </CardContent>
     </Card>

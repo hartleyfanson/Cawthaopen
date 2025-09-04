@@ -84,18 +84,23 @@ export default function CreateTournament() {
       if (result.successful && result.successful.length > 0) {
         const uploadURL = result.successful[0].uploadURL;
         
-        // Set ACL policy for the uploaded image
-        await apiRequest('PUT', '/api/tournament-photos', {
-          imageUrl: uploadURL
-        });
-        
-        setUploadedImageUrl(uploadURL);
-        form.setValue('headerImageUrl', uploadURL);
-        
-        toast({
-          title: "Photo Uploaded",
-          description: "Tournament photo has been uploaded successfully",
-        });
+        if (uploadURL) {
+          // Set ACL policy for the uploaded image
+          const aclResponse = await apiRequest('PUT', '/api/tournament-photos', {
+            imageUrl: uploadURL
+          });
+          const aclData = await aclResponse.json();
+          
+          // Use the object path from ACL response
+          const objectPath = aclData.objectPath;
+          setUploadedImageUrl(objectPath);
+          form.setValue('headerImageUrl', objectPath);
+          
+          toast({
+            title: "Photo Uploaded",
+            description: "Tournament photo has been uploaded successfully",
+          });
+        }
       }
     } catch (error) {
       console.error('Error processing photo upload:', error);
@@ -232,6 +237,12 @@ export default function CreateTournament() {
       return;
     }
     
+    // Validate course selection
+    if (!isCreatingManualCourse && (!data.courseId || data.courseId === "add-manually")) {
+      form.setError("courseId", { message: "Please select a course or create a manual course" });
+      return;
+    }
+    
     try {
       let courseId = data.courseId;
       
@@ -257,21 +268,49 @@ export default function CreateTournament() {
         console.log("Course created with ID:", courseId);
       }
       
+      // Final validation - ensure we have a courseId
+      if (!courseId) {
+        toast({
+          title: "Error",
+          description: "Course selection is required",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       // Prepare tee mappings based on selection mode
       const teeSelections = teeSelectionMode === "same" 
         ? holeTeeMappings.map(hole => ({ holeNumber: hole.holeNumber, teeColor: singleTeeColor }))
         : holeTeeMappings;
 
-      // Create the tournament with the course ID, tee selections, round dates, and image
-      createTournamentMutation.mutate({
-        ...data,
+      // Create the tournament data
+      const tournamentData = {
+        name: data.name,
+        description: data.description,
         courseId,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        status: data.status,
+        maxPlayers: data.maxPlayers,
+        numberOfRounds: data.numberOfRounds,
+        scoringFormat: data.scoringFormat,
+        handicapAllowance: data.handicapAllowance,
+        headerImageUrl: uploadedImageUrl || data.headerImageUrl || "",
         teeSelections,
         roundDates: numberOfRounds > 1 ? roundDates : [data.startDate],
-        headerImageUrl: uploadedImageUrl || data.headerImageUrl,
-      });
+      };
+
+      console.log("Submitting tournament data:", tournamentData);
+      
+      // Create the tournament
+      createTournamentMutation.mutate(tournamentData);
     } catch (error) {
       console.error("Error in submission process:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
