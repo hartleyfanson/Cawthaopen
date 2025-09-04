@@ -14,6 +14,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { EditScoreDialog } from "@/components/EditScoreDialog";
 
+
 // Component to show all courses and date range for multi-round tournaments
 function AllRoundsInfo({ tournament, tournamentRounds }: { tournament: any; tournamentRounds: any[] }) {
   const { data: allCourses } = useQuery({
@@ -247,6 +248,27 @@ export default function TournamentLeaderboard() {
   const isUserJoined = Array.isArray(tournamentPlayers) && 
     tournamentPlayers.some((player: any) => player.playerId === (user as any)?.id);
 
+  // Component to show course name for individual round buttons
+  const RoundCourseDisplay = ({ courseId }: { courseId?: string }) => {
+    const { data: course } = useQuery({
+      queryKey: ["/api/courses", courseId],
+      queryFn: async () => {
+        if (!courseId) return null;
+        const response = await fetch(`/api/courses/${courseId}`);
+        return response.ok ? response.json() : null;
+      },
+      enabled: !!courseId,
+    });
+
+    if (!course) return <span className="text-xs opacity-75">Course</span>;
+    
+    return (
+      <span className="text-xs opacity-75 max-w-24 truncate" title={`${course.name} • ${course.location}`}>
+        {course.name}
+      </span>
+    );
+  };
+
   // Check if tournament is future-dated using consistent date-based logic
   const isFutureTournament = useMemo(() => {
     const now = new Date();
@@ -343,12 +365,12 @@ export default function TournamentLeaderboard() {
             {/* Round Selection - show only if tournament has multiple rounds */}
             {tournamentRounds && Array.isArray(tournamentRounds) && tournamentRounds.length > 1 && (
               <div className="flex justify-center mt-6">
-                <div className="flex bg-background rounded-lg p-1 shadow-sm">
+                <div className="flex flex-wrap justify-center bg-background rounded-lg p-1 shadow-sm gap-1">
                   <Button
                     onClick={() => setSelectedRound('all')}
                     variant={selectedRound === 'all' ? "default" : "ghost"}
                     size="sm"
-                    className={`px-4 py-2 text-sm transition-all ${
+                    className={`px-3 py-2 text-xs sm:text-sm transition-all ${
                       selectedRound === 'all'
                         ? "bg-primary text-primary-foreground shadow-sm" 
                         : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -357,22 +379,29 @@ export default function TournamentLeaderboard() {
                   >
                     All Rounds
                   </Button>
-                  {tournamentRounds.map((round: any) => (
-                    <Button
-                      key={round.id}
-                      onClick={() => setSelectedRound(round.roundNumber)}
-                      variant={selectedRound === round.roundNumber ? "default" : "ghost"}
-                      size="sm"
-                      className={`px-4 py-2 text-sm transition-all ${
-                        selectedRound === round.roundNumber
-                          ? "bg-primary text-primary-foreground shadow-sm" 
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                      }`}
-                      data-testid={`button-round-${round.roundNumber}`}
-                    >
-                      Round {round.roundNumber}
-                    </Button>
-                  ))}
+                  {tournamentRounds.map((round: any) => {
+                    // Find course for this round
+                    const courseId = round.courseId || (tournament as any)?.courseId;
+                    return (
+                      <Button
+                        key={round.id}
+                        onClick={() => setSelectedRound(round.roundNumber)}
+                        variant={selectedRound === round.roundNumber ? "default" : "ghost"}
+                        size="sm"
+                        className={`px-3 py-2 text-xs sm:text-sm transition-all whitespace-nowrap ${
+                          selectedRound === round.roundNumber
+                            ? "bg-primary text-primary-foreground shadow-sm" 
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                        }`}
+                        data-testid={`button-round-${round.roundNumber}`}
+                      >
+                        <div className="flex flex-col items-center gap-0.5">
+                          <span className="font-semibold">Round {round.roundNumber}</span>
+                          <RoundCourseDisplay courseId={courseId} />
+                        </div>
+                      </Button>
+                    );
+                  })}
                 </div>
               </div>
             )}
