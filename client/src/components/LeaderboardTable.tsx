@@ -591,7 +591,7 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
       {/* Header with hole numbers */}
       <div className="bg-muted p-4 border-b border-border">
         <div className="grid gap-1 text-center text-sm font-medium text-muted-foreground" style={{gridTemplateColumns: "2fr " + "1fr ".repeat(9)}}>
-          <div className="text-left">PLAYER</div>
+          <div className="text-left">HOLE</div>
           {displayHoles.map((hole: any) => (
             <div key={hole.id} data-testid={`header-hole-${hole.holeNumber}`}>
               {hole.holeNumber}
