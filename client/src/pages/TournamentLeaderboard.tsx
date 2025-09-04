@@ -56,8 +56,8 @@ export default function TournamentLeaderboard() {
   });
 
   const { data: currentRound } = useQuery({
-    queryKey: ["/api/rounds", id, "1"],
-    enabled: !!user && !!id,
+    queryKey: ["/api/rounds", id, selectedRound === 'all' ? "1" : selectedRound.toString()],
+    enabled: !!user && !!id && selectedRound !== 'all',
   });
 
   const { data: currentRoundScores } = useQuery({

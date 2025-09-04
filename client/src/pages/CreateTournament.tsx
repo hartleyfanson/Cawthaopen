@@ -51,6 +51,22 @@ export default function CreateTournament() {
   });
   const [roundDates, setRoundDates] = useState<Date[]>([new Date()]);
 
+  const form = useForm({
+    resolver: zodResolver(createTournamentSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      courseId: "",
+      startDate: new Date(),
+      endDate: new Date(),
+      status: "upcoming",
+      maxPlayers: 32,
+      scoringFormat: "stroke_play",
+      handicapAllowance: "1.00",
+      numberOfRounds: 1,
+    },
+  });
+
   // Watch numberOfRounds to update round dates
   const numberOfRounds = form.watch("numberOfRounds");
   
@@ -62,7 +78,7 @@ export default function CreateTournament() {
       });
       setRoundDates(newDates);
     }
-  }, [numberOfRounds]);
+  }, [numberOfRounds, roundDates]);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -81,22 +97,6 @@ export default function CreateTournament() {
   const { data: courses, isLoading: loadingCourses } = useQuery({
     queryKey: ["/api/courses"],
     enabled: !!user,
-  });
-
-  const form = useForm({
-    resolver: zodResolver(createTournamentSchema),
-    defaultValues: {
-      name: "",
-      description: "",
-      courseId: "",
-      startDate: new Date(),
-      endDate: new Date(),
-      status: "upcoming",
-      maxPlayers: 32,
-      scoringFormat: "stroke_play",
-      handicapAllowance: "1.00",
-      numberOfRounds: 1,
-    },
   });
 
   const createCourseMutation = useMutation({
