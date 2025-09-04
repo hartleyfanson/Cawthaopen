@@ -203,6 +203,37 @@ export default function LiveScoring() {
     },
   });
 
+  const updateScoreMutation = useMutation({
+    mutationFn: async ({ scoreId, data }: { scoreId: string; data: any }) => {
+      return await apiRequest("PUT", `/api/scores/${scoreId}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/rounds"] });
+      toast({
+        title: "Score Updated",
+        description: `Hole ${currentHole} score updated successfully`,
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to update score",
+        variant: "destructive",
+      });
+    },
+  });
+
   const currentHoleData = (holes as any[])?.find((hole: any) => hole.holeNumber === currentHole);
   
   // Get tee selection for current hole
@@ -293,17 +324,34 @@ export default function LiveScoring() {
         });
       }
 
-      // Save the current hole score
-      await createScoreMutation.mutateAsync({
-        roundId: (roundToUse as any).id,
-        holeId: currentHoleData.id,
+      const scoreData = {
         strokes,
         putts: putts || 0, // Default putts to 0 if null
         fairwayHit: currentHoleData.par === 3 ? false : fairwayHit,
         greenInRegulation,
         powerupUsed,
         powerupNotes: powerupUsed ? powerupNotes : "",
-      });
+      };
+
+      // Check if a score already exists for this hole
+      const existingScore = Array.isArray(existingScores) 
+        ? existingScores.find((s: any) => s.holeId === currentHoleData.id)
+        : null;
+
+      if (existingScore) {
+        // Update existing score
+        await updateScoreMutation.mutateAsync({
+          scoreId: existingScore.id,
+          data: scoreData,
+        });
+      } else {
+        // Create new score
+        await createScoreMutation.mutateAsync({
+          roundId: (roundToUse as any).id,
+          holeId: currentHoleData.id,
+          ...scoreData,
+        });
+      }
 
       // Cache this score for local navigation
       const holeScore = {
