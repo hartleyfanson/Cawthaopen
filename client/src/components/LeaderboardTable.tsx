@@ -21,7 +21,7 @@ function formatPlayerName(playerName: string): string {
   const firstName = parts[0];
   const lastName = parts.slice(1).join(" ");
   
-  return `${firstName.charAt(0).toLowerCase()}. ${lastName}`;
+  return `${firstName.charAt(0).toUpperCase()}. ${lastName}`;
 }
 
 export function LeaderboardTable({ leaderboard, courseId, tournamentId, tournament }: LeaderboardTableProps) {
