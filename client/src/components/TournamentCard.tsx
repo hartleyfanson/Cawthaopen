@@ -88,7 +88,8 @@ export function TournamentCard({ tournament, status }: TournamentCardProps) {
         return (
           <Link href={`/tournaments/${tournament.id}/leaderboard`}>
             <Button 
-              className="bg-secondary text-secondary-foreground hover:bg-accent"
+              size="lg"
+              className="bg-secondary text-secondary-foreground hover:bg-accent text-base font-semibold px-6 py-3"
               data-testid="button-view-leaderboard"
             >
               View Leaderboard
@@ -100,7 +101,8 @@ export function TournamentCard({ tournament, status }: TournamentCardProps) {
           return (
             <Link href={`/tournaments/${tournament.id}/leaderboard`}>
               <Button 
-                className="bg-green-600 text-white hover:bg-green-700"
+                size="lg"
+                className="bg-green-600 text-white hover:bg-green-700 text-base font-semibold px-6 py-3"
                 data-testid="button-tournament-joined"
               >
                 <Check className="h-4 w-4 mr-2" />
@@ -113,7 +115,8 @@ export function TournamentCard({ tournament, status }: TournamentCardProps) {
           <Button 
             onClick={handleJoinTournament}
             disabled={joinTournamentMutation.isPending}
-            className="bg-secondary text-secondary-foreground hover:bg-accent"
+            size="lg"
+            className="bg-secondary text-secondary-foreground hover:bg-accent text-base font-semibold px-6 py-3"
             data-testid="button-join-tournament"
           >
             {joinTournamentMutation.isPending ? "Joining..." : "Join Tournament"}
@@ -123,7 +126,8 @@ export function TournamentCard({ tournament, status }: TournamentCardProps) {
         return (
           <Link href={`/tournaments/${tournament.id}/leaderboard`}>
             <Button 
-              className="bg-secondary text-secondary-foreground hover:bg-accent"
+              size="lg"
+              className="bg-secondary text-secondary-foreground hover:bg-accent text-base font-semibold px-6 py-3"
               data-testid="button-view-results"
             >
               View Results
