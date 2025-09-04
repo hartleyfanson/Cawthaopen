@@ -13,7 +13,6 @@ import Gallery from "@/pages/Gallery";
 import CreateTournament from "@/pages/CreateTournament";
 import Profile from "@/pages/Profile";
 import PlayerProfile from "@/pages/PlayerProfile";
-import Statistics from "@/pages/Statistics";
 import Admin from "@/pages/Admin";
 import NotFound from "@/pages/not-found";
 
@@ -36,7 +35,6 @@ function Router() {
           <Route path="/profile" component={Profile} />
           <Route path="/players/:playerId" component={PlayerProfile} />
           <Route path="/achievements" component={PlayerProfile} />
-          <Route path="/statistics" component={Statistics} />
           <Route path="/admin" component={Admin} />
         </>
       )}

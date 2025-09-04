@@ -130,10 +130,10 @@ export function Navigation() {
                       Edit Profile
                     </DropdownMenuItem>
                   </Link>
-                  <Link href="/statistics">
+                  <Link href="/achievements">
                     <DropdownMenuItem className="cursor-pointer" data-testid="menu-view-statistics">
                       <BarChart3 className="mr-2 h-4 w-4" />
-                      View Full Statistics
+                      View Statistics & Achievements
                     </DropdownMenuItem>
                   </Link>
                   {(user as any)?.isAdmin && (
