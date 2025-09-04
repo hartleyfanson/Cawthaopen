@@ -234,21 +234,44 @@ export function FutureTournamentView({ tournament, tournamentId, course, selecte
                           <th className="text-center py-2 font-medium">Par</th>
                           <th className="text-center py-2 font-medium">Yards</th>
                           <th className="text-center py-2 font-medium">Handicap</th>
+                          <th className="text-center py-2 font-medium">Tee</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {frontNine.map((hole: any) => (
-                          <tr key={hole.id} className="border-b border-border/50">
-                            <td className="py-2 font-medium">{hole.holeNumber}</td>
-                            <td className="text-center py-2">{hole.par}</td>
-                            <td className="text-center py-2">{getHoleYardage(hole)}</td>
-                            <td className="text-center py-2">{hole.handicap}</td>
-                          </tr>
-                        ))}
+                        {frontNine.map((hole: any) => {
+                          const teeSelection = Array.isArray(teeSelections) 
+                            ? teeSelections.find((tee: any) => tee.holeNumber === hole.holeNumber)
+                            : null;
+                          const teeColor = teeSelection?.teeColor || 'white';
+                          const teeColorClasses: Record<string, string> = {
+                            white: 'bg-gray-100 text-gray-800 border-gray-300',
+                            blue: 'bg-blue-100 text-blue-800 border-blue-300',
+                            red: 'bg-red-100 text-red-800 border-red-300', 
+                            gold: 'bg-yellow-100 text-yellow-800 border-yellow-300'
+                          };
+                          const teeColorClass = teeColorClasses[teeColor] || teeColorClasses.white;
+                          
+                          return (
+                            <tr key={hole.id} className="border-b border-border/50">
+                              <td className="py-2 font-medium">{hole.holeNumber}</td>
+                              <td className="text-center py-2">{hole.par}</td>
+                              <td className="text-center py-2">{getHoleYardage(hole)}</td>
+                              <td className="text-center py-2">{hole.handicap}</td>
+                              <td className="text-center py-2">
+                                <div className="flex justify-center">
+                                  <div className={`px-2 py-1 rounded text-xs border ${teeColorClass}`}>
+                                    {teeColor.charAt(0).toUpperCase()}
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
                         <tr className="border-t-2 border-accent font-semibold">
                           <td className="py-2">OUT</td>
                           <td className="text-center py-2">{frontNinePar}</td>
                           <td className="text-center py-2">{frontNineYardage}</td>
+                          <td className="text-center py-2">-</td>
                           <td className="text-center py-2">-</td>
                         </tr>
                       </tbody>
@@ -267,21 +290,44 @@ export function FutureTournamentView({ tournament, tournamentId, course, selecte
                           <th className="text-center py-2 font-medium">Par</th>
                           <th className="text-center py-2 font-medium">Yards</th>
                           <th className="text-center py-2 font-medium">Handicap</th>
+                          <th className="text-center py-2 font-medium">Tee</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {backNine.map((hole: any) => (
-                          <tr key={hole.id} className="border-b border-border/50">
-                            <td className="py-2 font-medium">{hole.holeNumber}</td>
-                            <td className="text-center py-2">{hole.par}</td>
-                            <td className="text-center py-2">{getHoleYardage(hole)}</td>
-                            <td className="text-center py-2">{hole.handicap}</td>
-                          </tr>
-                        ))}
+                        {backNine.map((hole: any) => {
+                          const teeSelection = Array.isArray(teeSelections) 
+                            ? teeSelections.find((tee: any) => tee.holeNumber === hole.holeNumber)
+                            : null;
+                          const teeColor = teeSelection?.teeColor || 'white';
+                          const teeColorClasses: Record<string, string> = {
+                            white: 'bg-gray-100 text-gray-800 border-gray-300',
+                            blue: 'bg-blue-100 text-blue-800 border-blue-300',
+                            red: 'bg-red-100 text-red-800 border-red-300', 
+                            gold: 'bg-yellow-100 text-yellow-800 border-yellow-300'
+                          };
+                          const teeColorClass = teeColorClasses[teeColor] || teeColorClasses.white;
+                          
+                          return (
+                            <tr key={hole.id} className="border-b border-border/50">
+                              <td className="py-2 font-medium">{hole.holeNumber}</td>
+                              <td className="text-center py-2">{hole.par}</td>
+                              <td className="text-center py-2">{getHoleYardage(hole)}</td>
+                              <td className="text-center py-2">{hole.handicap}</td>
+                              <td className="text-center py-2">
+                                <div className="flex justify-center">
+                                  <div className={`px-2 py-1 rounded text-xs border ${teeColorClass}`}>
+                                    {teeColor.charAt(0).toUpperCase()}
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
                         <tr className="border-t-2 border-accent font-semibold">
                           <td className="py-2">IN</td>
                           <td className="text-center py-2">{backNinePar}</td>
                           <td className="text-center py-2">{backNineYardage}</td>
+                          <td className="text-center py-2">-</td>
                           <td className="text-center py-2">-</td>
                         </tr>
                       </tbody>
