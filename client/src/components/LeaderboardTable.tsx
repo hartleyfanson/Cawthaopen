@@ -326,6 +326,36 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
             })}
           </div>
         )}
+
+        {/* YARDAGE row */}
+        {Array.isArray(teeSelections) && teeSelections.length > 0 && (
+          <div className="grid gap-1 text-center text-xs text-muted-foreground mt-1" style={{gridTemplateColumns: "2fr " + "1fr ".repeat(9)}}>
+            <div className="text-left">YARDS</div>
+            {displayHoles.map((hole: any) => {
+              const teeSelection = teeSelections.find((tee: any) => tee.holeNumber === hole.holeNumber);
+              const teeColor = teeSelection?.teeColor || 'white';
+              
+              // Get yardage based on tee color selection
+              const getYardageForTeeColor = (hole: any, teeColor: string) => {
+                switch (teeColor) {
+                  case 'gold': return hole.yardageGold || hole.yardageWhite || 0;
+                  case 'blue': return hole.yardageBlue || hole.yardageWhite || 0;
+                  case 'red': return hole.yardageRed || hole.yardageWhite || 0;
+                  case 'white':
+                  default: return hole.yardageWhite || 0;
+                }
+              };
+              
+              const yardage = getYardageForTeeColor(hole, teeColor);
+              
+              return (
+                <div key={`yards-${hole.id}`} data-testid={`header-yards-${hole.holeNumber}`}>
+                  {yardage}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
       
       {/* Player rows - hole-by-hole scores only */}
