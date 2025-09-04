@@ -122,6 +122,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Tournament photo upload ACL endpoint
+  app.put("/api/tournament-photos", isAuthenticated, async (req, res) => {
+    if (!req.body.imageUrl) {
+      return res.status(400).json({ error: "imageUrl is required" });
+    }
+
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
+        req.body.imageUrl,
+        {
+          owner: (req.user as any)?.claims?.sub,
+          visibility: "public", // Tournament photos should be public
+        }
+      );
+
+      res.status(200).json({
+        objectPath: objectPath,
+      });
+    } catch (error) {
+      console.error("Error setting tournament photo ACL:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Object storage routes for protected uploads
   app.get("/objects/:objectPath(*)", isAuthenticated, async (req, res) => {
     const userId = (req.user as any)?.claims?.sub;

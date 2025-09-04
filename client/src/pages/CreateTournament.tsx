@@ -19,10 +19,14 @@ import { useLocation } from "wouter";
 import { useEffect } from "react";
 import { z } from "zod";
 import { CourseSearch } from "@/components/CourseSearch";
+import { ObjectUploader } from "@/components/ObjectUploader";
+import type { UploadResult } from "@uppy/core";
+import { Upload, Image } from "lucide-react";
 
 const createTournamentSchema = insertTournamentSchema.extend({
   maxPlayers: z.number().min(1).max(100),
   numberOfRounds: z.number().min(1).max(4),
+  headerImageUrl: z.string().optional(),
 });
 
 export default function CreateTournament() {
@@ -53,6 +57,55 @@ export default function CreateTournament() {
     }))
   });
   const [roundDates, setRoundDates] = useState<Date[]>([new Date()]);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string>("");
+
+  // Photo upload handlers
+  const handlePhotoUpload = async () => {
+    try {
+      const response = await apiRequest('POST', '/api/objects/upload');
+      const data = await response.json();
+      return {
+        method: 'PUT' as const,
+        url: data.uploadURL
+      };
+    } catch (error) {
+      console.error('Error getting upload URL:', error);
+      toast({
+        title: "Error",
+        description: "Failed to prepare photo upload",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const handlePhotoComplete = async (result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
+    try {
+      if (result.successful && result.successful.length > 0) {
+        const uploadURL = result.successful[0].uploadURL;
+        
+        // Set ACL policy for the uploaded image
+        await apiRequest('PUT', '/api/tournament-photos', {
+          imageUrl: uploadURL
+        });
+        
+        setUploadedImageUrl(uploadURL);
+        form.setValue('headerImageUrl', uploadURL);
+        
+        toast({
+          title: "Photo Uploaded",
+          description: "Tournament photo has been uploaded successfully",
+        });
+      }
+    } catch (error) {
+      console.error('Error processing photo upload:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process photo upload",
+        variant: "destructive",
+      });
+    }
+  };
 
   const form = useForm({
     resolver: zodResolver(createTournamentSchema),
@@ -67,6 +120,7 @@ export default function CreateTournament() {
       scoringFormat: "stroke_play",
       handicapAllowance: "1.00",
       numberOfRounds: 1,
+      headerImageUrl: "",
     },
   });
 
@@ -208,12 +262,13 @@ export default function CreateTournament() {
         ? holeTeeMappings.map(hole => ({ holeNumber: hole.holeNumber, teeColor: singleTeeColor }))
         : holeTeeMappings;
 
-      // Create the tournament with the course ID, tee selections, and round dates
+      // Create the tournament with the course ID, tee selections, round dates, and image
       createTournamentMutation.mutate({
         ...data,
         courseId,
         teeSelections,
         roundDates: numberOfRounds > 1 ? roundDates : [data.startDate],
+        headerImageUrl: uploadedImageUrl || data.headerImageUrl,
       });
     } catch (error) {
       console.error("Error in submission process:", error);
@@ -518,6 +573,49 @@ export default function CreateTournament() {
                       </div>
                     </div>
                   )}
+
+                  {/* Tournament Photo Upload */}
+                  <FormField
+                    control={form.control}
+                    name="headerImageUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-foreground">Tournament Photo</FormLabel>
+                        <FormControl>
+                          <div className="space-y-4">
+                            {uploadedImageUrl && (
+                              <div className="relative w-full h-48 bg-muted rounded-lg overflow-hidden">
+                                <img 
+                                  src={uploadedImageUrl} 
+                                  alt="Tournament photo preview"
+                                  className="w-full h-full object-cover"
+                                />
+                                <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1">
+                                  <Image className="h-4 w-4" />
+                                </div>
+                              </div>
+                            )}
+                            <ObjectUploader
+                              maxNumberOfFiles={1}
+                              maxFileSize={10485760} // 10MB
+                              onGetUploadParameters={handlePhotoUpload}
+                              onComplete={handlePhotoComplete}
+                              buttonClassName="w-full bg-secondary text-secondary-foreground hover:bg-accent"
+                            >
+                              <Upload className="h-4 w-4 mr-2" />
+                              {uploadedImageUrl ? 'Change Tournament Photo' : 'Upload Tournament Photo'}
+                            </ObjectUploader>
+                            {!uploadedImageUrl && (
+                              <p className="text-sm text-muted-foreground">
+                                Add a photo to make your tournament more appealing. This will be displayed in the tournament history.
+                              </p>
+                            )}
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField

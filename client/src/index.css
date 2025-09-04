@@ -37,7 +37,7 @@
   --sidebar-accent-foreground: hsl(45, 86%, 92%);
   --sidebar-border: hsl(156, 40%, 25%);
   --sidebar-ring: hsl(156, 100%, 30%);
-  --font-sans: 'Inter', sans-serif;
+  --font-sans: 'Lora', serif;
   --font-serif: 'Playfair Display', serif;
   --font-mono: 'Fira Code', monospace;
   --radius: 0.5rem;

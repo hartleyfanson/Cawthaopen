@@ -137,16 +137,40 @@ export function TournamentCard({ tournament, status }: TournamentCardProps) {
 
   return (
     <Card 
-      className="bg-primary border border-border hover:border-secondary transition-colors cursor-pointer"
+      className="bg-primary border border-border hover:border-secondary transition-colors cursor-pointer overflow-hidden"
       data-testid={`card-tournament-${tournament.id}`}
     >
-      <CardContent className="p-4">
-        <div className="flex justify-between items-start mb-3">
-          <h4 className="text-lg font-semibold text-primary-foreground">
-            {tournament.name}
-          </h4>
-          {getStatusBadge()}
+      {/* Tournament Header Image */}
+      {tournament.headerImageUrl && (
+        <div className="relative h-32 w-full bg-muted">
+          <img 
+            src={tournament.headerImageUrl} 
+            alt={`${tournament.name} tournament photo`}
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute top-2 right-2">
+            {getStatusBadge()}
+          </div>
         </div>
+      )}
+      
+      <CardContent className="p-4">
+        {!tournament.headerImageUrl && (
+          <div className="flex justify-between items-start mb-3">
+            <h4 className="text-lg font-semibold text-primary-foreground">
+              {tournament.name}
+            </h4>
+            {getStatusBadge()}
+          </div>
+        )}
+        
+        {tournament.headerImageUrl && (
+          <div className="mb-3">
+            <h4 className="text-lg font-semibold text-primary-foreground">
+              {tournament.name}
+            </h4>
+          </div>
+        )}
         
         <p className="text-muted-foreground mb-2">
           {tournament.course?.name} • {tournament.course?.location}
