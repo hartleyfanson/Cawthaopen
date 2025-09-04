@@ -60,19 +60,18 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
     staleTime: 0,
   });
 
-  // Filter scores by selected round and current player, ensure we have a complete round
-  const roundSpecificScores = Array.isArray(tournamentPlayerScores) 
-    ? tournamentPlayerScores.filter((score: any) => 
-        score.roundNumber === selectedScorecardRound && 
-        score.playerId === playerData?.id &&
-        score.strokes > 0 // Only include actual scored holes
-      ).sort((a, b) => a.holeNumber - b.holeNumber) // Sort by hole number
+  // Use the same data source as the leaderboard - round-specific leaderboard API
+  const { data: roundLeaderboardData } = useQuery({
+    queryKey: ["/api/tournaments", tournamentId, "leaderboard", "round", selectedScorecardRound],
+    enabled: !!tournamentId && !!selectedScorecardRound,
+  });
+  
+  // Get the current player's data from the round leaderboard (single source of truth)
+  const currentPlayerRoundData = Array.isArray(roundLeaderboardData) 
+    ? roundLeaderboardData.find((player: any) => player.playerId === playerData?.id)
     : null;
-
-  // Debug: log the filtering
-  console.log('Tournament player scores:', tournamentPlayerScores);
-  console.log('Filtering for round:', selectedScorecardRound, 'player:', playerData?.id);
-  console.log('Filtered round scores:', roundSpecificScores);
+  
+  console.log('Using round leaderboard data (source of truth):', currentPlayerRoundData);
 
   const generateScorecard = async () => {
     console.log('Debug scorecard generation:', {
@@ -88,25 +87,22 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
     setIsGenerating(true);
     
     try {
-      // Use round-specific scores
-      const currentScores = roundSpecificScores;
-      console.log('Using scores for Round', selectedScorecardRound, ':', currentScores);
-      
-      // Additional validation - ensure we have enough holes for a valid scorecard
-      if (!currentScores || currentScores.length < 9) {
-        console.warn('Insufficient score data for scorecard:', currentScores?.length, 'holes');
+      // Use the single source of truth - round leaderboard data
+      if (!currentPlayerRoundData) {
         toast({
-          title: "Insufficient Data",
-          description: `Only ${currentScores?.length || 0} holes found for Round ${selectedScorecardRound}. Need at least 9 holes.`,
+          title: "No Data Found",
+          description: `No score data found for Round ${selectedScorecardRound}.`,
           variant: "destructive",
         });
         setIsGenerating(false);
         return;
       }
-      const totalStrokes = Array.isArray(currentScores) ? currentScores.reduce((sum: number, score: any) => sum + (score.strokes || score.scores?.strokes), 0) : 0;
-      const totalPutts = Array.isArray(currentScores) ? currentScores.reduce((sum: number, score: any) => sum + (score.putts || score.scores?.putts), 0) : 0;
-      const fairwaysHit = Array.isArray(currentScores) ? currentScores.filter((score: any) => score.fairwayHit || score.scores?.fairwayHit).length : 0;
-      const greensInRegulation = Array.isArray(currentScores) ? currentScores.filter((score: any) => score.greenInRegulation || score.scores?.greenInRegulation).length : 0;
+      
+      // Use the exact same data source as the leaderboard
+      const totalStrokes = currentPlayerRoundData.totalStrokes || 0;
+      const totalPutts = currentPlayerRoundData.totalPutts || 0;
+      const fairwaysHit = currentPlayerRoundData.fairwaysHit || 0;
+      const greensInRegulation = currentPlayerRoundData.greensInRegulation || 0;
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
@@ -222,16 +218,15 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
       const playerName = `${(playerData as any)?.firstName || 'Player'} ${(playerData as any)?.lastName || ''}`.trim();
       ctx.fillText(playerName, canvas.width / 2, playerY);
 
-      // Score summary (large centered display) - using fresh calculated totals
-      // Calculate par for only the holes actually played in this round
-      const roundPar = Array.isArray(currentScores) ? currentScores.reduce((sum: number, score: any) => sum + (score.holePar || 4), 0) : 72;
-      const scoreToPar = totalStrokes - roundPar;
+      // Score summary (large centered display) - using same calculation as leaderboard
+      const coursePar = Array.isArray(holes) ? holes.reduce((sum: number, hole: any) => sum + (hole.par || hole.holes?.par), 0) : 72;
+      const scoreToPar = totalStrokes > 0 ? totalStrokes - coursePar : 0;
       
-      console.log('Scorecard calculation:', {
+      console.log('Scorecard calculation (matching leaderboard):', {
         totalStrokes,
-        roundPar,
+        coursePar,
         scoreToPar,
-        holesInRound: currentScores?.length
+        playerData: currentPlayerRoundData
       });
       const scoreText = scoreToPar === 0 ? 'EVEN' : 
                        scoreToPar > 0 ? `+${scoreToPar}` : 
