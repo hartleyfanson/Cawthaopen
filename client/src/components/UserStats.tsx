@@ -148,37 +148,6 @@ export function UserStats({ userId }: UserStatsProps) {
             </div>
           )}
           
-          {(stats as any)?.averagePlacement && (
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">Average Placement</span>
-              <span 
-                className="text-accent font-semibold" 
-                data-testid="stat-avg-placement"
-              >
-                #{(stats as any)?.averagePlacement}
-              </span>
-            </div>
-          )}
-          
-          <div className="flex justify-between items-center">
-            <span className="text-muted-foreground">Top 10 Finishes</span>
-            <span 
-              className="text-accent font-semibold" 
-              data-testid="stat-top10"
-            >
-              {(stats as any)?.top10Finishes || 0}
-            </span>
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <span className="text-muted-foreground">Top 5 Finishes</span>
-            <span 
-              className="text-accent font-semibold" 
-              data-testid="stat-top5"
-            >
-              {(stats as any)?.top5Finishes || 0}
-            </span>
-          </div>
         </div>
         
         <Link href="/achievements?tab=stats">
