@@ -223,8 +223,16 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
       ctx.fillText(playerName, canvas.width / 2, playerY);
 
       // Score summary (large centered display) - using fresh calculated totals
-      const coursePar = Array.isArray(holes) ? holes.reduce((sum: number, hole: any) => sum + (hole.par || hole.holes?.par), 0) : 72;
-      const scoreToPar = totalStrokes - coursePar;
+      // Calculate par for only the holes actually played in this round
+      const roundPar = Array.isArray(currentScores) ? currentScores.reduce((sum: number, score: any) => sum + (score.holePar || 4), 0) : 72;
+      const scoreToPar = totalStrokes - roundPar;
+      
+      console.log('Scorecard calculation:', {
+        totalStrokes,
+        roundPar,
+        scoreToPar,
+        holesInRound: currentScores?.length
+      });
       const scoreText = scoreToPar === 0 ? 'EVEN' : 
                        scoreToPar > 0 ? `+${scoreToPar}` : 
                        `${scoreToPar}`;
