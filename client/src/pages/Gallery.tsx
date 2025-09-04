@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useParams, Link } from "wouter";
+import { useParams } from "wouter";
+import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigation } from "@/components/Navigation";
 import { ObjectUploader } from "@/components/ObjectUploader";
@@ -38,12 +39,12 @@ export default function Gallery() {
   const { data: tournament } = useQuery({
     queryKey: ["/api/tournaments", id],
     enabled: !!user && !!id,
-  });
+  }) as { data: any };
 
   const { data: photos, isLoading: loadingPhotos } = useQuery({
     queryKey: ["/api/tournaments", id, "gallery"],
     enabled: !!user && !!id,
-  });
+  }) as { data: any[], isLoading: boolean };
 
   const createPhotoMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -87,7 +88,7 @@ export default function Gallery() {
   };
 
   const handleUploadComplete = (result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
-    if (result.successful.length > 0) {
+    if (result.successful && result.successful.length > 0) {
       const uploadedFile = result.successful[0];
       createPhotoMutation.mutate({
         tournamentId: id,
