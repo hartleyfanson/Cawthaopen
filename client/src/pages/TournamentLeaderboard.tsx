@@ -285,8 +285,18 @@ export default function TournamentLeaderboard() {
           </div>
           
           <div className="flex justify-center gap-4 flex-wrap">
-            {/* Show Live Scoring/Edit Score button only for active tournaments */}
-            {(tournament as any)?.status === "active" && (
+            {/* Show Live Scoring/Edit Score button when current date is between tournament start and end dates */}
+            {(() => {
+              const now = new Date();
+              const startDate = (tournament as any)?.startDate ? new Date((tournament as any).startDate) : null;
+              const endDate = (tournament as any)?.endDate ? new Date((tournament as any).endDate) : null;
+              
+              const isTournamentActive = startDate && endDate && 
+                now >= startDate && now <= endDate && 
+                isUserJoined;
+                
+              return isTournamentActive;
+            })() && (
               <Link href={`/tournaments/${id}/scoring`}>
                 <Button 
                   className="bg-secondary text-secondary-foreground hover:bg-accent"
