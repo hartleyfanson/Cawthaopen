@@ -766,10 +766,15 @@ export class DatabaseStorage implements IStorage {
       .where(eq(achievements.id, data.achievementId));
 
     if (achievement.length > 0) {
+      // Get current stats to calculate new values
+      const currentStats = await this.getPlayerStats(data.playerId);
+      const currentAchievements = currentStats?.totalAchievements || 0;
+      const currentPoints = currentStats?.achievementPoints || 0;
+      
       await this.upsertPlayerStats(data.playerId, {
-        totalAchievements: sql`${playerStats.totalAchievements} + 1`,
-        achievementPoints: sql`${playerStats.achievementPoints} + ${achievement[0].points}`,
-      } as any);
+        totalAchievements: currentAchievements + 1,
+        achievementPoints: currentPoints + (achievement[0]?.points || 0),
+      });
     }
 
     return newAchievement;
@@ -784,21 +789,44 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertPlayerStats(playerId: string, updates: Partial<PlayerStats>): Promise<PlayerStats> {
-    const [stats] = await db
-      .insert(playerStats)
-      .values({
-        playerId,
-        ...updates,
-      } as any)
-      .onConflictDoUpdate({
-        target: playerStats.playerId,
-        set: {
+    // First try to get existing stats
+    const existing = await this.getPlayerStats(playerId);
+    
+    if (existing) {
+      // Update existing record
+      const [stats] = await db
+        .update(playerStats)
+        .set({
           ...updates,
           lastUpdated: new Date(),
-        },
-      })
-      .returning();
-    return stats;
+        })
+        .where(eq(playerStats.playerId, playerId))
+        .returning();
+      return stats;
+    } else {
+      // Insert new record with default values
+      const defaultStats = {
+        playerId,
+        totalAchievements: 0,
+        achievementPoints: 0,
+        holesInOne: 0,
+        eaglesCount: 0,
+        birdiesCount: 0,
+        parsCount: 0,
+        tournamentsWon: 0,
+        tournamentsPlayed: 0,
+        bestScore: null,
+        averageScore: null,
+        lastUpdated: new Date(),
+        ...updates,
+      };
+      
+      const [stats] = await db
+        .insert(playerStats)
+        .values(defaultStats as any)
+        .returning();
+      return stats;
+    }
   }
 
   // Helper function to analyze round data for achievement conditions

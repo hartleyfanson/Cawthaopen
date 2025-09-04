@@ -280,7 +280,7 @@ export default function LiveScoring() {
 
   // Save individual hole score
   const saveHoleScore = async () => {
-    if (!currentHoleData || strokes === null || putts === null) return;
+    if (!currentHoleData || strokes === null || strokes < 1) return;
     
     try {
       let roundToUse = currentRoundData;
@@ -298,7 +298,7 @@ export default function LiveScoring() {
         roundId: (roundToUse as any).id,
         holeId: currentHoleData.id,
         strokes,
-        putts,
+        putts: putts || 0, // Default putts to 0 if null
         fairwayHit: currentHoleData.par === 3 ? false : fairwayHit,
         greenInRegulation,
         powerupUsed,
@@ -615,7 +615,7 @@ export default function LiveScoring() {
                 
                 <Button
                   onClick={saveHoleScore}
-                  disabled={createScoreMutation.isPending || strokes === null || putts === null}
+                  disabled={createScoreMutation.isPending || strokes === null || strokes < 1}
                   className="bg-accent text-accent-foreground hover:bg-accent/90 font-semibold"
                   data-testid={currentHole === 18 ? "button-submit-round" : "button-save-hole"}
                 >
