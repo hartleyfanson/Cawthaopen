@@ -120,10 +120,6 @@ function PlayerProfile() {
                     <Award className="h-4 w-4" />
                     {totalAchievements} Achievements
                   </Badge>
-                  <Badge variant="outline" className="flex items-center gap-1">
-                    <Trophy className="h-4 w-4" />
-                    {totalPoints} Points
-                  </Badge>
                   {player.handicap && (
                     <Badge variant="outline">
                       Handicap: {player.handicap}
