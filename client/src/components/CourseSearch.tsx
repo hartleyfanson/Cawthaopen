@@ -72,7 +72,14 @@ export function CourseSearch({ onCourseSelect, isLoading = false }: CourseSearch
     setSelectedCourse(course);
     const result = await getCourseDetails();
     if (result.data) {
-      // Show preview and allow import
+      // Immediately call the callback when course details are loaded
+      onCourseSelect(course, result.data);
+      toast({
+        title: "Course Selected",
+        description: `${course.name} has been selected with ${result.data.length} holes.`,
+      });
+      // Keep the preview visible but clear search results
+      setSearchTerm("");
     }
   };
 

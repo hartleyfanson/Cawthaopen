@@ -72,6 +72,7 @@ export default function CreateTournament() {
       teeColor: "white",
     })),
   );
+  const [selectedCourse, setSelectedCourse] = useState<any>(null);
 
   const [roundDates, setRoundDates] = useState<Date[]>([new Date()]);
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string>("");
@@ -396,10 +397,24 @@ export default function CreateTournament() {
                         </FormLabel>
                         <FormControl>
                           <div className="space-y-4">
-                            {form.watch("courseId") ? (
-                              <div className="p-3 bg-muted rounded-lg border border-border">
-                                <p className="text-sm text-muted-foreground">Selected course:</p>
-                                <p className="font-medium">Course ID: {form.watch("courseId")}</p>
+                            {selectedCourse ? (
+                              <div className="p-4 bg-green-50 dark:bg-green-950 rounded-lg border border-green-200 dark:border-green-800">
+                                <div className="flex items-start justify-between">
+                                  <div className="space-y-1">
+                                    <p className="font-semibold text-green-800 dark:text-green-200">{selectedCourse.name}</p>
+                                    <p className="text-sm text-green-600 dark:text-green-300">
+                                      {selectedCourse.city}, {selectedCourse.state} {selectedCourse.country}
+                                    </p>
+                                    <p className="text-xs text-green-600 dark:text-green-400">
+                                      {selectedCourse.holes?.length || selectedCourse.holes || 18} holes • Par {selectedCourse.holes?.reduce?.((sum: number, hole: any) => sum + hole.par, 0) || 'TBD'}
+                                    </p>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="h-8 w-8 bg-green-600 rounded-full flex items-center justify-center">
+                                      <span className="text-white text-xs">✓</span>
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
                             ) : (
                               <p className="text-sm text-muted-foreground">Search for a golf course below</p>
@@ -419,6 +434,7 @@ export default function CreateTournament() {
                           shouldValidate: true,
                           shouldDirty: true,
                         });
+                        setSelectedCourse({ ...course, holes });
                         toast({
                           title: "Course selected",
                           description: `${course.name} set for this tournament.`,
