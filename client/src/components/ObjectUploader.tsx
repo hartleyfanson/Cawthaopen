@@ -17,6 +17,7 @@ interface ObjectUploaderProps {
   onComplete?: (
     result: UploadResult<Record<string, unknown>, Record<string, unknown>>
   ) => void;
+  onError?: (error: string) => void;
   buttonClassName?: string;
   children: ReactNode;
   directFileInput?: boolean; // When true, opens file browser directly instead of modal
@@ -55,6 +56,7 @@ export function ObjectUploader({
   maxFileSize = 10485760, // 10MB default
   onGetUploadParameters,
   onComplete,
+  onError,
   buttonClassName,
   children,
   directFileInput = false,
@@ -76,6 +78,14 @@ export function ObjectUploader({
       .on("complete", (result) => {
         onComplete?.(result);
       })
+      .on("restriction-failed", (file, error) => {
+        if (error.message.includes('file size')) {
+          const maxSizeMB = (maxFileSize / (1024 * 1024)).toFixed(1);
+          onError?.(`File size exceeds the ${maxSizeMB}MB limit. Please choose a smaller image.`);
+        } else {
+          onError?.(error.message);
+        }
+      })
   );
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -85,6 +95,13 @@ export function ObjectUploader({
       uppy.getFiles().forEach(file => uppy.removeFile(file.id));
       
       Array.from(files).forEach(file => {
+        // Check file size before adding to Uppy
+        if (file.size > maxFileSize) {
+          const maxSizeMB = (maxFileSize / (1024 * 1024)).toFixed(1);
+          onError?.(`File size exceeds the ${maxSizeMB}MB limit. Please choose a smaller image.`);
+          return;
+        }
+        
         try {
           uppy.addFile({
             name: file.name,
@@ -93,6 +110,7 @@ export function ObjectUploader({
           });
         } catch (err) {
           console.error('Error adding file:', err);
+          onError?.('Error selecting file. Please try again.');
         }
       });
       

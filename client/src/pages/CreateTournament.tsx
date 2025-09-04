@@ -600,6 +600,13 @@ export default function CreateTournament() {
                               maxFileSize={10485760} // 10MB
                               onGetUploadParameters={handlePhotoUpload}
                               onComplete={handlePhotoComplete}
+                              onError={(error) => {
+                                toast({
+                                  title: "Upload Error",
+                                  description: error,
+                                  variant: "destructive",
+                                });
+                              }}
                               buttonClassName="w-full bg-secondary text-secondary-foreground hover:bg-accent"
                               directFileInput={true}
                             >

@@ -261,6 +261,13 @@ export function Navigation() {
                         maxFileSize={5242880} // 5MB
                         onGetUploadParameters={handleProfileImageUpload}
                         onComplete={handleProfileImageComplete}
+                        onError={(error) => {
+                          toast({
+                            title: "Upload Error",
+                            description: error,
+                            variant: "destructive",
+                          });
+                        }}
                         buttonClassName="text-sm"
                         directFileInput={true}
                       >
