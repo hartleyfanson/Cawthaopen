@@ -59,6 +59,7 @@ export interface IStorage {
   getTournaments(): Promise<Tournament[]>;
   getTournament(id: string): Promise<Tournament | undefined>;
   createTournament(tournament: InsertTournament): Promise<Tournament>;
+  deleteTournament(id: string): Promise<void>;
   getTournamentsByStatus(status: string): Promise<Tournament[]>;
   joinTournament(data: InsertTournamentPlayer): Promise<TournamentPlayer>;
   getTournamentPlayers(tournamentId: string): Promise<TournamentPlayer[]>;
@@ -201,6 +202,34 @@ export class DatabaseStorage implements IStorage {
       .values(tournament)
       .returning();
     return newTournament;
+  }
+
+  async deleteTournament(id: string): Promise<void> {
+    // Delete in order of dependencies to avoid foreign key constraints
+    // First delete scores (through rounds)
+    await db.delete(scores).where(
+      sql`${scores.roundId} IN (
+        SELECT ${rounds.id} FROM ${rounds} WHERE ${rounds.tournamentId} = ${id}
+      )`
+    );
+    
+    // Delete rounds
+    await db.delete(rounds).where(eq(rounds.tournamentId, id));
+    
+    // Delete tournament players
+    await db.delete(tournamentPlayers).where(eq(tournamentPlayers.tournamentId, id));
+    
+    // Delete tournament hole tees
+    await db.delete(tournamentHoleTees).where(eq(tournamentHoleTees.tournamentId, id));
+    
+    // Delete tournament rounds
+    await db.delete(tournamentRounds).where(eq(tournamentRounds.tournamentId, id));
+    
+    // Delete gallery photos
+    await db.delete(galleryPhotos).where(eq(galleryPhotos.tournamentId, id));
+    
+    // Finally delete the tournament itself
+    await db.delete(tournaments).where(eq(tournaments.id, id));
   }
 
   async getTournamentsByStatus(status: string): Promise<Tournament[]> {

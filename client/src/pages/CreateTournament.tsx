@@ -75,6 +75,8 @@ export default function CreateTournament() {
     })),
   );
   const [selectedCourse, setSelectedCourse] = useState<any>(null);
+  const [roundCourses, setRoundCourses] = useState<any[]>([]);
+  const [roundTeeConfigs, setRoundTeeConfigs] = useState<Array<{roundNumber: number, teeSelectionMode: 'same' | 'mixed', singleTeeColor: string, holeTeeMappings: Array<{holeNumber: number, teeColor: string}>}>>([]);
 
   const [roundDates, setRoundDates] = useState<Date[]>([new Date()]);
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string>("");
@@ -251,33 +253,75 @@ export default function CreateTournament() {
 
     try {
 
-      // Prepare tee mappings based on selection mode
-      const teeSelections =
-        teeSelectionMode === "same"
-          ? holeTeeMappings.map((hole) => ({
-              holeNumber: hole.holeNumber,
-              teeColor: singleTeeColor,
-            }))
-          : holeTeeMappings;
-
-      // Create the tournament data
-      const tournamentData = {
-        name: data.name,
-        description: data.description,
-        courseId: data.courseId,
-        startDate: data.startDate.toISOString(),
-        endDate: data.endDate.toISOString(),
-        status: data.status,
-        maxPlayers: data.maxPlayers,
-        numberOfRounds: data.numberOfRounds,
-        scoringFormat: data.scoringFormat,
-        handicapAllowance: data.handicapAllowance,
-        headerImageUrl: uploadedImageUrl || data.headerImageUrl || "",
-        teeSelections,
-        roundDates: (numberOfRounds > 1 ? roundDates : [data.startDate]).map(
-          (d) => d.toISOString(),
-        ),
-      };
+      // Prepare tournament data for multi-round or single round
+      let tournamentData;
+      
+      if (numberOfRounds > 1) {
+        // Multi-round tournament - use per-round configurations
+        const validRoundConfigs = roundTeeConfigs.filter(config => config && config.roundNumber <= numberOfRounds);
+        const validRoundCourses = roundCourses.filter(course => course);
+        
+        if (validRoundCourses.length === 0) {
+          // Fallback to main course for all rounds
+          for (let i = 0; i < numberOfRounds; i++) {
+            validRoundCourses[i] = selectedCourse;
+          }
+        }
+        
+        if (validRoundConfigs.length === 0) {
+          // Create default configs for all rounds
+          for (let i = 0; i < numberOfRounds; i++) {
+            validRoundConfigs[i] = {
+              roundNumber: i + 1,
+              teeSelectionMode: "same",
+              singleTeeColor: "white",
+              holeTeeMappings: Array.from({ length: 18 }, (_, h) => ({holeNumber: h + 1, teeColor: "white"}))
+            };
+          }
+        }
+        
+        tournamentData = {
+          name: data.name,
+          description: data.description,
+          courseId: data.courseId, // Main course (can be updated later per round)
+          startDate: data.startDate.toISOString(),
+          endDate: data.endDate.toISOString(),
+          status: data.status,
+          maxPlayers: data.maxPlayers,
+          numberOfRounds: data.numberOfRounds,
+          scoringFormat: data.scoringFormat,
+          handicapAllowance: data.handicapAllowance,
+          headerImageUrl: uploadedImageUrl || data.headerImageUrl || "",
+          teeSelections: validRoundConfigs[0]?.holeTeeMappings || [],
+          roundDates: roundDates.map(d => d.toISOString()),
+          roundConfigs: validRoundConfigs,
+          roundCourses: validRoundCourses
+        };
+      } else {
+        // Single round tournament - use original logic with fallback
+        const singleRoundTeeConfig = roundTeeConfigs[0] || {
+          roundNumber: 1,
+          teeSelectionMode: "same",
+          singleTeeColor: "white",
+          holeTeeMappings: Array.from({ length: 18 }, (_, h) => ({holeNumber: h + 1, teeColor: "white"}))
+        };
+        
+        tournamentData = {
+          name: data.name,
+          description: data.description,
+          courseId: data.courseId,
+          startDate: data.startDate.toISOString(),
+          endDate: data.endDate.toISOString(),
+          status: data.status,
+          maxPlayers: data.maxPlayers,
+          numberOfRounds: data.numberOfRounds,
+          scoringFormat: data.scoringFormat,
+          handicapAllowance: data.handicapAllowance,
+          headerImageUrl: uploadedImageUrl || data.headerImageUrl || "",
+          teeSelections: singleRoundTeeConfig.holeTeeMappings,
+          roundDates: [data.startDate.toISOString()]
+        };
+      }
 
       console.log("Submitting tournament data:", tournamentData);
 
@@ -448,13 +492,13 @@ export default function CreateTournament() {
                           </FormLabel>
                           <FormControl>
                             <Input
-                              type="datetime-local"
+                              type="date"
                               className="bg-background border-border"
                               data-testid="input-start-date"
                               {...field}
                               value={
                                 field.value instanceof Date
-                                  ? field.value.toISOString().slice(0, 16)
+                                  ? field.value.toISOString().slice(0, 10)
                                   : (field.value ?? "")
                               }
                               onChange={(e) =>
@@ -477,13 +521,13 @@ export default function CreateTournament() {
                           </FormLabel>
                           <FormControl>
                             <Input
-                              type="datetime-local"
+                              type="date"
                               className="bg-background border-border"
                               data-testid="input-end-date"
                               {...field}
                               value={
                                 field.value instanceof Date
-                                  ? field.value.toISOString().slice(0, 16)
+                                  ? field.value.toISOString().slice(0, 10)
                                   : (field.value ?? "")
                               }
                               onChange={(e) =>
@@ -689,9 +733,9 @@ export default function CreateTournament() {
                                   Round {i + 1} Date
                                 </label>
                                 <Input
-                                  type="datetime-local"
+                                  type="date"
                                   value={
-                                    roundDates[i]?.toISOString().slice(0, 16) || ""
+                                    roundDates[i]?.toISOString().slice(0, 10) || ""
                                   }
                                   onChange={(e) => {
                                     const newDates = [...roundDates];
@@ -707,36 +751,227 @@ export default function CreateTournament() {
                                 <label className="text-sm font-medium text-foreground mb-2 block">
                                   Course for Round {i + 1}
                                 </label>
-                                <div className="text-sm text-muted-foreground p-2 bg-background rounded border">
-                                  {selectedCourse ? selectedCourse.name : "Select course above first"}
+                                <div className="space-y-2">
+                                  {roundCourses[i] ? (
+                                    <div className="p-3 bg-green-50 dark:bg-green-950 rounded border border-green-200 dark:border-green-800">
+                                      <div className="flex justify-between items-center">
+                                        <div>
+                                          <p className="font-medium text-green-800 dark:text-green-200">
+                                            {roundCourses[i].name}
+                                          </p>
+                                          <p className="text-sm text-green-600 dark:text-green-300">
+                                            {roundCourses[i].city}, {roundCourses[i].state}
+                                          </p>
+                                        </div>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => {
+                                            const newCourses = [...roundCourses];
+                                            newCourses[i] = null;
+                                            setRoundCourses(newCourses);
+                                          }}
+                                        >
+                                          Change
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-2">
+                                      <CourseSearch
+                                        onCourseSelect={async (course, holes) => {
+                                          try {
+                                            // Import the course to the database
+                                            const importResponse = await apiRequest("POST", "/api/courses/import", {
+                                              course,
+                                              holes,
+                                            });
+                                            
+                                            if (!importResponse.ok) {
+                                              throw new Error("Failed to import course");
+                                            }
+                                            
+                                            const importData = await importResponse.json();
+                                            
+                                            // Store the course for this round
+                                            const newCourses = [...roundCourses];
+                                            newCourses[i] = { ...course, holes, id: importData.course.id };
+                                            setRoundCourses(newCourses);
+                                            
+                                            toast({
+                                              title: "Course selected",
+                                              description: importData.imported 
+                                                ? `${course.name} imported and set for round ${i + 1}.`
+                                                : `${course.name} set for round ${i + 1}.`,
+                                            });
+                                          } catch (error) {
+                                            console.error("Error importing course:", error);
+                                            toast({
+                                              title: "Error",
+                                              description: "Failed to import course. Please try again.",
+                                              variant: "destructive",
+                                            });
+                                          }
+                                        }}
+                                      />
+                                      <p className="text-xs text-muted-foreground">
+                                        Choose a different course for this round, or use the same as round 1
+                                      </p>
+                                      {roundCourses[0] && (
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => {
+                                            const newCourses = [...roundCourses];
+                                            newCourses[i] = roundCourses[0];
+                                            setRoundCourses(newCourses);
+                                          }}
+                                        >
+                                          Use Same as Round 1: {roundCourses[0].name}
+                                        </Button>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  For now, all rounds use the same course. Future versions will support per-round course selection.
-                                </p>
                               </div>
                             </div>
                             
-                            <div className="mt-4">
-                              <label className="text-sm font-medium text-foreground mb-2 block">
+                            <div className="mt-4 p-3 border border-border rounded-lg bg-card">
+                              <h5 className="text-sm font-medium text-foreground mb-3">
                                 Tee Configuration for Round {i + 1}
-                              </label>
-                              <Select
-                                value={singleTeeColor}
-                                onValueChange={setSingleTeeColor}
-                              >
-                                <SelectTrigger
-                                  className="bg-background border-border"
-                                  data-testid={`select-round-${i + 1}-tee-color`}
-                                >
-                                  <SelectValue placeholder="Select tee color for this round" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="white">White Tees</SelectItem>
-                                  <SelectItem value="blue">Blue Tees</SelectItem>
-                                  <SelectItem value="red">Red Tees</SelectItem>
-                                  <SelectItem value="gold">Gold Tees</SelectItem>
-                                </SelectContent>
-                              </Select>
+                              </h5>
+                              
+                              <div className="space-y-3">
+                                <div className="flex items-center space-x-2">
+                                  <input
+                                    type="radio"
+                                    id={`same-tee-${i}`}
+                                    name={`tee-selection-${i}`}
+                                    checked={roundTeeConfigs[i]?.teeSelectionMode === "same" || !roundTeeConfigs[i]}
+                                    onChange={() => {
+                                      const newConfigs = [...roundTeeConfigs];
+                                      newConfigs[i] = {
+                                        roundNumber: i + 1,
+                                        teeSelectionMode: "same",
+                                        singleTeeColor: "white",
+                                        holeTeeMappings: Array.from({ length: 18 }, (_, h) => ({holeNumber: h + 1, teeColor: "white"}))
+                                      };
+                                      setRoundTeeConfigs(newConfigs);
+                                    }}
+                                    className="text-accent"
+                                  />
+                                  <label htmlFor={`same-tee-${i}`} className="text-sm text-foreground">
+                                    All holes use same tee
+                                  </label>
+                                </div>
+
+                                <div className="flex items-center space-x-2">
+                                  <input
+                                    type="radio"
+                                    id={`mixed-tee-${i}`}
+                                    name={`tee-selection-${i}`}
+                                    checked={roundTeeConfigs[i]?.teeSelectionMode === "mixed"}
+                                    onChange={() => {
+                                      const newConfigs = [...roundTeeConfigs];
+                                      newConfigs[i] = {
+                                        roundNumber: i + 1,
+                                        teeSelectionMode: "mixed",
+                                        singleTeeColor: "white",
+                                        holeTeeMappings: Array.from({ length: 18 }, (_, h) => ({holeNumber: h + 1, teeColor: "white"}))
+                                      };
+                                      setRoundTeeConfigs(newConfigs);
+                                    }}
+                                    className="text-accent"
+                                  />
+                                  <label htmlFor={`mixed-tee-${i}`} className="text-sm text-foreground">
+                                    Mix and match per hole
+                                  </label>
+                                </div>
+                              </div>
+
+                              {(!roundTeeConfigs[i] || roundTeeConfigs[i]?.teeSelectionMode === "same") && (
+                                <div className="mt-3">
+                                  <label className="text-xs font-medium text-foreground mb-2 block">
+                                    Select Tee Color for All Holes
+                                  </label>
+                                  <Select
+                                    value={roundTeeConfigs[i]?.singleTeeColor || "white"}
+                                    onValueChange={(color) => {
+                                      const newConfigs = [...roundTeeConfigs];
+                                      if (!newConfigs[i]) {
+                                        newConfigs[i] = {
+                                          roundNumber: i + 1,
+                                          teeSelectionMode: "same",
+                                          singleTeeColor: color,
+                                          holeTeeMappings: Array.from({ length: 18 }, (_, h) => ({holeNumber: h + 1, teeColor: color}))
+                                        };
+                                      } else {
+                                        newConfigs[i].singleTeeColor = color;
+                                        newConfigs[i].holeTeeMappings = Array.from({ length: 18 }, (_, h) => ({holeNumber: h + 1, teeColor: color}));
+                                      }
+                                      setRoundTeeConfigs(newConfigs);
+                                    }}
+                                  >
+                                    <SelectTrigger className="bg-background border-border">
+                                      <SelectValue placeholder="Select tee color" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="white">White Tees</SelectItem>
+                                      <SelectItem value="blue">Blue Tees</SelectItem>
+                                      <SelectItem value="red">Red Tees</SelectItem>
+                                      <SelectItem value="gold">Gold Tees</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              )}
+
+                              {roundTeeConfigs[i]?.teeSelectionMode === "mixed" && (
+                                <div className="mt-3">
+                                  <h6 className="text-xs font-medium text-foreground mb-2">
+                                    Tee Selection per Hole
+                                  </h6>
+                                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 max-h-32 overflow-y-auto">
+                                    {Array.from({ length: 18 }, (_, holeIndex) => (
+                                      <div key={holeIndex} className="space-y-1">
+                                        <label className="text-xs text-foreground block text-center">
+                                          #{holeIndex + 1}
+                                        </label>
+                                        <Select
+                                          value={roundTeeConfigs[i]?.holeTeeMappings?.[holeIndex]?.teeColor || "white"}
+                                          onValueChange={(color) => {
+                                            const newConfigs = [...roundTeeConfigs];
+                                            if (!newConfigs[i]) {
+                                              newConfigs[i] = {
+                                                roundNumber: i + 1,
+                                                teeSelectionMode: "mixed",
+                                                singleTeeColor: "white",
+                                                holeTeeMappings: Array.from({ length: 18 }, (_, h) => ({holeNumber: h + 1, teeColor: "white"}))
+                                              };
+                                            }
+                                            if (!newConfigs[i].holeTeeMappings) {
+                                              newConfigs[i].holeTeeMappings = Array.from({ length: 18 }, (_, h) => ({holeNumber: h + 1, teeColor: "white"}));
+                                            }
+                                            newConfigs[i].holeTeeMappings[holeIndex] = { holeNumber: holeIndex + 1, teeColor: color };
+                                            setRoundTeeConfigs(newConfigs);
+                                          }}
+                                        >
+                                          <SelectTrigger className="h-8 text-xs">
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="white">W</SelectItem>
+                                            <SelectItem value="blue">B</SelectItem>
+                                            <SelectItem value="red">R</SelectItem>
+                                            <SelectItem value="gold">G</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -745,141 +980,7 @@ export default function CreateTournament() {
                   )}
 
 
-                  {/* Round Dates Section */}
-                  {numberOfRounds > 1 && (
-                    <div className="space-y-4 p-4 border border-border rounded-lg bg-card">
-                      <h3 className="text-lg font-semibold text-foreground">
-                        Round Dates
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        Set the date for each round of the tournament
-                      </p>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {Array.from({ length: numberOfRounds }, (_, i) => (
-                          <div key={i}>
-                            <label className="text-sm font-medium text-foreground">
-                              Round {i + 1} Date
-                            </label>
-                            <Input
-                              type="datetime-local"
-                              value={
-                                roundDates[i]?.toISOString().slice(0, 16) || ""
-                              }
-                              onChange={(e) => {
-                                const newDates = [...roundDates];
-                                newDates[i] = new Date(e.target.value);
-                                setRoundDates(newDates);
-                              }}
-                              className="bg-background border-border"
-                              data-testid={`input-round-${i + 1}-date`}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-4 p-4 border border-border rounded-lg bg-card">
-                    <h3 className="text-lg font-semibold text-foreground">
-                      Tee Selection
-                    </h3>
-
-                    <div className="space-y-3">
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          id="same-tee"
-                          name="tee-selection"
-                          checked={teeSelectionMode === "same"}
-                          onChange={() => setTeeSelectionMode("same")}
-                          className="text-accent"
-                          data-testid="radio-same-tee"
-                        />
-                        <label htmlFor="same-tee" className="text-foreground">
-                          All holes use the same tee
-                        </label>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          id="mixed-tee"
-                          name="tee-selection"
-                          checked={teeSelectionMode === "mixed"}
-                          onChange={() => setTeeSelectionMode("mixed")}
-                          className="text-accent"
-                          data-testid="radio-mixed-tee"
-                        />
-                        <label htmlFor="mixed-tee" className="text-foreground">
-                          Mix and match tees per hole
-                        </label>
-                      </div>
-                    </div>
-
-                    {teeSelectionMode === "same" && (
-                      <div className="mt-4">
-                        <label className="text-sm font-medium text-foreground mb-2 block">
-                          Select Tee Color
-                        </label>
-                        <Select
-                          value={singleTeeColor}
-                          onValueChange={setSingleTeeColor}
-                        >
-                          <SelectTrigger
-                            className="bg-background border-border"
-                            data-testid="select-single-tee-color"
-                          >
-                            <SelectValue placeholder="Select tee color" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="white">White Tees</SelectItem>
-                            <SelectItem value="blue">Blue Tees</SelectItem>
-                            <SelectItem value="red">Red Tees</SelectItem>
-                            <SelectItem value="gold">Gold Tees</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-
-                    {teeSelectionMode === "mixed" && (
-                      <div className="mt-4">
-                        <h4 className="text-sm font-medium text-foreground mb-3">
-                          Tee Selection per Hole
-                        </h4>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 max-h-80 overflow-y-auto">
-                          {holeTeeMappings.map((hole, index) => (
-                            <div key={index} className="space-y-1">
-                              <label className="text-xs font-medium text-foreground">
-                                Hole {hole.holeNumber}
-                              </label>
-                              <Select
-                                value={hole.teeColor}
-                                onValueChange={(color) => {
-                                  const newMappings = [...holeTeeMappings];
-                                  newMappings[index].teeColor = color;
-                                  setHoleTeeMappings(newMappings);
-                                }}
-                              >
-                                <SelectTrigger
-                                  className="bg-background border-border h-8 text-xs"
-                                  data-testid={`select-hole-${index + 1}-tee`}
-                                >
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="white">White</SelectItem>
-                                  <SelectItem value="blue">Blue</SelectItem>
-                                  <SelectItem value="red">Red</SelectItem>
-                                  <SelectItem value="gold">Gold</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
 
                   <FormField
                     control={form.control}

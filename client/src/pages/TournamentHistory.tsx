@@ -1,16 +1,30 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigation } from "@/components/Navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { ArrowLeft } from "lucide-react";
-import { useEffect } from "react";
+import { ArrowLeft, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function TournamentHistory() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [deletingTournament, setDeletingTournament] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -26,27 +40,57 @@ export default function TournamentHistory() {
     }
   }, [isAuthenticated, isLoading, toast]);
 
-  const { data: upcomingTournaments } = useQuery({
+  const { data: upcomingTournaments = [] } = useQuery({
     queryKey: ["/api/tournaments/status/upcoming"],
     enabled: !!user,
   });
 
-  const { data: activeTournaments } = useQuery({
+  const { data: activeTournaments = [] } = useQuery({
     queryKey: ["/api/tournaments/status/active"],
     enabled: !!user,
   });
 
-  const { data: completedTournaments, isLoading: loadingTournaments } = useQuery({
+  const { data: completedTournaments = [], isLoading: loadingTournaments } = useQuery({
     queryKey: ["/api/tournaments/status/completed"],
     enabled: !!user,
   });
 
+  const deleteTournamentMutation = useMutation({
+    mutationFn: async (tournamentId: string) => {
+      const res = await apiRequest("DELETE", `/api/tournaments/${tournamentId}`);
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || "Failed to delete tournament");
+      }
+    },
+    onSuccess: () => {
+      // Invalidate all tournament queries to refresh the list
+      queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tournaments/status/upcoming"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tournaments/status/active"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tournaments/status/completed"] });
+      toast({
+        title: "Tournament Deleted",
+        description: "The tournament has been successfully deleted.",
+      });
+      setDeletingTournament(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to delete tournament: ${error.message}`,
+        variant: "destructive",
+      });
+      setDeletingTournament(null);
+    },
+  });
+
   // Combine and sort all tournaments chronologically
   const allTournaments = [
-    ...(upcomingTournaments || []),
-    ...(activeTournaments || []),
-    ...(completedTournaments || [])
-  ].sort((a, b) => {
+    ...upcomingTournaments,
+    ...activeTournaments,
+    ...completedTournaments
+  ].sort((a: any, b: any) => {
     const dateA = new Date(a.startDate);
     const dateB = new Date(b.startDate);
     const now = new Date();
@@ -126,12 +170,50 @@ export default function TournamentHistory() {
                   key={tournament.id} 
                   className="bg-muted overflow-hidden card-shadow hover:scale-105 transition-transform"
                 >
-                  {/* Tournament image placeholder */}
-                  <img 
-                    src="https://images.unsplash.com/photo-1551698618-1dfe5d97d256?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&h=300"
-                    alt="Tournament celebration" 
-                    className="w-full h-48 object-cover"
-                  />
+                  {/* Tournament image */}
+                  <div className="relative">
+                    <img 
+                      src={tournament.headerImageUrl || "https://images.unsplash.com/photo-1551698618-1dfe5d97d256?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&h=300"}
+                      alt="Tournament photo" 
+                      className="w-full h-48 object-cover"
+                    />
+                    {/* Delete button for tournament creator */}
+                    {user && tournament.createdBy === (user as any).id && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white"
+                            data-testid={`button-delete-tournament-${tournament.id}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Tournament</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete "{tournament.name}"? This action cannot be undone and will permanently remove all tournament data including scores, players, and photos.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => {
+                                setDeletingTournament(tournament.id);
+                                deleteTournamentMutation.mutate(tournament.id);
+                              }}
+                              className="bg-red-600 hover:bg-red-700"
+                              disabled={deletingTournament === tournament.id}
+                            >
+                              {deletingTournament === tournament.id ? "Deleting..." : "Delete Tournament"}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                  </div>
                   
                   <CardContent className="p-6">
                     <h3 className="text-xl font-serif font-bold text-accent mb-2">

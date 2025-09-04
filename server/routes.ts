@@ -702,6 +702,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/tournaments/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      
+      // First check if the tournament exists and if the user is the creator
+      const tournament = await storage.getTournament(req.params.id);
+      if (!tournament) {
+        return res.status(404).json({ message: "Tournament not found" });
+      }
+      
+      if (tournament.createdBy !== userId) {
+        return res.status(403).json({ message: "Only the tournament creator can delete this tournament" });
+      }
+      
+      await storage.deleteTournament(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting tournament:", error);
+      res.status(500).json({ message: "Failed to delete tournament" });
+    }
+  });
+
   app.post("/api/tournaments/:id/join", isAuthenticated, async (req, res) => {
     try {
       const userId = (req.user as any)?.claims?.sub;
