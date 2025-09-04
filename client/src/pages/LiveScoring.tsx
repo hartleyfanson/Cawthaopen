@@ -137,6 +137,7 @@ export default function LiveScoring() {
   const { data: existingScores } = useQuery({
     queryKey: ["/api/rounds", (currentRoundData as any)?.id, "scores"],
     enabled: !!(currentRoundData as any)?.id,
+    queryFn: () => fetch(`/api/rounds/${(currentRoundData as any)?.id}/scores`).then(res => res.json()),
   });
 
   const createRoundMutation = useMutation({
@@ -227,7 +228,7 @@ export default function LiveScoring() {
 
   // Load existing scores into cache when component mounts (for editing mode)
   useEffect(() => {
-    if (existingScores && holes && existingScores.length > 0) {
+    if (Array.isArray(existingScores) && Array.isArray(holes) && existingScores.length > 0) {
       const loadedScores = existingScores.map((score: any) => {
         const hole = holes.find((h: any) => h.id === score.holeId);
         return {
@@ -240,7 +241,7 @@ export default function LiveScoring() {
           powerupUsed: score.powerupUsed,
           powerupNotes: score.powerupNotes || "",
         };
-      }).filter(score => score.holeNumber).sort((a, b) => a.holeNumber - b.holeNumber);
+      }).filter(score => score.holeNumber).sort((a: any, b: any) => a.holeNumber - b.holeNumber);
       
       setCachedScores(loadedScores);
     }
@@ -304,7 +305,7 @@ export default function LiveScoring() {
       // Save all scores sequentially
       for (const score of allScores) {
         await createScoreMutation.mutateAsync({
-          roundId: roundToUse.id,
+          roundId: (roundToUse as any).id,
           holeId: score.holeId,
           strokes: score.strokes,
           putts: score.putts,
@@ -326,7 +327,7 @@ export default function LiveScoring() {
       // Invalidate caches to trigger real-time leaderboard updates
       queryClient.invalidateQueries({ queryKey: ["/api/tournaments", id, "leaderboard"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tournaments", id, "player-scores"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/rounds", roundToUse.id, "scores"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rounds", (roundToUse as any).id, "scores"] });
       
       // Navigate back to leaderboard
       setLocation(`/tournaments/${id}/leaderboard`);
@@ -335,6 +336,50 @@ export default function LiveScoring() {
       toast({
         title: "Error",
         description: "Failed to save round. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Save individual hole score and move to next hole
+  const saveHoleScore = async () => {
+    if (!currentHoleData) return;
+    
+    try {
+      let roundToUse = currentRoundData;
+      
+      if (!roundToUse) {
+        // Create round first
+        roundToUse = await createRoundMutation.mutateAsync({
+          tournamentId: id,
+          roundNumber: selectedRound,
+        });
+      }
+
+      // Save the current hole score
+      await createScoreMutation.mutateAsync({
+        roundId: (roundToUse as any).id,
+        holeId: currentHoleData.id,
+        strokes,
+        putts,
+        fairwayHit: currentHoleData.par === 3 ? false : fairwayHit,
+        greenInRegulation,
+        powerupUsed,
+        powerupNotes: powerupUsed ? powerupNotes : "",
+      });
+
+      // Cache this score for local navigation
+      cacheScoreAndContinue();
+      
+      toast({
+        title: "Score Saved",
+        description: `Hole ${currentHole} score saved successfully`,
+      });
+      
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save score. Please try again.",
         variant: "destructive",
       });
     }
@@ -374,11 +419,11 @@ export default function LiveScoring() {
           <div className="text-center mb-8">
             <h2 className="text-3xl font-serif font-bold text-accent mb-2">Live Scoring</h2>
             <p className="text-xl text-muted-foreground">
-              {tournament?.name} • Round {selectedRound}
+              {(tournament as any)?.name} • Round {selectedRound}
             </p>
             
             {/* Round Selection - show only if tournament has multiple rounds */}
-            {tournamentRounds && Array.isArray(tournamentRounds) && tournamentRounds.length > 1 && (
+            {Array.isArray(tournamentRounds) && tournamentRounds.length > 1 && (
               <div className="flex justify-center mt-4">
                 <div className="flex bg-background rounded-lg p-1 shadow-sm">
                   {tournamentRounds.map((round: any) => (
@@ -553,7 +598,7 @@ export default function LiveScoring() {
                 </Button>
                 
                 <div className="text-center text-sm text-muted-foreground">
-                  {existingScores?.length > 0 ? 'Editing Mode' : `Hole ${cachedScores.length}/18 scored`}
+                  {Array.isArray(existingScores) && existingScores.length > 0 ? 'Editing Mode' : `Hole ${cachedScores.length}/18 scored`}
                 </div>
                 
                 {currentHole === 18 ? (
@@ -566,16 +611,28 @@ export default function LiveScoring() {
                     {createScoreMutation.isPending ? "Saving Round..." : "Save & Complete Round"}
                   </Button>
                 ) : (
-                  <Button
-                    onClick={cacheScoreAndContinue}
-                    size="sm"
-                    className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm bg-secondary text-secondary-foreground hover:bg-accent"
-                    data-testid="button-next-hole"
-                  >
-                    <span className="hidden sm:inline">Next Hole</span>
-                    <span className="sm:hidden">Next</span>
-                    <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
-                  </Button>
+                  <div className="flex space-x-2">
+                    <Button
+                      onClick={saveHoleScore}
+                      disabled={createScoreMutation.isPending}
+                      size="sm"
+                      variant="outline"
+                      className="flex items-center space-x-1 px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm"
+                      data-testid="button-save-hole"
+                    >
+                      {createScoreMutation.isPending ? "Saving..." : "Save Hole"}
+                    </Button>
+                    <Button
+                      onClick={cacheScoreAndContinue}
+                      size="sm"
+                      className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm bg-secondary text-secondary-foreground hover:bg-accent"
+                      data-testid="button-next-hole"
+                    >
+                      <span className="hidden sm:inline">Next Hole</span>
+                      <span className="sm:hidden">Next</span>
+                      <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
+                    </Button>
+                  </div>
                 )}
               </div>
             </CardContent>
