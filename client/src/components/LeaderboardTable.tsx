@@ -644,7 +644,7 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
                 white: 'bg-gray-300 text-gray-900 border-gray-400',
                 blue: 'bg-blue-300 text-blue-900 border-blue-400',
                 red: 'bg-red-300 text-red-900 border-red-400', 
-                gold: 'bg-yellow-300 text-yellow-900 border-yellow-400'
+                gold: 'bg-amber-300 text-amber-900 border-amber-400'
               };
               const teeColorClass = teeColorClasses[teeColor] || teeColorClasses.white;
               
