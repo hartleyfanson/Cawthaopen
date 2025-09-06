@@ -173,12 +173,12 @@ export function MultiSkillTreeManager({ playerId }: MultiSkillTreeManagerProps) 
       {/* Selected Category Skill Tree */}
       {selectedCategoryData && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
-          <div className={`bg-gradient-to-r ${selectedCategoryData.color} text-white p-6`}>
+          <div className={`bg-gradient-to-r ${selectedCategoryData.color} text-white p-4`}>
             <div className="flex items-center gap-3">
-              <selectedCategoryData.icon className="w-8 h-8" />
-              <div>
-                <h3 className="text-2xl font-bold">{selectedCategoryData.name}</h3>
-                <p className="text-white/90 mt-1">{selectedCategoryData.description}</p>
+              <selectedCategoryData.icon className="w-6 h-6 flex-shrink-0" />
+              <div className="min-w-0">
+                <h3 className="text-xl font-bold leading-tight">{selectedCategoryData.name}</h3>
+                <p className="text-white/90 mt-1 text-sm leading-tight">{selectedCategoryData.description}</p>
               </div>
             </div>
           </div>
