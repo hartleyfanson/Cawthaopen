@@ -221,7 +221,7 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
     let adjustedTotalScore = 0;
 
     for (let holeNumber = 1; holeNumber <= 18; holeNumber++) {
-      const holeScore = playerData.scores[holeNumber];
+      const holeScore = playerData.scores?.[holeNumber];
       if (holeScore?.strokes) {
         const hole = allHoles.find((h: any) => h.holeNumber === holeNumber);
         const doublePar = hole ? hole.par * 2 : 8; // Default double par if hole not found
@@ -318,7 +318,7 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
     if (!playerData) return [];
     
     return displayHoles.map((hole: any) => {
-      const scoreData = playerData.scores[hole.holeNumber];
+      const scoreData = playerData.scores?.[hole.holeNumber];
       return {
         holeId: hole.id,
         score: scoreData?.strokes || null,
@@ -540,7 +540,7 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
             const holesCompleted = playerData?.holesCompleted || 0;
             
             // Calculate par for completed holes only (partial round support)
-            const completedHolePars = Object.keys(playerData.scores || {}).map(holeNum => {
+            const completedHolePars = Object.keys(playerData?.scores || {}).map(holeNum => {
               const hole = allHoles.find((h: any) => h.holeNumber === parseInt(holeNum));
               return hole ? hole.par : 0;
             });

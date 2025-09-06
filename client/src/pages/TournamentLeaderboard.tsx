@@ -451,9 +451,6 @@ export default function TournamentLeaderboard() {
                           <div className="font-semibold text-foreground">
                             {player.player?.firstName || 'Player'} {player.player?.lastName || ''}
                           </div>
-                          <div className="text-sm text-muted-foreground">
-                            Tees: {player.teeSelection || 'White'}
-                          </div>
                         </div>
                       </div>
                       <div className="text-sm text-muted-foreground">
