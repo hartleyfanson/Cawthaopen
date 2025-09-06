@@ -641,10 +641,10 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
               const teeSelection = teeSelections.find((tee: any) => tee.holeNumber === hole.holeNumber);
               const teeColor = teeSelection?.teeColor || 'white';
               const teeColorClasses: Record<string, string> = {
-                white: 'bg-gray-100 text-gray-800 border-gray-300',
-                blue: 'bg-blue-100 text-blue-800 border-blue-300',
-                red: 'bg-red-100 text-red-800 border-red-300', 
-                gold: 'bg-yellow-100 text-yellow-800 border-yellow-300'
+                white: 'bg-gray-300 text-gray-900 border-gray-400',
+                blue: 'bg-blue-300 text-blue-900 border-blue-400',
+                red: 'bg-red-300 text-red-900 border-red-400', 
+                gold: 'bg-yellow-300 text-yellow-900 border-yellow-400'
               };
               const teeColorClass = teeColorClasses[teeColor] || teeColorClasses.white;
               

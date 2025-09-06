@@ -273,9 +273,17 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
       const playerName = `${(playerData as any)?.firstName || 'Player'} ${(playerData as any)?.lastName || ''}`.trim();
       ctx.fillText(playerName, canvas.width / 2, playerY);
 
-      // Score summary (large centered display) - using same calculation as leaderboard
-      const coursePar = Array.isArray(holes) ? holes.reduce((sum: number, hole: any) => sum + (hole.par || hole.holes?.par), 0) : 72;
-      const scoreToPar = totalStrokes > 0 ? totalStrokes - coursePar : 0;
+      // Score summary (large centered display) - calculate par for completed holes only
+      const completedScores = Object.values(currentPlayerRoundData.scores || {});
+      const completedHolePars = completedScores.map((scoreData: any) => {
+        const actualScore = scoreData.scores || scoreData;
+        const hole = Array.isArray(holes) ? holes.find((h: any) => (h.id || h.holes?.id) === actualScore.holeId) : null;
+        return hole ? (hole.par || hole.holes?.par) : 0;
+      });
+      const completedHolesTotalPar = completedHolePars.reduce((sum: number, par: number) => sum + par, 0);
+      const holesCompleted = completedScores.length;
+      
+      const scoreToPar = totalStrokes > 0 && holesCompleted > 0 ? totalStrokes - completedHolesTotalPar : 0;
       const scoreText = scoreToPar === 0 ? 'EVEN' : 
                        scoreToPar > 0 ? `+${scoreToPar}` : 
                        `${scoreToPar}`;
@@ -285,10 +293,10 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
       ctx.textAlign = 'center';
       ctx.fillText(scoreText, canvas.width / 2, playerY + 70);
 
-      // Total score (centered below main score)
+      // Total score and holes played (centered below main score)
       ctx.fillStyle = '#666666';
       ctx.font = '28px sans-serif';
-      ctx.fillText(`Total: ${totalStrokes}`, canvas.width / 2, playerY + 105);
+      ctx.fillText(`Total: ${totalStrokes} (${holesCompleted} holes)`, canvas.width / 2, playerY + 105);
 
       // Calculate fairway stats (only par 4s and 5s count)
       const par4And5Holes = Array.isArray(holes) ? holes.filter((hole: any) => (hole.par || hole.holes?.par) === 4 || (hole.par || hole.holes?.par) === 5) : [];
