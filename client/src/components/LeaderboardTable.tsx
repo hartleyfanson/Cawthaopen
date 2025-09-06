@@ -672,8 +672,15 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
           const holeScores = getPlayerHoleScores(player.playerId);
           
           const totalScore = playerData?.totalScore || 0;
-          const totalPar = allHoles.reduce((sum: number, hole: any) => sum + hole.par, 0);
-          const scoreToPar = totalScore > 0 ? totalScore - totalPar : 0;
+          const holesCompleted = playerData?.holesCompleted || 0;
+          
+          // Calculate par for completed holes only (partial round support)
+          const completedHolePars = Object.keys(playerData?.scores || {}).map(holeNum => {
+            const hole = allHoles.find((h: any) => h.holeNumber === parseInt(holeNum));
+            return hole ? hole.par : 0;
+          });
+          const completedHolesTotalPar = completedHolePars.reduce((sum: number, par: number) => sum + par, 0);
+          const scoreToPar = totalScore > 0 && holesCompleted > 0 ? totalScore - completedHolesTotalPar : 0;
           const isLeader = index === 0 && totalScore > 0;
           
           return (
@@ -693,13 +700,13 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
                       {index + 1}
                     </div>
                     <div>
-                      <div className={`font-semibold ${
+                      <div className={`font-semibold text-sm ${
                         isLeader ? 'text-primary' : 'text-foreground'
                       }`} data-testid={`text-player-name-${player.playerId}`}>
                         {formatPlayerName(player.playerName)}
                       </div>
                       {totalScore > 0 && (
-                        <div className="text-sm text-muted-foreground">
+                        <div className="text-xs text-muted-foreground">
                           {scoreToPar === 0 ? 'E' : scoreToPar > 0 ? `+${scoreToPar}` : scoreToPar} ({totalScore})
                         </div>
                       )}

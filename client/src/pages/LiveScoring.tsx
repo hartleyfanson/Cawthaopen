@@ -731,7 +731,13 @@ export default function LiveScoring() {
                     <span className="font-medium text-foreground">Green in Regulation</span>
                     <Switch
                       checked={greenInRegulation}
-                      onCheckedChange={setGreenInRegulation}
+                      onCheckedChange={(checked) => {
+                        // Only allow GIR if putts > 0 (or if unchecking)
+                        if (!checked || (putts !== null && putts > 0)) {
+                          setGreenInRegulation(checked);
+                        }
+                      }}
+                      disabled={putts === 0}
                       data-testid="switch-gir"
                     />
                   </div>
