@@ -3,6 +3,7 @@ import { useParams } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigation } from "@/components/Navigation";
 import { LeaderboardTable } from "@/components/LeaderboardTable";
+import { RoundScorecard } from "@/components/RoundScorecard";
 import { ShareScorecard } from "@/components/ShareScorecard";
 import { FutureTournamentView } from "@/components/FutureTournamentView";
 import { Card, CardContent } from "@/components/ui/card";
@@ -422,6 +423,18 @@ export default function TournamentLeaderboard() {
                 selectedRound={selectedRound}
                 tournamentRounds={tournamentRounds as any[]}
               />
+              
+              {/* Show detailed round scorecard for specific rounds in multi-round tournaments */}
+              {selectedRound !== 'all' && typeof selectedRound === 'number' && (
+                <div className="mt-8">
+                  <RoundScorecard 
+                    tournamentId={id || ''}
+                    selectedRound={selectedRound}
+                    courseId={currentCourseId}
+                  />
+                </div>
+              )}
+              
               <PowerupComments 
                 tournamentId={id || ''}
                 selectedRound={selectedRound}
