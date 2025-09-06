@@ -250,6 +250,7 @@ export default function LiveScoring() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rounds"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rounds", id, "completion-status"] });
       toast({
         title: "Score Saved",
         description: `Hole ${currentHole} score saved successfully`,
@@ -281,6 +282,7 @@ export default function LiveScoring() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rounds"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rounds", id, "completion-status"] });
       toast({
         title: "Score Updated",
         description: `Hole ${currentHole} score updated successfully`,
@@ -532,10 +534,11 @@ export default function LiveScoring() {
         // Clear saved scoring state since round is complete
         clearSavedState();
         
-        // Invalidate caches to trigger real-time leaderboard updates
+        // Invalidate caches to trigger real-time leaderboard updates and round completion status
         queryClient.invalidateQueries({ queryKey: ["/api/tournaments", id, "leaderboard"] });
         queryClient.invalidateQueries({ queryKey: ["/api/tournaments", id, "player-scores"] });
         queryClient.invalidateQueries({ queryKey: ["/api/rounds"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/rounds", id, "completion-status"] });
         
         // Navigate back to leaderboard
         setLocation(`/tournaments/${id}/leaderboard`);
