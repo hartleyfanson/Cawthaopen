@@ -477,8 +477,7 @@ export default function LiveScoring() {
             roundNumber: selectedRound,
           });
           
-          // Wait a moment for the round to be fully created
-          await new Promise(resolve => setTimeout(resolve, 100));
+          // Round created successfully, no need to wait
         } catch (error) {
           console.error("Error creating round:", error);
           throw error;
