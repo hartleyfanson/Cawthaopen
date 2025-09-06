@@ -88,9 +88,18 @@ export function MultiSkillTreeManager({ playerId }: MultiSkillTreeManagerProps) 
       achievements: achievements.filter(a =>
         a.condition === 'greens_in_regulation' ||
         a.condition === 'approach_accuracy' ||
+        a.condition === 'smart_course_management' ||
+        a.condition === 'hazard_avoidance' ||
+        a.condition === 'club_selection_mastery' ||
+        a.condition === 'recovery_shot_expert' ||
+        a.condition === 'wind_management' ||
+        a.condition === 'course_knowledge' ||
+        a.condition === 'multiple_birdies_tournament' ||
         a.category === 'strategy' ||
         a.name.toLowerCase().includes('strategy') ||
-        a.name.toLowerCase().includes('course management')
+        a.name.toLowerCase().includes('course management') ||
+        a.name.toLowerCase().includes('smart') ||
+        a.name.toLowerCase().includes('tactical')
       )
     },
     {
@@ -103,7 +112,6 @@ export function MultiSkillTreeManager({ playerId }: MultiSkillTreeManagerProps) 
         a.condition === 'first_tournament' ||
         a.condition === 'tournament_win' ||
         a.condition === 'tournament_count' ||
-        a.condition === 'multiple_birdies_tournament' ||
         a.category === 'tournament' ||
         a.category === 'milestone'
       )

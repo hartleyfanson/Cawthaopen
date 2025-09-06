@@ -1037,6 +1037,81 @@ export class DatabaseStorage implements IStorage {
         value: 50,
         rarity: 'legendary',
         points: 150
+      },
+      // Course Strategy achievements
+      {
+        name: 'Smart Player',
+        description: 'Avoid all water hazards and bunkers in a single round',
+        badgeIcon: 'Target',
+        badgeColor: 'blue',
+        category: 'strategy',
+        condition: 'hazard_avoidance',
+        rarity: 'rare',
+        points: 25
+      },
+      {
+        name: 'Course Tactician',
+        description: 'Play a strategic round with no penalty strokes',
+        badgeIcon: 'Crosshair',
+        badgeColor: 'purple',
+        category: 'strategy',
+        condition: 'smart_course_management',
+        rarity: 'rare',
+        points: 30
+      },
+      {
+        name: 'Recovery Artist',
+        description: 'Successfully recover from 3+ difficult lies in one round',
+        badgeIcon: 'RefreshCw',
+        badgeColor: 'orange',
+        category: 'strategy',
+        condition: 'recovery_shot_expert',
+        value: 3,
+        rarity: 'epic',
+        points: 35
+      },
+      {
+        name: 'Wind Whisperer',
+        description: 'Play a round in windy conditions (15+ mph) without losing a ball',
+        badgeIcon: 'Wind',
+        badgeColor: 'gray',
+        category: 'strategy',
+        condition: 'wind_management',
+        rarity: 'rare',
+        points: 25
+      },
+      {
+        name: 'Local Knowledge',
+        description: 'Play the same course 10 times and improve your score by 10+ strokes',
+        badgeIcon: 'Map',
+        badgeColor: 'green',
+        category: 'strategy',
+        condition: 'course_knowledge',
+        value: 10,
+        rarity: 'common',
+        points: 20
+      },
+      {
+        name: 'Club Selection Master',
+        description: 'Hit 14+ greens in regulation using optimal club selection',
+        badgeIcon: 'Target',
+        badgeColor: 'gold',
+        category: 'strategy',
+        condition: 'club_selection_mastery',
+        value: 14,
+        rarity: 'epic',
+        points: 40
+      },
+      {
+        name: 'Strategic Birdie Hunter',
+        description: 'Score 5+ birdies in a single tournament using smart course management',
+        badgeIcon: 'Crosshair',
+        badgeColor: 'yellow',
+        category: 'strategy',
+        condition: 'multiple_birdies_tournament',
+        value: 5,
+        rarity: 'epic',
+        points: 40
       }
     ];
 
