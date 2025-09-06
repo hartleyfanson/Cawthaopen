@@ -36,13 +36,8 @@ export function MultiSkillTreeManager({ playerId }: MultiSkillTreeManagerProps) 
       color: "from-yellow-600 to-yellow-400",
       description: "Master the art of low scoring and breakthrough performances",
       achievements: achievements.filter(a => 
-        a.condition === 'score_69' || 
-        a.condition === 'under_par_round' ||
-        a.condition === 'eagle' ||
-        a.condition === 'birdie' ||
-        a.condition === 'hole_in_one' ||
         a.condition === 'score_under_threshold' ||
-        a.category === 'scoring'
+        a.condition === 'under_par_round'
       )
     },
     {
@@ -59,6 +54,8 @@ export function MultiSkillTreeManager({ playerId }: MultiSkillTreeManagerProps) 
         a.condition === 'fairways_in_regulation' ||
         a.condition === 'two_putt_master' ||
         a.condition === 'one_putt_master' ||
+        a.condition === 'birdie' ||
+        a.condition === 'eagle' ||
         a.category === 'consistency' ||
         a.name.toLowerCase().includes('consistency') ||
         a.name.toLowerCase().includes('fairway finder') ||
@@ -75,12 +72,11 @@ export function MultiSkillTreeManager({ playerId }: MultiSkillTreeManagerProps) 
       color: "from-green-600 to-green-400",
       description: "Perfect your touch on the greens",
       achievements: achievements.filter(a =>
-        a.condition === 'two_putt_master' ||
-        a.condition === 'one_putt_master' ||
         a.condition === 'low_putts_round' ||
         a.category === 'putting' ||
-        a.name.toLowerCase().includes('putt') ||
-        a.description.toLowerCase().includes('putt')
+        (a.name.toLowerCase().includes('putt') && 
+         !a.name.toLowerCase().includes('one putt wonder') &&
+         !a.name.toLowerCase().includes('two putt master'))
       )
     },
     {
@@ -125,6 +121,9 @@ export function MultiSkillTreeManager({ playerId }: MultiSkillTreeManagerProps) 
         a.condition === 'extreme_score' ||
         a.condition === 'birdie_and_triple_bogey' ||
         a.condition === 'consecutive_double_bogeys' ||
+        a.condition === 'score_69' ||
+        a.condition === 'hole_in_one' ||
+        a.condition === 'albatross' ||
         a.category === 'special' ||
         a.name.toLowerCase().includes('weather') ||
         a.name.toLowerCase().includes('speed') ||
