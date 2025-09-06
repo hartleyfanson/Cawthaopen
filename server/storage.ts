@@ -719,7 +719,7 @@ export class DatabaseStorage implements IStorage {
     const totalPutts = userScores.reduce((total, score) => total + (score.scores.putts || 0), 0);
 
     return {
-      totalRounds: userRounds.length,
+      totalRounds: userRounds.filter(round => round.rounds.totalStrokes !== null && round.rounds.totalStrokes !== undefined).length,
       averageScore: averageScore.toFixed(1),
       bestRound: {
         score: bestRoundData.rounds.totalStrokes,
