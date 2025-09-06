@@ -624,7 +624,20 @@ export default function LiveScoring() {
                     // Check if previous rounds are completed
                     const isPreviousRoundCompleted = round.roundNumber === 1 || 
                       (roundCompletionData && roundCompletionData[round.roundNumber - 1]);
-                    const canAccessRound = isPreviousRoundCompleted;
+                    
+                    // Check if this round itself is completed (should be locked for editing)
+                    const isThisRoundCompleted = roundCompletionData && roundCompletionData[round.roundNumber];
+                    
+                    // Can access round if: previous rounds are complete AND this round is not yet completed
+                    const canAccessRound = isPreviousRoundCompleted && !isThisRoundCompleted;
+                    
+                    // Show reason for lock
+                    let lockReason = "";
+                    if (!isPreviousRoundCompleted) {
+                      lockReason = `Complete Round ${round.roundNumber - 1} first`;
+                    } else if (isThisRoundCompleted) {
+                      lockReason = `Round ${round.roundNumber} is completed and locked`;
+                    }
                     
                     return (
                       <Button
@@ -641,11 +654,13 @@ export default function LiveScoring() {
                               : "text-muted-foreground/50 cursor-not-allowed"
                         }`}
                         data-testid={`button-round-${round.roundNumber}`}
-                        title={!canAccessRound ? `Complete Round ${round.roundNumber - 1} first` : undefined}
+                        title={!canAccessRound ? lockReason : undefined}
                       >
                         Round {round.roundNumber}
-                        {!canAccessRound && round.roundNumber > 1 && (
-                          <span className="ml-1 text-xs">🔒</span>
+                        {!canAccessRound && (
+                          <span className="ml-1 text-xs">
+                            {isThisRoundCompleted ? "✅" : "🔒"}
+                          </span>
                         )}
                       </Button>
                     );
@@ -655,40 +670,62 @@ export default function LiveScoring() {
             )}
           </div>
           
-          <Card className="bg-background card-shadow">
-            {/* Hole Header */}
-            <div className="flex justify-between items-center mb-6 p-4 bg-primary rounded-t-lg">
-              <div>
-                <h3 className="text-2xl font-bold text-accent" data-testid="text-hole-number">
-                  Hole {currentHole}
-                </h3>
-                <p className="text-muted-foreground">
-                  Par {currentHoleData?.par} • {currentYardage} yards • {formatTeeColor(currentTeeColor)}
-                </p>
-              </div>
-              <div className="text-right">
-                <div className="text-sm text-muted-foreground">Your Score</div>
-                <div className="text-3xl font-bold text-accent" data-testid="text-current-score">
-                  {strokes}
+          {/* Check if current round is completed and locked */}
+          {roundCompletionData && roundCompletionData[selectedRound] ? (
+            <Card className="bg-background card-shadow">
+              <CardContent className="p-8 text-center">
+                <div className="mb-4">
+                  <span className="text-6xl">✅</span>
                 </div>
-                {/* Round Progress */}
-                {roundProgress.holesCompleted > 0 && (
-                  <div className="text-xs text-muted-foreground mt-1">
-                    After {roundProgress.holesCompleted} holes: {' '}
-                    <span className={`font-medium ${
-                      roundProgress.scoreToPar === 0 ? 'text-gray-400' :
-                      roundProgress.scoreToPar < 0 ? 'text-green-400' : 'text-red-400'
-                    }`}>
-                      {roundProgress.scoreToPar === 0 ? 'E' : 
-                       roundProgress.scoreToPar > 0 ? `+${roundProgress.scoreToPar}` : 
-                       roundProgress.scoreToPar}
-                    </span>
+                <h3 className="text-2xl font-bold text-accent mb-2">
+                  Round {selectedRound} Complete
+                </h3>
+                <p className="text-muted-foreground mb-4">
+                  You have completed all 18 holes for Round {selectedRound}. This round is now locked and cannot be edited.
+                </p>
+                <Link href={`/tournaments/${id}/leaderboard`}>
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Leaderboard
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="bg-background card-shadow">
+              {/* Hole Header */}
+              <div className="flex justify-between items-center mb-6 p-4 bg-primary rounded-t-lg">
+                <div>
+                  <h3 className="text-2xl font-bold text-accent" data-testid="text-hole-number">
+                    Hole {currentHole}
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Par {currentHoleData?.par} • {currentYardage} yards • {formatTeeColor(currentTeeColor)}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm text-muted-foreground">Your Score</div>
+                  <div className="text-3xl font-bold text-accent" data-testid="text-current-score">
+                    {strokes}
                   </div>
-                )}
+                  {/* Round Progress */}
+                  {roundProgress.holesCompleted > 0 && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      After {roundProgress.holesCompleted} holes: {' '}
+                      <span className={`font-medium ${
+                        roundProgress.scoreToPar === 0 ? 'text-gray-400' :
+                        roundProgress.scoreToPar < 0 ? 'text-green-400' : 'text-red-400'
+                      }`}>
+                        {roundProgress.scoreToPar === 0 ? 'E' : 
+                         roundProgress.scoreToPar > 0 ? `+${roundProgress.scoreToPar}` : 
+                         roundProgress.scoreToPar}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-            
-            <CardContent>
+              
+              <CardContent>
               {/* Score Input */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
@@ -874,6 +911,7 @@ export default function LiveScoring() {
               </div>
             </CardContent>
           </Card>
+          )}
         </div>
       </section>
     </div>
