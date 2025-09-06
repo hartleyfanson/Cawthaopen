@@ -13,17 +13,26 @@ interface LeaderboardTableProps {
   tournamentRounds?: any[];
 }
 
-// Helper function to format player name as "first initial. last name"
-function formatPlayerName(playerName: string): string {
+// Helper function to format player name as "first initial. last name" with truncation for alignment
+function formatPlayerName(playerName: string, maxLength: number = 12): string {
   if (!playerName) return "";
   
   const parts = playerName.trim().split(" ");
-  if (parts.length < 2) return playerName;
+  if (parts.length < 2) {
+    // Single name - truncate if too long
+    return parts[0].length > maxLength ? parts[0].substring(0, maxLength - 1) + "…" : parts[0];
+  }
   
   const firstName = parts[0];
   const lastName = parts.slice(1).join(" ");
+  const formatted = `${firstName.charAt(0).toUpperCase()}. ${lastName}`;
   
-  return `${firstName.charAt(0).toUpperCase()}. ${lastName}`;
+  // Truncate if the formatted name is too long
+  if (formatted.length > maxLength) {
+    return formatted.substring(0, maxLength - 1) + "…";
+  }
+  
+  return formatted;
 }
 
 export function LeaderboardTable({ leaderboard, courseId, tournamentId, tournament, selectedRound = 'all', tournamentRounds = [] }: LeaderboardTableProps) {
