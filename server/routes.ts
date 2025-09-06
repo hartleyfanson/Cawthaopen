@@ -906,38 +906,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const scoreData = insertScoreSchema.parse(req.body);
       const score = await storage.createScore(scoreData);
       
-      // Get hole information for achievement checking
-      const hole = await storage.getHole(scoreData.holeId);
-      if (hole) {
-        // Check for individual hole achievements (hole-in-one, eagle, birdie, etc.)
-        await storage.checkAndAwardAchievements(userId, {
-          scoreData: {
-            strokes: score.strokes,
-            putts: score.putts,
-            holePar: hole.par,
-            fairwayHit: score.fairwayHit,
-            greenInRegulation: score.greenInRegulation,
-          },
-        });
-        
-        // Check if this completes a round for round-level achievements
-        const round = await storage.getRoundById(scoreData.roundId);
-        if (round) {
-          const roundAnalysis = await (storage as any).analyzeRoundData(round.id);
-          if (roundAnalysis && Object.keys(roundAnalysis).length > 0) {
+      // Return response immediately for fast user experience
+      res.status(201).json(score);
+      
+      // Run achievement checking asynchronously in background (non-blocking)
+      setImmediate(async () => {
+        try {
+          const hole = await storage.getHole(scoreData.holeId);
+          if (hole) {
+            // Check for individual hole achievements (hole-in-one, eagle, birdie, etc.)
             await storage.checkAndAwardAchievements(userId, {
-              roundData: {
-                ...roundAnalysis,
-                roundId: round.id,
-                totalStrokes: round.totalStrokes,
-                fairwaysHit: round.fairwaysHit,
+              scoreData: {
+                strokes: score.strokes,
+                putts: score.putts,
+                holePar: hole.par,
+                fairwayHit: score.fairwayHit,
+                greenInRegulation: score.greenInRegulation,
               },
             });
+            
+            // Check if this completes a round for round-level achievements
+            const round = await storage.getRoundById(scoreData.roundId);
+            if (round) {
+              const roundAnalysis = await (storage as any).analyzeRoundData(round.id);
+              if (roundAnalysis && Object.keys(roundAnalysis).length > 0) {
+                await storage.checkAndAwardAchievements(userId, {
+                  roundData: {
+                    ...roundAnalysis,
+                    roundId: round.id,
+                    totalStrokes: round.totalStrokes,
+                    fairwaysHit: round.fairwaysHit,
+                  },
+                });
+              }
+            }
           }
+        } catch (achievementError) {
+          console.error("Background achievement checking failed:", achievementError);
+          // Don't let achievement errors affect score saving
         }
-      }
+      });
       
-      res.status(201).json(score);
     } catch (error) {
       console.error("Error creating score:", error);
       res.status(500).json({ message: "Failed to create score" });
