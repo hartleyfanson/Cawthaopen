@@ -66,10 +66,23 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
     return selectedRound === 'all' && Array.isArray(tournamentRounds) && tournamentRounds.length > 1;
   }, [selectedRound, tournamentRounds]);
 
+  // Determine if we need to fetch single round data
+  const shouldFetchSingleRound = useMemo(() => {
+    const roundNum = parseInt(String(selectedRound));
+    return !isNaN(roundNum) && roundNum > 0;
+  }, [selectedRound]);
+
   // Fixed number of round queries to avoid hook order issues
   const maxRounds = 4; // Reasonable limit for tournament rounds
   const safeRounds = Array.isArray(tournamentRounds) ? tournamentRounds.slice(0, maxRounds) : [];
   
+  // Single round query for when viewing a specific round
+  const singleRoundQuery = useQuery({
+    queryKey: ["/api/tournaments", tournamentId, "leaderboard", "round", selectedRound],
+    enabled: shouldFetchSingleRound && !!tournamentId,
+    refetchInterval: 5000,
+  });
+
   // Create exactly maxRounds queries to maintain hook order
   const roundQuery1 = useQuery({
     queryKey: ["/api/tournaments", tournamentId, "leaderboard", "round", safeRounds[0]?.roundNumber],
@@ -332,17 +345,32 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
     });
   };
 
+  // Use round-specific data when viewing a specific round
+  const effectiveLeaderboard = shouldFetchSingleRound && singleRoundQuery.data
+    ? singleRoundQuery.data
+    : leaderboard;
+
   // Sort leaderboard by total score (lowest first)
   // Deduplicate leaderboard by playerId first, then sort
-  const uniqueLeaderboard = leaderboard.reduce((acc: any[], current: any) => {
-    const existingPlayer = acc.find(player => player.playerId === current.playerId);
-    if (!existingPlayer) {
-      acc.push(current);
-    }
-    return acc;
-  }, []);
+  const uniqueLeaderboard = Array.isArray(effectiveLeaderboard) 
+    ? effectiveLeaderboard.reduce((acc: any[], current: any) => {
+        const existingPlayer = acc.find(player => player.playerId === current.playerId);
+        if (!existingPlayer) {
+          acc.push(current);
+        }
+        return acc;
+      }, [])
+    : [];
 
   const sortedLeaderboard = [...uniqueLeaderboard].sort((a, b) => {
+    // For single round view, use the totalStrokes from the round data
+    if (shouldFetchSingleRound && singleRoundQuery.data) {
+      const scoreA = a.totalStrokes || 999;
+      const scoreB = b.totalStrokes || 999;
+      return scoreA - scoreB;
+    }
+    
+    // For multi-round view, use processedPlayerData
     const playerDataA = processedPlayerData[a.playerId];
     const playerDataB = processedPlayerData[b.playerId];
     
@@ -546,21 +574,41 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
         <h3 className="text-sm font-medium text-muted-foreground mb-3 text-center">ROUND SUMMARY</h3>
         <div className="space-y-2">
           {sortedLeaderboard.map((player: any, index: number) => {
-            const playerData = processedPlayerData[player.playerId];
-            const frontNineTotal = playerData?.frontNineTotal || 0;
-            const backNineTotal = playerData?.backNineTotal || 0;
-            const totalScore = playerData?.totalScore || 0;
-            const holesCompleted = playerData?.holesCompleted || 0;
+            // For single round view, use round-specific data; for multi-round, use processedPlayerData
+            let frontNineTotal, backNineTotal, totalScore, holesCompleted, scoreToPar, netScore;
             
-            // Calculate par for completed holes only (partial round support)
-            const completedHolePars = Object.keys(playerData?.scores || {}).map(holeNum => {
-              const hole = allHoles.find((h: any) => h.holeNumber === parseInt(holeNum));
-              return hole ? hole.par : 0;
-            });
-            const completedHolesTotalPar = completedHolePars.reduce((sum: number, par: number) => sum + par, 0);
-            const scoreToPar = totalScore > 0 && holesCompleted > 0 ? totalScore - completedHolesTotalPar : 0;
+            if (shouldFetchSingleRound && singleRoundQuery.data) {
+              // Use round-specific data from API
+              totalScore = player.totalStrokes || 0;
+              frontNineTotal = 0; // Will be calculated from individual scores if needed
+              backNineTotal = 0;  // Will be calculated from individual scores if needed
+              holesCompleted = 18; // Assume complete round for round-specific data
+              
+              // Calculate score to par for this round
+              const coursePar = allHoles.reduce((sum: number, hole: any) => sum + (hole.par || 0), 0);
+              scoreToPar = totalScore > 0 ? totalScore - coursePar : 0;
+              
+              // Calculate net score for single round
+              netScore = calculateNetScore(totalScore, player.playerId);
+            } else {
+              // Use multi-round data
+              const playerData = processedPlayerData[player.playerId];
+              frontNineTotal = playerData?.frontNineTotal || 0;
+              backNineTotal = playerData?.backNineTotal || 0;
+              totalScore = playerData?.totalScore || 0;
+              holesCompleted = playerData?.holesCompleted || 0;
+              
+              // Calculate par for completed holes only (partial round support)
+              const completedHolePars = Object.keys(playerData?.scores || {}).map(holeNum => {
+                const hole = allHoles.find((h: any) => h.holeNumber === parseInt(holeNum));
+                return hole ? hole.par : 0;
+              });
+              const completedHolesTotalPar = completedHolePars.reduce((sum: number, par: number) => sum + par, 0);
+              scoreToPar = totalScore > 0 && holesCompleted > 0 ? totalScore - completedHolesTotalPar : 0;
+              netScore = holesCompleted >= 18 ? calculateNetScore(totalScore, player.playerId) : null;
+            }
+            
             const isLeader = index === 0 && totalScore > 0;
-            const netScore = holesCompleted >= 18 ? calculateNetScore(totalScore, player.playerId) : null;
             
             return (
               <div key={`summary-${player.playerId}`} className={`p-3 rounded-lg ${isLeader ? 'bg-primary/20 border border-primary/30' : 'bg-background/60'}`}>
