@@ -873,7 +873,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         playerId: userId,
       });
-      const round = await storage.createRound(roundData);
+      const round = await storage.findOrCreateRound(roundData);
       res.status(201).json(round);
     } catch (error) {
       console.error("Error creating round:", error);
