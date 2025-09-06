@@ -99,7 +99,7 @@ export default function LiveScoring() {
       setPowerupNotes('');
       setCachedScores([]);
     }
-  }, [id, user?.id, storageKey, selectedRound]);
+  }, [id, (user as any)?.id, storageKey, selectedRound]);
 
   // Reset scoring state when round changes (ensures fresh start for each round)
   useEffect(() => {
