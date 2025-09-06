@@ -149,7 +149,7 @@ export function MultiSkillTreeManager({ playerId }: MultiSkillTreeManagerProps) 
               <Button
                 key={category.id}
                 variant={isSelected ? "default" : "outline"}
-                className={`h-auto p-4 flex flex-col items-center gap-2 transition-all duration-200 ${
+                className={`h-auto p-3 flex flex-col items-center gap-1 transition-all duration-200 ${
                   isSelected 
                     ? `bg-gradient-to-r ${category.color} text-white border-0` 
                     : "hover:shadow-md"
@@ -158,7 +158,7 @@ export function MultiSkillTreeManager({ playerId }: MultiSkillTreeManagerProps) 
                 data-testid={`category-${category.id}`}
               >
                 <IconComponent className="w-6 h-6" />
-                <span className="text-sm font-medium text-center leading-tight">
+                <span className="text-xs font-medium text-center leading-tight px-1">
                   {category.name}
                 </span>
                 <span className="text-xs opacity-75">

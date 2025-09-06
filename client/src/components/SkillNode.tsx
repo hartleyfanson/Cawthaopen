@@ -77,9 +77,7 @@ export function SkillNode({ achievement, isUnlocked, onClick, rarity, position }
     <button
       className={`group relative flex flex-col items-center justify-center ${config.size} rounded-xl cursor-pointer transition-all duration-700 hover:scale-110 hover:rotate-1 focus:outline-none focus:ring-4 focus:ring-blue-500/50 ${config.borderClass} ${config.bgGradient} backdrop-blur-sm`}
       style={{
-        position: 'absolute',
-        left: `${position.x}px`,
-        top: `${position.y}px`,
+        position: 'relative',
         filter: isUnlocked ? 'none' : 'grayscale(1) opacity(0.6)',
       }}
       onClick={onClick}
