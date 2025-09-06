@@ -74,6 +74,7 @@ export interface IStorage {
   getTournamentLeaderboard(tournamentId: string): Promise<any[]>;
   getTournamentRoundLeaderboard(tournamentId: string, roundNumber: number): Promise<any[]>;
   getTournamentPlayerScores(tournamentId: string): Promise<any[]>;
+  isRoundCompleted(tournamentId: string, playerId: string, roundNumber: number): Promise<boolean>;
   
   // Gallery operations
   createGalleryPhoto(photo: InsertGalleryPhoto): Promise<GalleryPhoto>;
@@ -305,6 +306,27 @@ export class DatabaseStorage implements IStorage {
         )
       );
     return round;
+  }
+
+  async isRoundCompleted(
+    tournamentId: string,
+    playerId: string,
+    roundNumber: number
+  ): Promise<boolean> {
+    // First get the round
+    const round = await this.getRound(tournamentId, playerId, roundNumber);
+    if (!round) {
+      return false; // No round exists, so it's not completed
+    }
+
+    // Get the number of scores recorded for this round
+    const roundScores = await db
+      .select()
+      .from(scores)
+      .where(eq(scores.roundId, round.id));
+
+    // A round is completed when it has 18 scores (one for each hole)
+    return roundScores.length === 18;
   }
 
   async createScore(score: InsertScore): Promise<Score> {

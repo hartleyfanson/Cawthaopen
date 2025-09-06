@@ -900,6 +900,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/rounds/:tournamentId/:roundNumber/completed", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      const roundNumber = parseInt(req.params.roundNumber);
+      if (isNaN(roundNumber)) {
+        return res.status(400).json({ message: "Invalid round number" });
+      }
+      const isCompleted = await storage.isRoundCompleted(
+        req.params.tournamentId,
+        userId,
+        roundNumber
+      );
+      res.json({ isCompleted });
+    } catch (error) {
+      console.error("Error checking round completion:", error);
+      res.status(500).json({ message: "Failed to check round completion" });
+    }
+  });
+
   app.post("/api/scores", isAuthenticated, async (req, res) => {
     try {
       const userId = (req.user as any)?.claims?.sub;
