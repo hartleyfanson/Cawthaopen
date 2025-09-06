@@ -70,6 +70,27 @@ export default function LiveScoring() {
     }
   }, [id, user?.id, storageKey]);
 
+  // Auto-create round when entering live scoring (to fix first-hole save issue)
+  useEffect(() => {
+    if (!id || !(user as any)?.id || isLoading || !isAuthenticated) return;
+    
+    // Only auto-create if we don't have a current round already
+    if (!currentRoundData && tournament && user) {
+      const autoCreateRound = async () => {
+        try {
+          await createRoundMutation.mutateAsync({
+            tournamentId: id,
+            roundNumber: selectedRound,
+          });
+        } catch (error) {
+          console.log('Could not auto-create round:', error);
+        }
+      };
+      
+      autoCreateRound();
+    }
+  }, [id, (user as any)?.id, currentRoundData, tournament, user, selectedRound, isLoading, isAuthenticated, createRoundMutation]);
+
   // Save scoring state to local storage whenever it changes
   useEffect(() => {
     if (!id || !(user as any)?.id) return;
@@ -725,13 +746,6 @@ export default function LiveScoring() {
                 </div>
               </div>
               
-              {/* Auto-correction indicator */}
-              {strokes !== null && putts !== null && currentHoleData && (
-                <div className="mt-2 text-xs text-green-600 flex items-center gap-1">
-                  <span>✓</span>
-                  <span>Golf rules auto-applied</span>
-                </div>
-              )}
 
               {/* Powerup Notes */}
               {powerupUsed && (
