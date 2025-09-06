@@ -26,6 +26,58 @@ export default function LiveScoring() {
   const [greenInRegulation, setGreenInRegulation] = useState(false);
   const [powerupUsed, setPowerupUsed] = useState(false);
   const [powerupNotes, setPowerupNotes] = useState("");
+  const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
+  
+  // Golf scoring validation functions
+  const validateGolfScore = (strokes: number, putts: number, par: number, gir: boolean) => {
+    const warnings: string[] = [];
+    
+    // Basic validation
+    if (strokes < 1 || strokes > 10) {
+      warnings.push("Score should be between 1-10 strokes");
+    }
+    
+    if (putts < 0 || putts > 6) {
+      warnings.push("Putts should be between 0-6");
+    }
+    
+    if (putts > strokes) {
+      warnings.push("Putts cannot exceed total strokes");
+    }
+    
+    // GIR logic validation
+    const shotsToGreen = strokes - putts;
+    const girRequired = par - 2; // Par 3: 1 shot, Par 4: 2 shots, Par 5: 3 shots
+    const actualGIR = shotsToGreen <= girRequired;
+    
+    if (gir && !actualGIR) {
+      warnings.push(`Green in regulation requires reaching green in ${girRequired} shots or less`);
+    }
+    
+    // Specific validation rules
+    if (!gir && strokes === par && putts === 2) {
+      warnings.push("If you didn't hit GIR but made par, you likely couldn't have 2 putts (would need chip/pitch + 1 putt)");
+    }
+    
+    if (gir && putts === 0) {
+      warnings.push("If you hit GIR with 0 putts, you likely holed out from off the green (not GIR)");
+    }
+    
+    return warnings;
+  };
+  
+  // Auto-suggest corrections
+  const autoCorrectValues = () => {
+    if (strokes === null || putts === null || !currentHoleData) return;
+    
+    const shotsToGreen = strokes - putts;
+    const girRequired = currentHoleData.par - 2;
+    const shouldBeGIR = shotsToGreen <= girRequired;
+    
+    if (shouldBeGIR !== greenInRegulation) {
+      setGreenInRegulation(shouldBeGIR);
+    }
+  };
   
   // Cache all hole scores until completion
   const [cachedScores, setCachedScores] = useState<Array<{
@@ -42,11 +94,11 @@ export default function LiveScoring() {
   const [, setLocation] = useLocation();
 
   // Local storage key for persisting scoring state (includes round number)
-  const storageKey = `live-scoring-${id}-${(user as any)?.id}-round-${selectedRound}`;
+  const storageKey = `live-scoring-${id}-${user?.id}-round-${selectedRound}`;
 
   // Load scoring state from local storage on mount
   useEffect(() => {
-    if (!id || !(user as any)?.id) return;
+    if (!id || !user?.id) return;
     
     try {
       const savedState = localStorage.getItem(storageKey);
@@ -69,7 +121,7 @@ export default function LiveScoring() {
 
   // Save scoring state to local storage whenever it changes
   useEffect(() => {
-    if (!id || !(user as any)?.id) return;
+    if (!id || !user?.id) return;
     
     const stateToSave = {
       selectedRound,
@@ -88,7 +140,8 @@ export default function LiveScoring() {
     } catch (error) {
       console.log('Could not save scoring state:', error);
     }
-  }, [selectedRound, currentHole, strokes, putts, fairwayHit, greenInRegulation, powerupUsed, powerupNotes, cachedScores, storageKey, id, (user as any)?.id]);
+  }, [selectedRound, currentHole, strokes, putts, fairwayHit, greenInRegulation, powerupUsed, powerupNotes, cachedScores, storageKey, id, user?.id]);
+
 
   // Clear local storage when round is completed
   const clearSavedState = () => {
@@ -236,6 +289,16 @@ export default function LiveScoring() {
 
   const currentHoleData = (holes as any[])?.find((hole: any) => hole.holeNumber === currentHole);
   
+  // Validate scores whenever strokes, putts, or GIR change
+  useEffect(() => {
+    if (strokes !== null && putts !== null && currentHoleData) {
+      const warnings = validateGolfScore(strokes, putts, currentHoleData.par, greenInRegulation);
+      setValidationWarnings(warnings);
+    } else {
+      setValidationWarnings([]);
+    }
+  }, [strokes, putts, greenInRegulation, currentHoleData]);
+  
   // Get tee selection for current hole
   const currentTeeSelection = Array.isArray(teeSelections) 
     ? teeSelections.find((tee: any) => tee.holeNumber === currentHole)
@@ -259,6 +322,33 @@ export default function LiveScoring() {
   const formatTeeColor = (teeColor: string) => {
     return teeColor.charAt(0).toUpperCase() + teeColor.slice(1).toLowerCase() + ' Tees';
   };
+
+  // Calculate round progress (score-to-par for holes completed so far)
+  const calculateRoundProgress = () => {
+    if (!Array.isArray(holes) || cachedScores.length === 0) {
+      return { holesCompleted: 0, totalStrokes: 0, totalPar: 0, scoreToPar: 0 };
+    }
+
+    let totalStrokes = 0;
+    let totalPar = 0;
+    let holesCompleted = 0;
+
+    cachedScores.forEach(score => {
+      if (score.strokes !== null && score.strokes > 0) {
+        const hole = holes.find((h: any) => h.holeNumber === score.holeNumber);
+        if (hole) {
+          totalStrokes += score.strokes;
+          totalPar += hole.par;
+          holesCompleted++;
+        }
+      }
+    });
+
+    const scoreToPar = holesCompleted > 0 ? totalStrokes - totalPar : 0;
+    return { holesCompleted, totalStrokes, totalPar, scoreToPar };
+  };
+
+  const roundProgress = calculateRoundProgress();
 
   // Load existing score data when navigating to a hole (for editing)
   useEffect(() => {
@@ -499,6 +589,20 @@ export default function LiveScoring() {
                 <div className="text-3xl font-bold text-accent" data-testid="text-current-score">
                   {strokes}
                 </div>
+                {/* Round Progress */}
+                {roundProgress.holesCompleted > 0 && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    After {roundProgress.holesCompleted} holes: {' '}
+                    <span className={`font-medium ${
+                      roundProgress.scoreToPar === 0 ? 'text-gray-400' :
+                      roundProgress.scoreToPar < 0 ? 'text-green-400' : 'text-red-400'
+                    }`}>
+                      {roundProgress.scoreToPar === 0 ? 'E' : 
+                       roundProgress.scoreToPar > 0 ? `+${roundProgress.scoreToPar}` : 
+                       roundProgress.scoreToPar}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
             
@@ -627,6 +731,31 @@ export default function LiveScoring() {
                 </div>
               </div>
               
+              {/* Validation Warnings */}
+              {validationWarnings.length > 0 && (
+                <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-yellow-600 font-medium">⚠️ Scoring Validation</span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={autoCorrectValues}
+                      className="ml-auto text-xs"
+                    >
+                      Auto-Fix
+                    </Button>
+                  </div>
+                  <ul className="text-sm text-yellow-700 space-y-1">
+                    {validationWarnings.map((warning, index) => (
+                      <li key={index} className="flex items-start gap-1">
+                        <span className="text-yellow-600">•</span>
+                        <span>{warning}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {/* Powerup Notes */}
               {powerupUsed && (
                 <div className="mt-6">

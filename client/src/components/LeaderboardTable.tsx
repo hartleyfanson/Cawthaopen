@@ -530,8 +530,13 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
             const totalScore = playerData?.totalScore || 0;
             const holesCompleted = playerData?.holesCompleted || 0;
             
-            const totalPar = allHoles.reduce((sum: number, hole: any) => sum + hole.par, 0);
-            const scoreToPar = totalScore > 0 ? totalScore - totalPar : 0;
+            // Calculate par for completed holes only (partial round support)
+            const completedHolePars = Object.keys(playerData.scores || {}).map(holeNum => {
+              const hole = allHoles.find((h: any) => h.holeNumber === parseInt(holeNum));
+              return hole ? hole.par : 0;
+            });
+            const completedHolesTotalPar = completedHolePars.reduce((sum: number, par: number) => sum + par, 0);
+            const scoreToPar = totalScore > 0 && holesCompleted > 0 ? totalScore - completedHolesTotalPar : 0;
             const isLeader = index === 0 && totalScore > 0;
             const netScore = holesCompleted >= 18 ? calculateNetScore(totalScore, player.playerId) : null;
             
