@@ -919,6 +919,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Round completion status for all rounds in a tournament
+  app.get("/api/rounds/:tournamentId/completion-status", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      const tournamentId = req.params.tournamentId;
+      
+      // Get tournament to know how many rounds
+      const tournament = await storage.getTournament(tournamentId);
+      if (!tournament) {
+        return res.status(404).json({ message: "Tournament not found" });
+      }
+      
+      // Check completion status for each round
+      const completionStatus: Record<number, boolean> = {};
+      for (let roundNumber = 1; roundNumber <= (tournament.numberOfRounds || 1); roundNumber++) {
+        completionStatus[roundNumber] = await storage.isRoundCompleted(
+          tournamentId,
+          userId,
+          roundNumber
+        );
+      }
+      
+      res.json(completionStatus);
+    } catch (error) {
+      console.error("Error checking round completion status:", error);
+      res.status(500).json({ message: "Failed to check round completion status" });
+    }
+  });
+
   app.post("/api/scores", isAuthenticated, async (req, res) => {
     try {
       const userId = (req.user as any)?.claims?.sub;
