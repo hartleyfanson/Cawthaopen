@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { generateAchievementImage } from "./imageGeneration";
 import { 
   ObjectStorageService,
   ObjectNotFoundError,
@@ -1111,6 +1112,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching achievements:", error);
       res.status(500).json({ message: "Failed to fetch achievements" });
+    }
+  });
+
+  // Generate AI image for achievement
+  app.post("/api/achievements/:achievementId/generate-image", isAuthenticated, async (req, res) => {
+    try {
+      const { achievementId } = req.params;
+      const achievements = await storage.getAchievements();
+      const achievement = achievements.find(a => a.id === achievementId);
+      
+      if (!achievement) {
+        return res.status(404).json({ message: "Achievement not found" });
+      }
+
+      const imageUrl = await generateAchievementImage(achievement.name, achievement.description);
+      
+      // You could store this URL in the database if needed
+      res.json({ imageUrl });
+    } catch (error) {
+      console.error("Error generating achievement image:", error);
+      res.status(500).json({ message: "Failed to generate achievement image" });
     }
   });
 

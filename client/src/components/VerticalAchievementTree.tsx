@@ -1,5 +1,9 @@
 import { Achievement, PlayerAchievement } from '@shared/schema';
 import { SkillNode } from './SkillNode';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Sparkles } from 'lucide-react';
+import { apiRequest } from '@/lib/queryClient';
 
 interface VerticalAchievementTreeProps {
   achievements: Achievement[];
@@ -12,6 +16,35 @@ export function VerticalAchievementTree({
   unlockedAchievements, 
   playerAchievements 
 }: VerticalAchievementTreeProps) {
+  const [generatingImages, setGeneratingImages] = useState<Set<string>>(new Set());
+  const [generatedImages, setGeneratedImages] = useState<Record<string, string>>({});
+
+  const handleGenerateImage = async (achievement: Achievement) => {
+    if (generatingImages.has(achievement.id) || generatedImages[achievement.id]) {
+      return;
+    }
+
+    setGeneratingImages(prev => new Set([...prev, achievement.id]));
+    
+    try {
+      const response = await apiRequest(`/api/achievements/${achievement.id}/generate-image`, {
+        method: 'POST'
+      });
+      
+      setGeneratedImages(prev => ({
+        ...prev,
+        [achievement.id]: response.imageUrl
+      }));
+    } catch (error) {
+      console.error('Error generating image:', error);
+    } finally {
+      setGeneratingImages(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(achievement.id);
+        return newSet;
+      });
+    }
+  };
   // Group achievements by rarity
   const achievementsByRarity = {
     common: achievements.filter(a => a.rarity === 'common'),
@@ -43,7 +76,7 @@ export function VerticalAchievementTree({
       {/* Header with progress */}
       <div className="relative z-10 p-6 bg-green-800/90 backdrop-blur-sm text-green-50">
         <h2 className="text-2xl font-bold mb-4 text-center">Golf Mastery Journey</h2>
-        <div className="flex justify-center gap-6">
+        <div className="flex justify-center items-center gap-6 mb-4">
           {(['common', 'rare', 'epic', 'legendary'] as const).map((rarity) => {
             const rarityAchievements = achievementsByRarity[rarity];
             const unlockedCount = rarityAchievements.filter(a => unlockedAchievements.has(a.id)).length;
@@ -63,6 +96,20 @@ export function VerticalAchievementTree({
             );
           })}
         </div>
+        
+        {/* Generate Images Button */}
+        <div className="flex justify-center">
+          <Button
+            onClick={() => achievements.forEach(handleGenerateImage)}
+            disabled={generatingImages.size > 0}
+            variant="secondary"
+            size="sm"
+            className="bg-green-600 hover:bg-green-700 text-green-50 border-green-500"
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            {generatingImages.size > 0 ? 'Generating AI Art...' : 'Generate AI Achievement Art'}
+          </Button>
+        </div>
       </div>
 
       <div className="relative z-10 p-8 space-y-16">
@@ -70,13 +117,27 @@ export function VerticalAchievementTree({
         {rootAchievement && (
           <div className="flex justify-center">
             <div className="relative">
-              <SkillNode
-                achievement={rootAchievement}
-                isUnlocked={unlockedAchievements.has(rootAchievement.id)}
-                onClick={() => {}}
-                rarity={rootAchievement.rarity || 'common'}
-                position={{ x: 0, y: 0 }}
-              />
+              <div className="flex flex-col items-center gap-2">
+                <SkillNode
+                  achievement={rootAchievement}
+                  isUnlocked={unlockedAchievements.has(rootAchievement.id)}
+                  onClick={() => handleGenerateImage(rootAchievement)}
+                  rarity={rootAchievement.rarity || 'common'}
+                  position={{ x: 0, y: 0 }}
+                />
+                {generatedImages[rootAchievement.id] && (
+                  <img 
+                    src={generatedImages[rootAchievement.id]} 
+                    alt={rootAchievement.name}
+                    className="w-16 h-16 rounded-lg object-cover shadow-lg border-2 border-green-300"
+                  />
+                )}
+                {generatingImages.has(rootAchievement.id) && (
+                  <div className="w-16 h-16 rounded-lg bg-green-100 animate-pulse flex items-center justify-center">
+                    <Sparkles className="w-6 h-6 text-green-600 animate-spin" />
+                  </div>
+                )}
+              </div>
               {/* Root connection line down */}
               <div className="absolute top-full left-1/2 transform -translate-x-0.5 w-1 h-12 bg-gradient-to-b from-emerald-500 to-emerald-300"></div>
             </div>
@@ -90,13 +151,27 @@ export function VerticalAchievementTree({
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center">
               {achievementsByRarity.common.map((achievement, index) => (
                 <div key={achievement.id} className="relative">
-                  <SkillNode
-                    achievement={achievement}
-                    isUnlocked={unlockedAchievements.has(achievement.id)}
-                    onClick={() => {}}
-                    rarity={achievement.rarity || 'common'}
-                    position={{ x: 0, y: 0 }}
-                  />
+                  <div className="flex flex-col items-center gap-2">
+                    <SkillNode
+                      achievement={achievement}
+                      isUnlocked={unlockedAchievements.has(achievement.id)}
+                      onClick={() => handleGenerateImage(achievement)}
+                      rarity={achievement.rarity || 'common'}
+                      position={{ x: 0, y: 0 }}
+                    />
+                    {generatedImages[achievement.id] && (
+                      <img 
+                        src={generatedImages[achievement.id]} 
+                        alt={achievement.name}
+                        className="w-12 h-12 rounded-lg object-cover shadow-lg border border-green-300"
+                      />
+                    )}
+                    {generatingImages.has(achievement.id) && (
+                      <div className="w-12 h-12 rounded-lg bg-green-100 animate-pulse flex items-center justify-center">
+                        <Sparkles className="w-4 h-4 text-green-600 animate-spin" />
+                      </div>
+                    )}
+                  </div>
                   {/* Connection line to next tier if not the last common achievement */}
                   {index === Math.floor(achievementsByRarity.common.length / 2) && achievementsByRarity.rare.length > 0 && (
                     <div className="absolute top-full left-1/2 transform -translate-x-0.5 w-1 h-12 bg-gradient-to-b from-emerald-500 to-emerald-300"></div>
@@ -114,13 +189,27 @@ export function VerticalAchievementTree({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 justify-items-center">
               {achievementsByRarity.rare.map((achievement, index) => (
                 <div key={achievement.id} className="relative">
-                  <SkillNode
-                    achievement={achievement}
-                    isUnlocked={unlockedAchievements.has(achievement.id)}
-                    onClick={() => {}}
-                    rarity={achievement.rarity || 'common'}
-                    position={{ x: 0, y: 0 }}
-                  />
+                  <div className="flex flex-col items-center gap-2">
+                    <SkillNode
+                      achievement={achievement}
+                      isUnlocked={unlockedAchievements.has(achievement.id)}
+                      onClick={() => handleGenerateImage(achievement)}
+                      rarity={achievement.rarity || 'common'}
+                      position={{ x: 0, y: 0 }}
+                    />
+                    {generatedImages[achievement.id] && (
+                      <img 
+                        src={generatedImages[achievement.id]} 
+                        alt={achievement.name}
+                        className="w-12 h-12 rounded-lg object-cover shadow-lg border border-green-300"
+                      />
+                    )}
+                    {generatingImages.has(achievement.id) && (
+                      <div className="w-12 h-12 rounded-lg bg-green-100 animate-pulse flex items-center justify-center">
+                        <Sparkles className="w-4 h-4 text-green-600 animate-spin" />
+                      </div>
+                    )}
+                  </div>
                   {/* Connection line to next tier if middle rare achievement */}
                   {index === Math.floor(achievementsByRarity.rare.length / 2) && achievementsByRarity.epic.length > 0 && (
                     <div className="absolute top-full left-1/2 transform -translate-x-0.5 w-1 h-12 bg-gradient-to-b from-amber-500 to-amber-300"></div>
@@ -138,13 +227,27 @@ export function VerticalAchievementTree({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-16 justify-items-center">
               {achievementsByRarity.epic.map((achievement, index) => (
                 <div key={achievement.id} className="relative">
-                  <SkillNode
-                    achievement={achievement}
-                    isUnlocked={unlockedAchievements.has(achievement.id)}
-                    onClick={() => {}}
-                    rarity={achievement.rarity || 'common'}
-                    position={{ x: 0, y: 0 }}
-                  />
+                  <div className="flex flex-col items-center gap-2">
+                    <SkillNode
+                      achievement={achievement}
+                      isUnlocked={unlockedAchievements.has(achievement.id)}
+                      onClick={() => handleGenerateImage(achievement)}
+                      rarity={achievement.rarity || 'common'}
+                      position={{ x: 0, y: 0 }}
+                    />
+                    {generatedImages[achievement.id] && (
+                      <img 
+                        src={generatedImages[achievement.id]} 
+                        alt={achievement.name}
+                        className="w-12 h-12 rounded-lg object-cover shadow-lg border border-green-300"
+                      />
+                    )}
+                    {generatingImages.has(achievement.id) && (
+                      <div className="w-12 h-12 rounded-lg bg-green-100 animate-pulse flex items-center justify-center">
+                        <Sparkles className="w-4 h-4 text-green-600 animate-spin" />
+                      </div>
+                    )}
+                  </div>
                   {/* Connection line to next tier if first epic achievement */}
                   {index === 0 && achievementsByRarity.legendary.length > 0 && (
                     <div className="absolute top-full left-1/2 transform -translate-x-0.5 w-1 h-12 bg-gradient-to-b from-violet-500 to-violet-300"></div>
@@ -162,13 +265,27 @@ export function VerticalAchievementTree({
             <div className="grid grid-cols-1 gap-20 justify-items-center">
               {achievementsByRarity.legendary.map((achievement) => (
                 <div key={achievement.id} className="relative">
-                  <SkillNode
-                    achievement={achievement}
-                    isUnlocked={unlockedAchievements.has(achievement.id)}
-                    onClick={() => {}}
-                    rarity={achievement.rarity || 'common'}
-                    position={{ x: 0, y: 0 }}
-                  />
+                  <div className="flex flex-col items-center gap-2">
+                    <SkillNode
+                      achievement={achievement}
+                      isUnlocked={unlockedAchievements.has(achievement.id)}
+                      onClick={() => handleGenerateImage(achievement)}
+                      rarity={achievement.rarity || 'common'}
+                      position={{ x: 0, y: 0 }}
+                    />
+                    {generatedImages[achievement.id] && (
+                      <img 
+                        src={generatedImages[achievement.id]} 
+                        alt={achievement.name}
+                        className="w-12 h-12 rounded-lg object-cover shadow-lg border border-green-300"
+                      />
+                    )}
+                    {generatingImages.has(achievement.id) && (
+                      <div className="w-12 h-12 rounded-lg bg-green-100 animate-pulse flex items-center justify-center">
+                        <Sparkles className="w-4 h-4 text-green-600 animate-spin" />
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
