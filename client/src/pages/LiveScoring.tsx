@@ -55,21 +55,63 @@ export default function LiveScoring() {
       const savedState = localStorage.getItem(storageKey);
       if (savedState) {
         const parsed = JSON.parse(savedState);
-        if (parsed.selectedRound) setSelectedRound(parsed.selectedRound);
-        if (parsed.currentHole) setCurrentHole(parsed.currentHole);
-        if (parsed.strokes) setStrokes(parsed.strokes);
-        if (parsed.putts) setPutts(parsed.putts);
-        if (parsed.fairwayHit !== undefined) setFairwayHit(parsed.fairwayHit);
-        if (parsed.greenInRegulation !== undefined) setGreenInRegulation(parsed.greenInRegulation);
-        if (parsed.powerupUsed !== undefined) setPowerupUsed(parsed.powerupUsed);
-        if (parsed.powerupNotes) setPowerupNotes(parsed.powerupNotes);
-        if (parsed.cachedScores) setCachedScores(parsed.cachedScores);
+        // Only load saved state if it matches the current selected round
+        if (parsed.selectedRound === selectedRound) {
+          if (parsed.currentHole) setCurrentHole(parsed.currentHole);
+          if (parsed.strokes) setStrokes(parsed.strokes);
+          if (parsed.putts) setPutts(parsed.putts);
+          if (parsed.fairwayHit !== undefined) setFairwayHit(parsed.fairwayHit);
+          if (parsed.greenInRegulation !== undefined) setGreenInRegulation(parsed.greenInRegulation);
+          if (parsed.powerupUsed !== undefined) setPowerupUsed(parsed.powerupUsed);
+          if (parsed.powerupNotes) setPowerupNotes(parsed.powerupNotes);
+          if (parsed.cachedScores) setCachedScores(parsed.cachedScores);
+        } else {
+          // Clear state when round changes - start fresh
+          setCurrentHole(1);
+          setStrokes(null);
+          setPutts(null);
+          setFairwayHit(false);
+          setGreenInRegulation(false);
+          setPowerupUsed(false);
+          setPowerupNotes('');
+          setCachedScores([]);
+        }
+      } else {
+        // No saved state - start fresh
+        setCurrentHole(1);
+        setStrokes(null);
+        setPutts(null);
+        setFairwayHit(false);
+        setGreenInRegulation(false);
+        setPowerupUsed(false);
+        setPowerupNotes('');
+        setCachedScores([]);
       }
     } catch (error) {
       console.log('Could not load saved scoring state:', error);
+      // Fallback to fresh state on error
+      setCurrentHole(1);
+      setStrokes(null);
+      setPutts(null);
+      setFairwayHit(false);
+      setGreenInRegulation(false);
+      setPowerupUsed(false);
+      setPowerupNotes('');
+      setCachedScores([]);
     }
-  }, [id, user?.id, storageKey]);
+  }, [id, user?.id, storageKey, selectedRound]);
 
+  // Reset scoring state when round changes (ensures fresh start for each round)
+  useEffect(() => {
+    setCurrentHole(1);
+    setStrokes(null);
+    setPutts(null);
+    setFairwayHit(false);
+    setGreenInRegulation(false);
+    setPowerupUsed(false);
+    setPowerupNotes('');
+    // Don't clear cached scores immediately - let the storage loading logic handle it
+  }, [selectedRound]);
 
   // Save scoring state to local storage whenever it changes
   useEffect(() => {
