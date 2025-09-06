@@ -24,16 +24,14 @@ export function VerticalAchievementTree({
       return;
     }
 
-    setGeneratingImages(prev => new Set([...prev, achievement.id]));
+    setGeneratingImages(prev => new Set([...Array.from(prev), achievement.id]));
     
     try {
-      const response = await apiRequest(`/api/achievements/${achievement.id}/generate-image`, {
-        method: 'POST'
-      });
+      const response = await apiRequest(`/api/achievements/${achievement.id}/generate-image`, "POST");
       
       setGeneratedImages(prev => ({
         ...prev,
-        [achievement.id]: response.imageUrl
+        [achievement.id]: (response as any).imageUrl
       }));
     } catch (error) {
       console.error('Error generating image:', error);
@@ -100,7 +98,7 @@ export function VerticalAchievementTree({
         {/* Generate Images Button */}
         <div className="flex justify-center">
           <Button
-            onClick={() => achievements.forEach(handleGenerateImage)}
+            onClick={() => achievements.forEach(achievement => handleGenerateImage(achievement))}
             disabled={generatingImages.size > 0}
             variant="secondary"
             size="sm"
@@ -148,7 +146,11 @@ export function VerticalAchievementTree({
         {achievementsByRarity.common.length > 0 && (
           <div className="space-y-8">
             <h3 className="text-xl font-semibold text-green-800 text-center">Foundation Skills</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center">
+            <div className={`grid gap-8 justify-items-center ${
+              achievementsByRarity.common.length === 1 ? 'grid-cols-1' :
+              achievementsByRarity.common.length === 2 ? 'grid-cols-1 sm:grid-cols-2' :
+              'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+            }`}>
               {achievementsByRarity.common.map((achievement, index) => (
                 <div key={achievement.id} className="relative">
                   <div className="flex flex-col items-center gap-2">
@@ -186,7 +188,10 @@ export function VerticalAchievementTree({
         {achievementsByRarity.rare.length > 0 && (
           <div className="space-y-8">
             <h3 className="text-xl font-semibold text-green-700 text-center">Advanced Mastery</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 justify-items-center">
+            <div className={`grid gap-12 justify-items-center ${
+              achievementsByRarity.rare.length === 1 ? 'grid-cols-1' :
+              'grid-cols-1 sm:grid-cols-2'
+            }`}>
               {achievementsByRarity.rare.map((achievement, index) => (
                 <div key={achievement.id} className="relative">
                   <div className="flex flex-col items-center gap-2">
@@ -224,7 +229,10 @@ export function VerticalAchievementTree({
         {achievementsByRarity.epic.length > 0 && (
           <div className="space-y-8">
             <h3 className="text-xl font-semibold text-amber-700 text-center">Expert Excellence</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-16 justify-items-center">
+            <div className={`grid gap-16 justify-items-center ${
+              achievementsByRarity.epic.length === 1 ? 'grid-cols-1' :
+              'grid-cols-1 sm:grid-cols-2'
+            }`}>
               {achievementsByRarity.epic.map((achievement, index) => (
                 <div key={achievement.id} className="relative">
                   <div className="flex flex-col items-center gap-2">
@@ -262,7 +270,10 @@ export function VerticalAchievementTree({
         {achievementsByRarity.legendary.length > 0 && (
           <div className="space-y-8">
             <h3 className="text-xl font-semibold text-violet-700 text-center">Legendary Mastery</h3>
-            <div className="grid grid-cols-1 gap-20 justify-items-center">
+            <div className={`grid gap-20 justify-items-center ${
+              achievementsByRarity.legendary.length === 1 ? 'grid-cols-1' :
+              'grid-cols-1 sm:grid-cols-2'
+            }`}>
               {achievementsByRarity.legendary.map((achievement) => (
                 <div key={achievement.id} className="relative">
                   <div className="flex flex-col items-center gap-2">
