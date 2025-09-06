@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Achievement, PlayerAchievement } from "@shared/schema";
 import { SkillNode } from "./SkillNode";
-import { SkillTreeCategory } from "./MultiSkillTreeManager";
+import type { SkillTreeCategory } from "@/types/skillTree";
 import { Button } from "@/components/ui/button";
 import { Sparkles } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";

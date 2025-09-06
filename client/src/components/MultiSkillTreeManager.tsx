@@ -8,14 +8,7 @@ import {
   TrendingUp, Crosshair, Eye, Timer, Crown, CloudRain
 } from "lucide-react";
 
-export interface SkillTreeCategory {
-  id: string;
-  name: string;
-  icon: any;
-  color: string;
-  description: string;
-  achievements: Achievement[];
-}
+import type { SkillTreeCategory } from "@/types/skillTree";
 
 interface MultiSkillTreeManagerProps {
   playerId: string;
