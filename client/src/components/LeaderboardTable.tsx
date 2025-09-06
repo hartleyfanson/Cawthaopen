@@ -718,22 +718,22 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
               data-testid={`row-player-${player.playerId}`}
             >
               <div className="grid gap-1 items-center text-center" style={{gridTemplateColumns: "2fr " + "1fr ".repeat(9)}}>
-                <div className="text-left px-2">
-                  <div className="flex items-center space-x-2">
-                    <div className={`text-lg font-bold ${
+                <div className="text-left px-1">
+                  <div className="flex items-center space-x-1">
+                    <div className={`text-sm font-bold ${
                       isLeader ? 'text-primary' : 'text-muted-foreground'
                     }`}>
                       {index + 1}
                     </div>
-                    <div>
-                      <div className={`font-semibold text-sm ${
+                    <div className="flex-1 min-w-0">
+                      <div className={`font-semibold text-xs leading-tight truncate ${
                         isLeader ? 'text-primary' : 'text-foreground'
                       }`} data-testid={`text-player-name-${player.playerId}`}>
-                        {formatPlayerName(player.playerName)}
+                        {formatPlayerName(player.playerName, 8)}
                       </div>
                       {totalScore > 0 && (
-                        <div className="text-xs text-muted-foreground">
-                          {scoreToPar === 0 ? 'E' : scoreToPar > 0 ? `+${scoreToPar}` : scoreToPar} ({totalScore})
+                        <div className="text-xs text-muted-foreground leading-tight">
+                          {scoreToPar === 0 ? 'E' : scoreToPar > 0 ? `+${scoreToPar}` : scoreToPar}
                         </div>
                       )}
                     </div>
@@ -744,8 +744,8 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
                 {holeScores.map((score, holeIndex) => {
                   if (!score.hasScore) {
                     return (
-                      <div key={holeIndex} className="text-center text-muted-foreground">
-                        -
+                      <div key={holeIndex} className="flex justify-center items-center h-7">
+                        <span className="text-muted-foreground text-sm">-</span>
                       </div>
                     );
                   }
@@ -757,19 +757,19 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
                   return (
                     <div 
                       key={holeIndex}
-                      className="text-center"
+                      className="flex justify-center"
                       data-testid={`score-hole-${holeNumber}-player-${player.playerId}`}
                     >
                       {isUnder ? (
-                        <div className="under-par mx-auto">
+                        <div className="under-par w-6 h-6 flex items-center justify-center text-sm">
                           {score.score}
                         </div>
                       ) : isOver ? (
-                        <div className="over-par mx-auto">
+                        <div className="over-par w-6 h-6 flex items-center justify-center text-sm">
                           {score.score}
                         </div>
                       ) : (
-                        <div className={isLeader ? 'text-primary' : 'text-foreground'}>
+                        <div className={`w-6 h-6 flex items-center justify-center text-sm ${isLeader ? 'text-primary' : 'text-foreground'}`}>
                           {score.score}
                         </div>
                       )}
