@@ -40,7 +40,7 @@ import {
   type InsertPlayerStats,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, asc, and, sql } from "drizzle-orm";
+import { eq, desc, asc, and, sql, isNotNull } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -582,7 +582,7 @@ export class DatabaseStorage implements IStorage {
         averagePutts: sql<number>`AVG(${rounds.totalPutts})`.as('averagePutts'),
       })
       .from(rounds)
-      .where(eq(rounds.playerId, userId))
+      .where(and(eq(rounds.playerId, userId), isNotNull(rounds.totalStrokes)))
       .groupBy(rounds.playerId);
 
     const wins = await db
