@@ -14,63 +14,64 @@ export function DraggableSkillTree({ achievements, unlockedAchievements, onNodeC
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Define node positions for tree layout branching from "join tournament" root
+  // Define node positions for top-down tree layout
   const getNodePositions = () => {
     const positions: Record<string, { x: number; y: number }> = {};
     
-    // Find the "join tournament" or first tournament achievement as root
+    // Find the "join tournament" or tournament debut achievement as root
     const rootAchievement = achievements.find(a => 
       a.name.toLowerCase().includes('tournament') || 
       a.condition === 'tournament_count' ||
-      a.category === 'tournament'
+      a.category === 'tournament' ||
+      a.name.toLowerCase().includes('debut')
     ) || achievements[0];
     
-    // Root node - center
+    // Root node - at the top center
     if (rootAchievement) {
-      positions[rootAchievement.id] = { x: 500, y: 300 };
+      positions[rootAchievement.id] = { x: 500, y: 80 };
     }
     
-    // Branch common achievements (foundation skills) - close to root
+    // Common achievements (foundation) - second tier, spread horizontally
     const commonAchievements = achievements.filter(a => a.rarity === 'common' && a.id !== rootAchievement?.id);
+    const commonSpacing = 180;
+    const commonStartX = 500 - (commonAchievements.length - 1) * commonSpacing / 2;
     commonAchievements.forEach((achievement, index) => {
-      const angle = (index / Math.max(commonAchievements.length, 1)) * Math.PI * 2;
-      const radius = 150;
       positions[achievement.id] = {
-        x: 500 + Math.cos(angle) * radius,
-        y: 300 + Math.sin(angle) * radius * 0.8
+        x: commonStartX + index * commonSpacing,
+        y: 220
       };
     });
 
-    // Branch rare achievements - intermediate distance
+    // Rare achievements - third tier, more spread out
     const rareAchievements = achievements.filter(a => a.rarity === 'rare');
+    const rareSpacing = 160;
+    const rareStartX = 500 - (rareAchievements.length - 1) * rareSpacing / 2;
     rareAchievements.forEach((achievement, index) => {
-      const angle = (index / Math.max(rareAchievements.length, 1)) * Math.PI * 2 + Math.PI / 6;
-      const radius = 250;
       positions[achievement.id] = {
-        x: 500 + Math.cos(angle) * radius,
-        y: 300 + Math.sin(angle) * radius * 0.9
+        x: rareStartX + index * rareSpacing,
+        y: 380
       };
     });
 
-    // Branch epic achievements - further out
+    // Epic achievements - fourth tier, wider spread
     const epicAchievements = achievements.filter(a => a.rarity === 'epic');
+    const epicSpacing = 200;
+    const epicStartX = 500 - (epicAchievements.length - 1) * epicSpacing / 2;
     epicAchievements.forEach((achievement, index) => {
-      const angle = (index / Math.max(epicAchievements.length, 1)) * Math.PI * 2 + Math.PI / 4;
-      const radius = 350;
       positions[achievement.id] = {
-        x: 500 + Math.cos(angle) * radius,
-        y: 300 + Math.sin(angle) * radius
+        x: epicStartX + index * epicSpacing,
+        y: 560
       };
     });
 
-    // Branch legendary achievements - outermost
+    // Legendary achievements - bottom tier, widest spread
     const legendaryAchievements = achievements.filter(a => a.rarity === 'legendary');
+    const legendarySpacing = 250;
+    const legendaryStartX = 500 - (legendaryAchievements.length - 1) * legendarySpacing / 2;
     legendaryAchievements.forEach((achievement, index) => {
-      const angle = (index / Math.max(legendaryAchievements.length, 1)) * Math.PI * 2 + Math.PI / 3;
-      const radius = 450;
       positions[achievement.id] = {
-        x: 500 + Math.cos(angle) * radius,
-        y: 300 + Math.sin(angle) * radius
+        x: legendaryStartX + index * legendarySpacing,
+        y: 740
       };
     });
 
@@ -79,61 +80,57 @@ export function DraggableSkillTree({ achievements, unlockedAchievements, onNodeC
 
   const nodePositions = getNodePositions();
 
-  // Connection lines creating tree branches from root
+  // Connection lines creating top-down tree structure
   const getConnections = () => {
     const connections: Array<{ from: string; to: string }> = [];
     
     const rootAchievement = achievements.find(a => 
       a.name.toLowerCase().includes('tournament') || 
       a.condition === 'tournament_count' ||
-      a.category === 'tournament'
+      a.category === 'tournament' ||
+      a.name.toLowerCase().includes('debut')
     ) || achievements[0];
     
     if (!rootAchievement) return connections;
     
-    // Connect root to all common achievements
+    // Connect root to all common achievements (direct branches from top)
     const commonAchievements = achievements.filter(a => a.rarity === 'common' && a.id !== rootAchievement.id);
     commonAchievements.forEach(achievement => {
       connections.push({ from: rootAchievement.id, to: achievement.id });
     });
     
-    // Connect common achievements to rare achievements of similar category
+    // Connect each common achievement to related rare achievements
     const rareAchievements = achievements.filter(a => a.rarity === 'rare');
-    rareAchievements.forEach(rareAchievement => {
-      const parentCommon = commonAchievements.find(common => 
-        common.category === rareAchievement.category ||
-        common.condition.includes(rareAchievement.condition.split('_')[0])
-      ) || commonAchievements[0];
-      
-      if (parentCommon) {
+    if (rareAchievements.length > 0 && commonAchievements.length > 0) {
+      rareAchievements.forEach((rareAchievement, index) => {
+        // Distribute rare achievements among common achievements
+        const parentIndex = index % commonAchievements.length;
+        const parentCommon = commonAchievements[parentIndex];
         connections.push({ from: parentCommon.id, to: rareAchievement.id });
-      }
-    });
+      });
+    }
     
-    // Connect rare to epic achievements
+    // Connect rare achievements to epic achievements
     const epicAchievements = achievements.filter(a => a.rarity === 'epic');
-    epicAchievements.forEach(epicAchievement => {
-      const parentRare = rareAchievements.find(rare => 
-        rare.category === epicAchievement.category ||
-        rare.condition.includes(epicAchievement.condition.split('_')[0])
-      ) || rareAchievements[0];
-      
-      if (parentRare) {
+    if (epicAchievements.length > 0 && rareAchievements.length > 0) {
+      epicAchievements.forEach((epicAchievement, index) => {
+        // Distribute epic achievements among rare achievements
+        const parentIndex = index % rareAchievements.length;
+        const parentRare = rareAchievements[parentIndex];
         connections.push({ from: parentRare.id, to: epicAchievement.id });
-      }
-    });
+      });
+    }
     
-    // Connect epic to legendary achievements
+    // Connect epic achievements to legendary achievements
     const legendaryAchievements = achievements.filter(a => a.rarity === 'legendary');
-    legendaryAchievements.forEach(legendaryAchievement => {
-      const parentEpic = epicAchievements.find(epic => 
-        epic.category === legendaryAchievement.category
-      ) || epicAchievements[0];
-      
-      if (parentEpic) {
+    if (legendaryAchievements.length > 0 && epicAchievements.length > 0) {
+      legendaryAchievements.forEach((legendaryAchievement, index) => {
+        // Distribute legendary achievements among epic achievements
+        const parentIndex = index % epicAchievements.length;
+        const parentEpic = epicAchievements[parentIndex];
         connections.push({ from: parentEpic.id, to: legendaryAchievement.id });
-      }
-    });
+      });
+    }
 
     return connections;
   };
@@ -164,9 +161,9 @@ export function DraggableSkillTree({ achievements, unlockedAchievements, onNodeC
       y: pos.y - dragStart.y
     };
     
-    // Constrain panning
-    newPan.x = Math.max(-800, Math.min(300, newPan.x));
-    newPan.y = Math.max(-600, Math.min(200, newPan.y));
+    // Constrain panning for top-down layout
+    newPan.x = Math.max(-600, Math.min(400, newPan.x));
+    newPan.y = Math.max(-500, Math.min(50, newPan.y));
     
     setPan(newPan);
   }, [isDragging, dragStart]);
@@ -176,7 +173,7 @@ export function DraggableSkillTree({ achievements, unlockedAchievements, onNodeC
   }, []);
 
   return (
-    <div className="relative w-full h-[800px] overflow-hidden bg-gradient-to-b from-green-50 via-emerald-100 to-green-200 rounded-2xl border border-green-300 shadow-2xl">
+    <div className="relative w-full h-[900px] overflow-hidden bg-gradient-to-b from-green-50 via-emerald-100 to-green-200 rounded-2xl border border-green-300 shadow-2xl">
       {/* Golf course pattern background */}
       <div className="absolute inset-0 opacity-20">
         <div className="absolute inset-0" style={{
@@ -232,7 +229,7 @@ export function DraggableSkillTree({ achievements, unlockedAchievements, onNodeC
         onTouchEnd={handleEnd}
       >
         {/* Connection lines */}
-        <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ width: '1000px', height: '1000px' }}>
+        <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ width: '1200px', height: '1200px' }}>
           <defs>
             <linearGradient id="connectionGradient" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="rgba(34, 197, 94, 0.6)" />
