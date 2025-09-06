@@ -78,7 +78,7 @@ export function SkillNode({ achievement, isUnlocked, onClick, rarity, position }
       className={`group relative flex flex-col items-center justify-center ${config.size} rounded-xl cursor-pointer transition-all duration-700 hover:scale-110 hover:rotate-1 focus:outline-none focus:ring-4 focus:ring-blue-500/50 ${config.borderClass} ${config.bgGradient} backdrop-blur-sm`}
       style={{
         position: 'relative',
-        filter: isUnlocked ? 'none' : 'grayscale(1) opacity(0.6)',
+        filter: isUnlocked ? 'none' : 'grayscale(0.8) opacity(0.7)',
       }}
       onClick={onClick}
       onKeyDown={(e) => {
@@ -111,18 +111,21 @@ export function SkillNode({ achievement, isUnlocked, onClick, rarity, position }
       
       {/* Lock overlay for locked skills */}
       {!isUnlocked && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-xl backdrop-blur-sm">
-          <Lock className="w-6 h-6 text-white opacity-80 drop-shadow-lg" />
+        <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-xl backdrop-blur-sm border-2 border-dashed border-gray-400/50">
+          <Lock className="w-6 h-6 text-white opacity-90 drop-shadow-lg" />
         </div>
       )}
       
       {/* Enhanced skill name tooltip */}
-      <div className={`absolute -bottom-12 left-1/2 transform -translate-x-1/2 px-4 py-2 text-sm font-bold rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-all duration-300 z-30 backdrop-blur-md ${
+      <div className={`absolute -bottom-14 left-1/2 transform -translate-x-1/2 px-3 py-2 text-xs font-bold rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-all duration-300 z-30 backdrop-blur-md ${
         isUnlocked 
           ? `${config.bgGradient} ${config.textColor} border-2 ${config.borderClass.includes('legendary') ? 'border-violet-400' : config.borderClass.includes('epic') ? 'border-amber-400' : config.borderClass.includes('rare') ? 'border-emerald-400' : 'border-slate-400'} shadow-xl` 
-          : 'bg-gray-900/90 text-gray-100 border border-gray-600'
+          : 'bg-gray-800/90 text-gray-200 border border-gray-500 shadow-lg'
       }`}>
         {achievement.name}
+        {!isUnlocked && (
+          <div className="text-xs opacity-75 mt-1">Click to see how to unlock</div>
+        )}
         <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-current"></div>
       </div>
     </button>
