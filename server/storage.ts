@@ -759,7 +759,132 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(achievements)
       .where(eq(achievements.isActive, true))
-      .orderBy(asc(achievements.category), asc(achievements.name));
+      .orderBy(asc(achievements.rarity), asc(achievements.category), asc(achievements.name));
+  }
+
+  async seedNewAchievements(): Promise<void> {
+    const newAchievements = [
+      {
+        name: 'Nice',
+        description: 'Score exactly 69 in a complete round (net or gross)',
+        badgeIcon: 'SmileIcon',
+        badgeColor: 'purple',
+        category: 'special',
+        condition: 'score_69',
+        rarity: 'epic',
+        points: 50
+      },
+      {
+        name: 'Consistency King',
+        description: 'Complete 5 consecutive rounds without a triple bogey',
+        badgeIcon: 'Crown',
+        badgeColor: 'gold',
+        category: 'scoring',
+        condition: 'no_triple_bogey_streak',
+        value: 5,
+        rarity: 'rare',
+        points: 30
+      },
+      {
+        name: 'Putting Machine',
+        description: 'Complete a round using 24 putts or fewer',
+        badgeIcon: 'Target',
+        badgeColor: 'blue',
+        category: 'putting',
+        condition: 'low_putts_round',
+        value: 24,
+        rarity: 'rare',
+        points: 25
+      },
+      {
+        name: 'Fairway Finder',
+        description: 'Hit fairways on 8 consecutive holes (excluding par 3s)',
+        badgeIcon: 'Navigation',
+        badgeColor: 'green',
+        category: 'driving',
+        condition: 'fairway_streak',
+        value: 8,
+        rarity: 'common',
+        points: 20
+      },
+      {
+        name: 'Comeback Kid',
+        description: 'Finish at least 5 strokes better than your worst 9-hole score in the same round',
+        badgeIcon: 'TrendingUp',
+        badgeColor: 'orange',
+        category: 'special',
+        condition: 'comeback_round',
+        value: 5,
+        rarity: 'epic',
+        points: 40
+      },
+      {
+        name: 'Par Perfect',
+        description: 'Score par on 12 or more holes in a single round',
+        badgeIcon: 'CheckCircle',
+        badgeColor: 'gold',
+        category: 'scoring',
+        condition: 'par_streak',
+        value: 12,
+        rarity: 'rare',
+        points: 35
+      },
+      {
+        name: 'Eagle Eye',
+        description: 'Score an eagle (2 under par) on any hole',
+        badgeIcon: 'Eye',
+        badgeColor: 'purple',
+        category: 'scoring',
+        condition: 'eagle',
+        rarity: 'legendary',
+        points: 100
+      },
+      {
+        name: 'The Grinder',
+        description: 'Complete 10 tournaments',
+        badgeIcon: 'Cog',
+        badgeColor: 'silver',
+        category: 'milestone',
+        condition: 'tournament_count',
+        value: 10,
+        rarity: 'common',
+        points: 15
+      },
+      {
+        name: 'Speed Demon',
+        description: 'Complete a round in under 3 hours',
+        badgeIcon: 'Zap',
+        badgeColor: 'yellow',
+        category: 'special',
+        condition: 'fast_round',
+        value: 180, // 3 hours in minutes
+        rarity: 'rare',
+        points: 25
+      },
+      {
+        name: 'Weather Warrior',
+        description: 'Complete a round in adverse weather conditions',
+        badgeIcon: 'CloudRain',
+        badgeColor: 'blue',
+        category: 'special',
+        condition: 'weather_round',
+        rarity: 'rare',
+        points: 30
+      }
+    ];
+
+    for (const achievement of newAchievements) {
+      // Check if achievement already exists
+      const existing = await db
+        .select()
+        .from(achievements)
+        .where(eq(achievements.name, achievement.name))
+        .limit(1);
+      
+      if (existing.length === 0) {
+        await db.insert(achievements).values(achievement);
+      }
+    }
   }
 
   async getPlayerAchievements(playerId: string): Promise<(PlayerAchievement & { achievement: Achievement })[]> {
@@ -1067,6 +1192,66 @@ export class DatabaseStorage implements IStorage {
         // Manual achievement - handled separately through voting system
         case 'crowd_favorite_vote':
           // This will be handled through a separate admin interface
+          break;
+        
+        case 'score_69':
+          if (context.roundData && (context.roundData.totalStrokes === 69)) {
+            shouldAward = true;
+          }
+          break;
+        
+        case 'no_triple_bogey_streak':
+          if (context.roundData && !context.roundData.hasTripleBogey) {
+            shouldAward = true;
+          }
+          break;
+        
+        case 'low_putts_round':
+          if (context.roundData && achievement.value && context.roundData.totalPutts && context.roundData.totalPutts <= achievement.value) {
+            shouldAward = true;
+          }
+          break;
+        
+        case 'fairway_streak':
+          if (context.roundData && achievement.value && context.roundData.longestFairwayStreak >= achievement.value) {
+            shouldAward = true;
+          }
+          break;
+        
+        case 'comeback_round':
+          if (context.roundData && achievement.value && context.roundData.scoreImprovement && context.roundData.scoreImprovement >= achievement.value) {
+            shouldAward = true;
+          }
+          break;
+        
+        case 'par_streak':
+          if (context.roundData && achievement.value && context.roundData.parCount >= achievement.value) {
+            shouldAward = true;
+          }
+          break;
+        
+        case 'eagle':
+          if (context.scoreData && context.scoreData.strokes === (context.scoreData.holePar - 2)) {
+            shouldAward = true;
+          }
+          break;
+        
+        case 'tournament_count':
+          if (context.tournamentData && achievement.value && context.tournamentData.playerTournamentCount >= achievement.value) {
+            shouldAward = true;
+          }
+          break;
+        
+        case 'fast_round':
+          if (context.roundData && achievement.value && context.roundData.duration && context.roundData.duration <= achievement.value) {
+            shouldAward = true;
+          }
+          break;
+        
+        case 'weather_round':
+          if (context.roundData && context.roundData.weatherConditions && context.roundData.weatherConditions !== 'clear') {
+            shouldAward = true;
+          }
           break;
       }
 
