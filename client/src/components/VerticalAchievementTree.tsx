@@ -110,7 +110,7 @@ export function VerticalAchievementTree({
         </div>
       </div>
 
-      <div className="relative z-10 p-8 space-y-16">
+      <div className="relative z-10 p-8 space-y-24">
         {/* Tournament Debut - Root */}
         {rootAchievement && (
           <div className="flex justify-center">
@@ -137,16 +137,16 @@ export function VerticalAchievementTree({
                 )}
               </div>
               {/* Root connection line down */}
-              <div className="absolute top-full left-1/2 transform -translate-x-0.5 w-1 h-12 bg-gradient-to-b from-emerald-500 to-emerald-300"></div>
+              <div className="absolute top-full left-1/2 transform -translate-x-0.5 w-1 h-16 bg-gradient-to-b from-emerald-500 to-emerald-300"></div>
             </div>
           </div>
         )}
 
         {/* Common Achievements - Foundation Level */}
         {achievementsByRarity.common.length > 0 && (
-          <div className="space-y-8">
+          <div className="space-y-12">
             <h3 className="text-xl font-semibold text-green-800 text-center">Foundation Skills</h3>
-            <div className={`grid gap-8 justify-items-center ${
+            <div className={`grid gap-12 justify-items-center ${
               achievementsByRarity.common.length === 1 ? 'grid-cols-1' :
               achievementsByRarity.common.length === 2 ? 'grid-cols-1 sm:grid-cols-2' :
               'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
@@ -176,7 +176,7 @@ export function VerticalAchievementTree({
                   </div>
                   {/* Connection line to next tier if not the last common achievement */}
                   {index === Math.floor(achievementsByRarity.common.length / 2) && achievementsByRarity.rare.length > 0 && (
-                    <div className="absolute top-full left-1/2 transform -translate-x-0.5 w-1 h-12 bg-gradient-to-b from-emerald-500 to-emerald-300"></div>
+                    <div className="absolute top-full left-1/2 transform -translate-x-0.5 w-1 h-16 bg-gradient-to-b from-emerald-500 to-emerald-300"></div>
                   )}
                 </div>
               ))}
@@ -186,9 +186,9 @@ export function VerticalAchievementTree({
 
         {/* Rare Achievements - Advanced Level */}
         {achievementsByRarity.rare.length > 0 && (
-          <div className="space-y-8">
+          <div className="space-y-12">
             <h3 className="text-xl font-semibold text-green-700 text-center">Advanced Mastery</h3>
-            <div className={`grid gap-12 justify-items-center ${
+            <div className={`grid gap-16 justify-items-center ${
               achievementsByRarity.rare.length === 1 ? 'grid-cols-1' :
               'grid-cols-1 sm:grid-cols-2'
             }`}>
@@ -217,7 +217,7 @@ export function VerticalAchievementTree({
                   </div>
                   {/* Connection line to next tier if middle rare achievement */}
                   {index === Math.floor(achievementsByRarity.rare.length / 2) && achievementsByRarity.epic.length > 0 && (
-                    <div className="absolute top-full left-1/2 transform -translate-x-0.5 w-1 h-12 bg-gradient-to-b from-amber-500 to-amber-300"></div>
+                    <div className="absolute top-full left-1/2 transform -translate-x-0.5 w-1 h-16 bg-gradient-to-b from-amber-500 to-amber-300"></div>
                   )}
                 </div>
               ))}
@@ -227,9 +227,9 @@ export function VerticalAchievementTree({
 
         {/* Epic Achievements - Expert Level */}
         {achievementsByRarity.epic.length > 0 && (
-          <div className="space-y-8">
+          <div className="space-y-12">
             <h3 className="text-xl font-semibold text-amber-700 text-center">Expert Excellence</h3>
-            <div className={`grid gap-16 justify-items-center ${
+            <div className={`grid gap-20 justify-items-center ${
               achievementsByRarity.epic.length === 1 ? 'grid-cols-1' :
               'grid-cols-1 sm:grid-cols-2'
             }`}>
@@ -258,7 +258,7 @@ export function VerticalAchievementTree({
                   </div>
                   {/* Connection line to next tier if first epic achievement */}
                   {index === 0 && achievementsByRarity.legendary.length > 0 && (
-                    <div className="absolute top-full left-1/2 transform -translate-x-0.5 w-1 h-12 bg-gradient-to-b from-violet-500 to-violet-300"></div>
+                    <div className="absolute top-full left-1/2 transform -translate-x-0.5 w-1 h-16 bg-gradient-to-b from-violet-500 to-violet-300"></div>
                   )}
                 </div>
               ))}
@@ -268,9 +268,9 @@ export function VerticalAchievementTree({
 
         {/* Legendary Achievements - Master Level */}
         {achievementsByRarity.legendary.length > 0 && (
-          <div className="space-y-8">
+          <div className="space-y-12">
             <h3 className="text-xl font-semibold text-violet-700 text-center">Legendary Mastery</h3>
-            <div className={`grid gap-20 justify-items-center ${
+            <div className={`grid gap-24 justify-items-center ${
               achievementsByRarity.legendary.length === 1 ? 'grid-cols-1' :
               'grid-cols-1 sm:grid-cols-2'
             }`}>
@@ -304,7 +304,7 @@ export function VerticalAchievementTree({
         )}
 
         {/* Bottom spacing */}
-        <div className="h-8"></div>
+        <div className="h-16"></div>
       </div>
     </div>
   );
