@@ -733,8 +733,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create tournament rounds with dates if provided
       if (roundDates && Array.isArray(roundDates) && roundDates.length > 0) {
         for (let i = 0; i < roundDates.length; i++) {
+          // Get courseId for this round - use from roundCourses if available, otherwise fall back to tournament's courseId
+          const roundCourseId = (roundCourses && Array.isArray(roundCourses) && roundCourses[i]?.id) 
+            ? roundCourses[i].id 
+            : tournament.courseId;
+            
           const roundData = insertTournamentRoundSchema.parse({
             tournamentId: tournament.id,
+            courseId: roundCourseId,
             roundNumber: i + 1,
             roundDate: new Date(roundDates[i]),
           });
