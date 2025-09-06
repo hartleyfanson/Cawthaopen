@@ -28,56 +28,6 @@ export default function LiveScoring() {
   const [powerupNotes, setPowerupNotes] = useState("");
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
   
-  // Golf scoring validation functions
-  const validateGolfScore = (strokes: number, putts: number, par: number, gir: boolean) => {
-    const warnings: string[] = [];
-    
-    // Basic validation
-    if (strokes < 1 || strokes > 10) {
-      warnings.push("Score should be between 1-10 strokes");
-    }
-    
-    if (putts < 0 || putts > 6) {
-      warnings.push("Putts should be between 0-6");
-    }
-    
-    if (putts > strokes) {
-      warnings.push("Putts cannot exceed total strokes");
-    }
-    
-    // GIR logic validation
-    const shotsToGreen = strokes - putts;
-    const girRequired = par - 2; // Par 3: 1 shot, Par 4: 2 shots, Par 5: 3 shots
-    const actualGIR = shotsToGreen <= girRequired;
-    
-    if (gir && !actualGIR) {
-      warnings.push(`Green in regulation requires reaching green in ${girRequired} shots or less`);
-    }
-    
-    // Specific validation rules
-    if (!gir && strokes === par && putts === 2) {
-      warnings.push("If you didn't hit GIR but made par, you likely couldn't have 2 putts (would need chip/pitch + 1 putt)");
-    }
-    
-    if (gir && putts === 0) {
-      warnings.push("If you hit GIR with 0 putts, you likely holed out from off the green (not GIR)");
-    }
-    
-    return warnings;
-  };
-  
-  // Auto-suggest corrections
-  const autoCorrectValues = () => {
-    if (strokes === null || putts === null || !currentHoleData) return;
-    
-    const shotsToGreen = strokes - putts;
-    const girRequired = currentHoleData.par - 2;
-    const shouldBeGIR = shotsToGreen <= girRequired;
-    
-    if (shouldBeGIR !== greenInRegulation) {
-      setGreenInRegulation(shouldBeGIR);
-    }
-  };
   
   // Cache all hole scores until completion
   const [cachedScores, setCachedScores] = useState<Array<{
@@ -289,15 +239,38 @@ export default function LiveScoring() {
 
   const currentHoleData = (holes as any[])?.find((hole: any) => hole.holeNumber === currentHole);
   
-  // Validate scores whenever strokes, putts, or GIR change
+  // Auto-correct golf scores based on professional rules
   useEffect(() => {
     if (strokes !== null && putts !== null && currentHoleData) {
-      const warnings = validateGolfScore(strokes, putts, currentHoleData.par, greenInRegulation);
-      setValidationWarnings(warnings);
+      // Auto-correct GIR based on shots to green
+      const shotsToGreen = strokes - putts;
+      const girRequired = currentHoleData.par - 2; // Par 3: 1 shot, Par 4: 2 shots, Par 5: 3 shots
+      const shouldBeGIR = shotsToGreen <= girRequired;
+      
+      if (shouldBeGIR !== greenInRegulation) {
+        setGreenInRegulation(shouldBeGIR);
+      }
+      
+      // Auto-correct putts if they exceed total strokes
+      if (putts > strokes) {
+        setPutts(Math.max(0, strokes - 1)); // Leave at least 1 stroke for approach
+      }
+      
+      // Professional rule: if no GIR but made par, you can't have 2+ putts
+      if (!shouldBeGIR && strokes === currentHoleData.par && putts >= 2) {
+        setPutts(1); // Must be 1 putt after chip/pitch
+      }
+      
+      // If GIR with 0 putts, you likely holed out (not GIR)
+      if (shouldBeGIR && putts === 0 && strokes < currentHoleData.par) {
+        setGreenInRegulation(false); // Holed out from off the green
+      }
+      
+      setValidationWarnings([]); // Clear warnings since we auto-correct
     } else {
       setValidationWarnings([]);
     }
-  }, [strokes, putts, greenInRegulation, currentHoleData]);
+  }, [strokes, putts, currentHoleData]);
   
   // Get tee selection for current hole
   const currentTeeSelection = Array.isArray(teeSelections) 
@@ -435,9 +408,14 @@ export default function LiveScoring() {
           data: scoreData,
         });
       } else {
-        // Create new score
+        // Create new score - ensure roundId is properly set
+        const roundId = roundToUse?.id || (roundToUse as any)?.id;
+        if (!roundId) {
+          throw new Error("Round ID is missing after round creation");
+        }
+        
         await createScoreMutation.mutateAsync({
-          roundId: (roundToUse as any).id,
+          roundId: roundId,
           holeId: currentHoleData.id,
           ...scoreData,
         });
@@ -731,28 +709,11 @@ export default function LiveScoring() {
                 </div>
               </div>
               
-              {/* Validation Warnings */}
-              {validationWarnings.length > 0 && (
-                <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-yellow-600 font-medium">⚠️ Scoring Validation</span>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={autoCorrectValues}
-                      className="ml-auto text-xs"
-                    >
-                      Auto-Fix
-                    </Button>
-                  </div>
-                  <ul className="text-sm text-yellow-700 space-y-1">
-                    {validationWarnings.map((warning, index) => (
-                      <li key={index} className="flex items-start gap-1">
-                        <span className="text-yellow-600">•</span>
-                        <span>{warning}</span>
-                      </li>
-                    ))}
-                  </ul>
+              {/* Auto-correction indicator */}
+              {strokes !== null && putts !== null && currentHoleData && (
+                <div className="mt-2 text-xs text-green-600 flex items-center gap-1">
+                  <span>✓</span>
+                  <span>Golf rules auto-applied</span>
                 </div>
               )}
 
