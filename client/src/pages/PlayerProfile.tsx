@@ -8,7 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { AchievementBadge } from "@/components/AchievementBadge";
-import { Trophy, Award, Target, TrendingUp, Calendar, BarChart3, Star, ArrowLeft, Users } from "lucide-react";
+import { SkillNode } from "@/components/SkillNode";
+import { Trophy, Award, Target, TrendingUp, Calendar, BarChart3, Star, ArrowLeft, Users, Info, X } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigation } from "@/components/Navigation";
@@ -33,6 +34,7 @@ function PlayerProfile() {
   const [activeTab, setActiveTab] = useState("overview");
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>("");
   const [categoryIndices, setCategoryIndices] = useState<Record<string, number>>({});
+  const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null);
 
   // Determine default tab based on route
   useEffect(() => {
@@ -317,20 +319,20 @@ function PlayerProfile() {
             </Card>
           </TabsContent>
 
-          {/* Achievements Tab - Skill Tree Layout */}
+          {/* Achievements Tab - Vertical Skill Tree */}
           <TabsContent value="achievements" className="space-y-6">
             {/* Achievement Overview */}
             <Card className="bg-gradient-to-r from-green-50 to-gold-50 border-2 border-green-200">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-center justify-center">
                   <Trophy className="h-6 w-6 text-gold" />
-                  Achievement Progress
+                  Skill Tree Progress
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-center space-y-2">
                   <div className="text-3xl font-bold text-gold">{totalAchievements}</div>
-                  <div className="text-sm text-muted-foreground">Achievements Unlocked</div>
+                  <div className="text-sm text-muted-foreground">Skills Unlocked</div>
                   <div className="w-full bg-muted rounded-full h-2 mt-2">
                     <div 
                       className="bg-gradient-to-r from-green-500 to-gold-500 h-2 rounded-full transition-all duration-500"
@@ -344,120 +346,154 @@ function PlayerProfile() {
               </CardContent>
             </Card>
 
-            {/* Skill Tree Layout by Rarity */}
-            {['legendary', 'epic', 'rare', 'common'].map((rarity) => {
-              const rarityAchievements = achievements.filter(a => a.rarity === rarity);
-              if (rarityAchievements.length === 0) return null;
+            {/* Vertical Skill Tree */}
+            <div className="relative flex flex-col items-center space-y-8 py-8 overflow-x-auto">
+              {/* Tree connections background */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center opacity-20">
+                <div className="h-full w-1 bg-gradient-to-b from-purple-500 via-orange-500 via-blue-500 to-gray-500 rounded-full"></div>
+              </div>
               
-              const rarityConfig = {
-                legendary: { color: 'from-purple-500 to-pink-500', icon: '👑', bgColor: 'bg-purple-50 border-purple-200', textColor: 'text-purple-700' },
-                epic: { color: 'from-orange-500 to-red-500', icon: '🔥', bgColor: 'bg-orange-50 border-orange-200', textColor: 'text-orange-700' },
-                rare: { color: 'from-blue-500 to-cyan-500', icon: '💎', bgColor: 'bg-blue-50 border-blue-200', textColor: 'text-blue-700' },
-                common: { color: 'from-gray-400 to-gray-600', icon: '⭐', bgColor: 'bg-gray-50 border-gray-200', textColor: 'text-gray-700' }
-              };
-              const config = rarityConfig[rarity as keyof typeof rarityConfig];
-              
-              return (
-                <Card key={rarity} className={`${config.bgColor} border-2`}>
-                  <CardHeader>
-                    <CardTitle className={`capitalize ${config.textColor} flex items-center gap-2 text-center justify-center`}>
-                      <span className="text-2xl">{config.icon}</span>
-                      {rarity} Achievements
-                      <span className="text-sm font-normal">({rarityAchievements.filter(a => unlockedAchievements.has(a.id)).length}/{rarityAchievements.length})</span>
-                    </CardTitle>
+              {/* Legendary Tier */}
+              {achievements.filter(a => a.rarity === 'legendary').length > 0 && (
+                <div className="relative z-10 flex flex-col items-center space-y-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="h-px bg-purple-300 w-16"></div>
+                    <span className="text-lg font-bold text-purple-700 bg-purple-50 px-4 py-2 rounded-full border-2 border-purple-200">
+                      👑 Legendary
+                    </span>
+                    <div className="h-px bg-purple-300 w-16"></div>
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-4 max-w-4xl">
+                    {achievements.filter(a => a.rarity === 'legendary').map((achievement, index) => (
+                      <SkillNode key={achievement.id} achievement={achievement} isUnlocked={unlockedAchievements.has(achievement.id)} onClick={() => setSelectedAchievement(achievement)} rarity="legendary" />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Epic Tier */}
+              {achievements.filter(a => a.rarity === 'epic').length > 0 && (
+                <div className="relative z-10 flex flex-col items-center space-y-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="h-px bg-orange-300 w-16"></div>
+                    <span className="text-lg font-bold text-orange-700 bg-orange-50 px-4 py-2 rounded-full border-2 border-orange-200">
+                      🔥 Epic
+                    </span>
+                    <div className="h-px bg-orange-300 w-16"></div>
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-4 max-w-5xl">
+                    {achievements.filter(a => a.rarity === 'epic').map((achievement, index) => (
+                      <SkillNode key={achievement.id} achievement={achievement} isUnlocked={unlockedAchievements.has(achievement.id)} onClick={() => setSelectedAchievement(achievement)} rarity="epic" />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Rare Tier */}
+              {achievements.filter(a => a.rarity === 'rare').length > 0 && (
+                <div className="relative z-10 flex flex-col items-center space-y-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="h-px bg-blue-300 w-16"></div>
+                    <span className="text-lg font-bold text-blue-700 bg-blue-50 px-4 py-2 rounded-full border-2 border-blue-200">
+                      💎 Rare
+                    </span>
+                    <div className="h-px bg-blue-300 w-16"></div>
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-4 max-w-6xl">
+                    {achievements.filter(a => a.rarity === 'rare').map((achievement, index) => (
+                      <SkillNode key={achievement.id} achievement={achievement} isUnlocked={unlockedAchievements.has(achievement.id)} onClick={() => setSelectedAchievement(achievement)} rarity="rare" />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Common Tier */}
+              {achievements.filter(a => a.rarity === 'common').length > 0 && (
+                <div className="relative z-10 flex flex-col items-center space-y-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="h-px bg-gray-300 w-16"></div>
+                    <span className="text-lg font-bold text-gray-700 bg-gray-50 px-4 py-2 rounded-full border-2 border-gray-200">
+                      ⭐ Foundation
+                    </span>
+                    <div className="h-px bg-gray-300 w-16"></div>
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-4 max-w-7xl">
+                    {achievements.filter(a => a.rarity === 'common').map((achievement, index) => (
+                      <SkillNode key={achievement.id} achievement={achievement} isUnlocked={unlockedAchievements.has(achievement.id)} onClick={() => setSelectedAchievement(achievement)} rarity="common" />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Achievement Detail Modal */}
+            {selectedAchievement && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedAchievement(null)}>
+                <Card className="max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+                  <CardHeader className="pb-4">
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-3">
+                        <div className="text-3xl">
+                          {{
+                            'Trophy': '🏆', 'Target': '🎯', 'Zap': '⚡', 'Star': '⭐', 'Crown': '👑', 'Award': '🏅',
+                            'Eye': '👁️', 'CheckCircle': '✅', 'Navigation': '🧭', 'TrendingUp': '📈', 'Cog': '⚙️',
+                            'CloudRain': '🌧️', 'SmileIcon': '😎'
+                          }[selectedAchievement.badgeIcon] || '🏆'}
+                        </div>
+                        <div>
+                          <CardTitle className="text-lg">{selectedAchievement.name}</CardTitle>
+                          <div className={`text-sm font-medium capitalize ${
+                            selectedAchievement.rarity === 'legendary' ? 'text-purple-700' :
+                            selectedAchievement.rarity === 'epic' ? 'text-orange-700' :
+                            selectedAchievement.rarity === 'rare' ? 'text-blue-700' :
+                            'text-gray-700'
+                          }`}>
+                            {selectedAchievement.rarity} • {selectedAchievement.category}
+                          </div>
+                        </div>
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => setSelectedAchievement(null)}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                      {rarityAchievements.map((achievement) => {
-                        const isUnlocked = unlockedAchievements.has(achievement.id);
-                        const iconMap = {
-                          'Trophy': '🏆', 'Target': '🎯', 'Zap': '⚡', 'Star': '⭐', 'Crown': '👑', 'Award': '🏅',
-                          'Eye': '👁️', 'CheckCircle': '✅', 'Navigation': '🧭', 'TrendingUp': '📈', 'Cog': '⚙️',
-                          'CloudRain': '🌧️', 'SmileIcon': '😎'
-                        };
-                        const icon = iconMap[achievement.badgeIcon as keyof typeof iconMap] || '🏆';
-                        
-                        return (
-                          <div 
-                            key={achievement.id}
-                            className={`group relative flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all duration-300 cursor-pointer ${
-                              isUnlocked 
-                                ? `bg-white ${config.bgColor.replace('bg-', 'border-').replace('-50', '-300')} shadow-lg hover:shadow-xl transform hover:-translate-y-1` 
-                                : 'bg-gray-100 border-gray-300 opacity-50 hover:opacity-70'
-                            }`}
-                            data-testid={`achievement-${achievement.id}`}
-                            title={achievement.description}
-                          >
-                            {/* Rarity Glow Effect for Unlocked */}
-                            {isUnlocked && (
-                              <div className={`absolute inset-0 rounded-lg bg-gradient-to-r ${config.color} opacity-20 group-hover:opacity-30 transition-opacity`} />
-                            )}
-                            
-                            {/* Achievement Icon */}
-                            <div className={`relative z-10 text-4xl transform transition-transform duration-200 ${
-                              isUnlocked ? 'group-hover:scale-110' : 'grayscale'
-                            }`}>
-                              {icon}
-                            </div>
-                            
-                            {/* Achievement Name */}
-                            <div className={`relative z-10 text-sm font-bold text-center leading-tight ${
-                              isUnlocked ? config.textColor : 'text-gray-500'
-                            }`}>
-                              {achievement.name}
-                            </div>
-                            
-                            {/* Points Badge */}
-                            <div className={`relative z-10 text-xs px-2 py-1 rounded-full font-semibold ${
-                              isUnlocked 
-                                ? `bg-gradient-to-r ${config.color} text-white shadow-sm` 
-                                : 'bg-gray-200 text-gray-600'
-                            }`}>
-                              +{achievement.points}pts
-                            </div>
-                            
-                            {/* Lock Overlay for Locked Achievements */}
-                            {!isUnlocked && (
-                              <div className="absolute inset-0 flex items-center justify-center bg-black/10 rounded-lg">
-                                <div className="text-2xl opacity-60">🔒</div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="font-medium text-sm text-muted-foreground mb-1">Description</h4>
+                        <p className="text-sm">{selectedAchievement.description}</p>
+                      </div>
+                      
+                      {selectedAchievement.value && (
+                        <div>
+                          <h4 className="font-medium text-sm text-muted-foreground mb-1">Requirement</h4>
+                          <p className="text-sm">Threshold: {selectedAchievement.value}</p>
+                        </div>
+                      )}
+                      
+                      <div className={`flex items-center gap-2 p-3 rounded-lg ${
+                        unlockedAchievements.has(selectedAchievement.id) 
+                          ? 'bg-green-50 border border-green-200' 
+                          : 'bg-gray-50 border border-gray-200'
+                      }`}>
+                        <div className={`h-3 w-3 rounded-full ${
+                          unlockedAchievements.has(selectedAchievement.id) 
+                            ? 'bg-green-500' 
+                            : 'bg-gray-400'
+                        }`}></div>
+                        <span className={`text-sm font-medium ${
+                          unlockedAchievements.has(selectedAchievement.id) 
+                            ? 'text-green-700' 
+                            : 'text-gray-600'
+                        }`}>
+                          {unlockedAchievements.has(selectedAchievement.id) ? 'Unlocked!' : 'Locked'}
+                        </span>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
-              );
-            })}
-            
-            {/* Achievement Legend */}
-            <Card className="bg-muted/30">
-              <CardContent className="pt-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-2xl">👑</span>
-                    <span className="text-sm font-semibold text-purple-700">Legendary</span>
-                    <span className="text-xs text-muted-foreground">Epic feats</span>
-                  </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-2xl">🔥</span>
-                    <span className="text-sm font-semibold text-orange-700">Epic</span>
-                    <span className="text-xs text-muted-foreground">Remarkable</span>
-                  </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-2xl">💎</span>
-                    <span className="text-sm font-semibold text-blue-700">Rare</span>
-                    <span className="text-xs text-muted-foreground">Impressive</span>
-                  </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-2xl">⭐</span>
-                    <span className="text-sm font-semibold text-gray-700">Common</span>
-                    <span className="text-xs text-muted-foreground">Foundation</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+            )}
           </TabsContent>
 
           {/* Statistics Tab */}
