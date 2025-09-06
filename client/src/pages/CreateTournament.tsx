@@ -519,7 +519,7 @@ export default function CreateTournament() {
                                   : (field.value ?? "")
                               }
                               onChange={(e) =>
-                                field.onChange(new Date(e.target.value))
+                                field.onChange(e.target.value ? new Date(e.target.value) : "")
                               }
                             />
                           </FormControl>
@@ -548,7 +548,7 @@ export default function CreateTournament() {
                                   : (field.value ?? "")
                               }
                               onChange={(e) =>
-                                field.onChange(new Date(e.target.value))
+                                field.onChange(e.target.value ? new Date(e.target.value) : "")
                               }
                             />
                           </FormControl>
@@ -576,7 +576,7 @@ export default function CreateTournament() {
                               data-testid="input-max-players"
                               {...field}
                               onChange={(e) =>
-                                field.onChange(parseInt(e.target.value))
+                                field.onChange(e.target.value ? parseInt(e.target.value) : "")
                               }
                             />
                           </FormControl>
@@ -602,7 +602,7 @@ export default function CreateTournament() {
                               data-testid="input-number-of-rounds"
                               {...field}
                               onChange={(e) =>
-                                field.onChange(parseInt(e.target.value))
+                                field.onChange(e.target.value ? parseInt(e.target.value) : "")
                               }
                             />
                           </FormControl>
