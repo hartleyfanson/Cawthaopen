@@ -289,22 +289,6 @@ export class DatabaseStorage implements IStorage {
     return newRound;
   }
 
-  async findOrCreateRound(round: InsertRound): Promise<Round> {
-    // First try to find existing round
-    const existingRound = await this.getRound(
-      round.tournamentId,
-      round.playerId,
-      round.roundNumber
-    );
-    
-    if (existingRound) {
-      return existingRound;
-    }
-    
-    // If no existing round, create new one
-    return await this.createRound(round);
-  }
-
   async getRound(
     tournamentId: string,
     playerId: string,

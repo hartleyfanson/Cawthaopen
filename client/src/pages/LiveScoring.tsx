@@ -110,11 +110,8 @@ export default function LiveScoring() {
     setGreenInRegulation(false);
     setPowerupUsed(false);
     setPowerupNotes('');
-    setCachedScores([]); // Clear cached scores immediately when changing rounds
-    
-    // Force refresh of round-specific data when switching rounds
-    queryClient.invalidateQueries({ queryKey: ["/api/rounds"] });
-  }, [selectedRound, queryClient]);
+    // Don't clear cached scores immediately - let the storage loading logic handle it
+  }, [selectedRound]);
 
   // Save scoring state to local storage whenever it changes
   useEffect(() => {
