@@ -275,13 +275,17 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
 
       // Score summary (large centered display) - calculate par for completed holes only
       const completedScores = Object.values(currentPlayerRoundData.scores || {});
-      const completedHolePars = completedScores.map((scoreData: any) => {
-        const actualScore = scoreData.scores || scoreData;
-        const hole = Array.isArray(holes) ? holes.find((h: any) => (h.id || h.holes?.id) === actualScore.holeId) : null;
-        return hole ? (hole.par || hole.holes?.par) : 0;
-      });
-      const completedHolesTotalPar = completedHolePars.reduce((sum: number, par: number) => sum + par, 0);
       const holesCompleted = completedScores.length;
+      
+      // Calculate par for actually played holes using hole numbers
+      let completedHolesTotalPar = 0;
+      Object.keys(currentPlayerRoundData.scores || {}).forEach(holeNumberStr => {
+        const holeNumber = parseInt(holeNumberStr);
+        const hole = Array.isArray(holes) ? holes.find((h: any) => (h.holeNumber || h.holes?.holeNumber) === holeNumber) : null;
+        if (hole) {
+          completedHolesTotalPar += (hole.par || hole.holes?.par || 4);
+        }
+      });
       
       const scoreToPar = totalStrokes > 0 && holesCompleted > 0 ? totalStrokes - completedHolesTotalPar : 0;
       const scoreToParText = scoreToPar === 0 ? 'EVEN' : 
@@ -292,24 +296,24 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
       ctx.fillStyle = '#D4AF37';
       ctx.font = 'bold 64px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(`${totalStrokes}`, canvas.width / 2, playerY + 70);
+      ctx.fillText(`${totalStrokes}`, canvas.width / 2, playerY + 60);
 
       // Score relative to par (centered below main score)
       ctx.fillStyle = '#666666';
-      ctx.font = 'bold 32px sans-serif';
-      ctx.fillText(scoreToParText, canvas.width / 2, playerY + 110);
+      ctx.font = 'bold 28px sans-serif';
+      ctx.fillText(scoreToParText, canvas.width / 2, playerY + 95);
 
       // Holes played (centered below par score)
       ctx.fillStyle = '#666666';
-      ctx.font = '24px sans-serif';
-      ctx.fillText(`(${holesCompleted} holes)`, canvas.width / 2, playerY + 140);
+      ctx.font = '20px sans-serif';
+      ctx.fillText(`(${holesCompleted} holes)`, canvas.width / 2, playerY + 120);
 
       // Calculate fairway stats (only par 4s and 5s count)
       const par4And5Holes = Array.isArray(holes) ? holes.filter((hole: any) => (hole.par || hole.holes?.par) === 4 || (hole.par || hole.holes?.par) === 5) : [];
       const fairwayDenominator = par4And5Holes.length;
       
       // Stats section (much larger and bold)
-      const statsY = playerY + 150;
+      const statsY = playerY + 160;
       ctx.fillStyle = '#1a4a3a';
       ctx.font = 'bold 32px sans-serif';
       ctx.textAlign = 'center';
