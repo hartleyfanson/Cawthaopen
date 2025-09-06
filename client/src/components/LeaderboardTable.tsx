@@ -604,7 +604,7 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
 
       {/* Header with hole numbers */}
       <div className="bg-muted p-4 border-b border-border">
-        <div className="grid gap-1 text-center text-sm font-medium text-muted-foreground" style={{gridTemplateColumns: "2fr " + "1fr ".repeat(9)}}>
+        <div className="grid text-center text-sm font-medium text-muted-foreground" style={{gridTemplateColumns: "1.5fr " + "1fr ".repeat(9), gap: "2px"}}>
           <div className="text-left">HOLE</div>
           {displayHoles.map((hole: any) => (
             <div key={hole.id} data-testid={`header-hole-${hole.holeNumber}`}>
@@ -614,7 +614,7 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
         </div>
         
         {/* PAR row */}
-        <div className="grid gap-1 text-center text-sm text-muted-foreground mt-1" style={{gridTemplateColumns: "2fr " + "1fr ".repeat(9)}}>
+        <div className="grid text-center text-sm text-muted-foreground mt-1" style={{gridTemplateColumns: "1.5fr " + "1fr ".repeat(9), gap: "2px"}}>
           <div className="text-left">PAR</div>
           {displayHoles.map((hole: any) => (
             <div key={`par-${hole.id}`} data-testid={`header-par-${hole.holeNumber}`}>
@@ -624,7 +624,7 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
         </div>
 
         {/* HANDICAP row */}
-        <div className="grid gap-1 text-center text-xs text-muted-foreground mt-1" style={{gridTemplateColumns: "2fr " + "1fr ".repeat(9)}}>
+        <div className="grid text-center text-xs text-muted-foreground mt-1" style={{gridTemplateColumns: "1.5fr " + "1fr ".repeat(9), gap: "2px"}}>
           <div className="text-left">HDCP</div>
           {displayHoles.map((hole: any) => (
             <div key={`hdcp-${hole.id}`} data-testid={`header-hdcp-${hole.holeNumber}`}>
@@ -635,7 +635,7 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
 
         {/* TEE COLORS row */}
         {Array.isArray(teeSelections) && teeSelections.length > 0 && (
-          <div className="grid gap-1 text-center text-xs mt-1" style={{gridTemplateColumns: "2fr " + "1fr ".repeat(9)}}>
+          <div className="grid text-center text-xs mt-1" style={{gridTemplateColumns: "1.5fr " + "1fr ".repeat(9), gap: "2px"}}>
             <div className="text-left text-muted-foreground">TEES</div>
             {displayHoles.map((hole: any) => {
               const teeSelection = teeSelections.find((tee: any) => tee.holeNumber === hole.holeNumber);
@@ -662,7 +662,7 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
 
         {/* YARDAGE row */}
         {Array.isArray(teeSelections) && teeSelections.length > 0 && (
-          <div className="grid gap-1 text-center text-xs text-muted-foreground mt-1" style={{gridTemplateColumns: "2fr " + "1fr ".repeat(9)}}>
+          <div className="grid text-center text-xs text-muted-foreground mt-1" style={{gridTemplateColumns: "1.5fr " + "1fr ".repeat(9), gap: "2px"}}>
             <div className="text-left">YARDS</div>
             {displayHoles.map((hole: any) => {
               const teeSelection = teeSelections.find((tee: any) => tee.holeNumber === hole.holeNumber);
@@ -717,10 +717,10 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
               }`}
               data-testid={`row-player-${player.playerId}`}
             >
-              <div className="grid gap-1 items-center text-center" style={{gridTemplateColumns: "2fr " + "1fr ".repeat(9)}}>
-                <div className="text-left px-1">
+              <div className="grid items-center text-center" style={{gridTemplateColumns: "1.5fr " + "1fr ".repeat(9), gap: "2px"}}>
+                <div className="text-left">
                   <div className="flex items-center space-x-1">
-                    <div className={`text-sm font-bold ${
+                    <div className={`text-xs font-bold ${
                       isLeader ? 'text-primary' : 'text-muted-foreground'
                     }`}>
                       {index + 1}
@@ -729,7 +729,7 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
                       <div className={`font-semibold text-xs leading-tight truncate ${
                         isLeader ? 'text-primary' : 'text-foreground'
                       }`} data-testid={`text-player-name-${player.playerId}`}>
-                        {formatPlayerName(player.playerName, 8)}
+                        {formatPlayerName(player.playerName, 6)}
                       </div>
                       {totalScore > 0 && (
                         <div className="text-xs text-muted-foreground leading-tight">
