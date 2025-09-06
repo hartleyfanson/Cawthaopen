@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { AchievementBadge } from "@/components/AchievementBadge";
-import { SkillNode } from "@/components/SkillNode";
+import { DraggableSkillTree } from "@/components/DraggableSkillTree";
 import { Trophy, Award, Target, TrendingUp, Calendar, BarChart3, Star, ArrowLeft, Users, Info, X } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
@@ -346,141 +346,12 @@ function PlayerProfile() {
               </CardContent>
             </Card>
 
-            {/* Constellation Skill Tree */}
-            <div className="relative min-h-[800px] w-full overflow-hidden bg-gradient-to-b from-slate-50 via-blue-50/20 to-indigo-100/30 rounded-2xl border border-slate-200 shadow-inner p-8">
-              {/* Constellation background pattern */}
-              <div className="absolute inset-0 opacity-10">
-                {/* Subtle connecting lines between skill nodes */}
-                <svg className="w-full h-full" viewBox="0 0 800 800">
-                  <defs>
-                    <pattern id="constellation" patternUnits="userSpaceOnUse" width="100" height="100">
-                      <circle cx="20" cy="20" r="1" fill="currentColor" opacity="0.3" />
-                      <circle cx="80" cy="60" r="1" fill="currentColor" opacity="0.2" />
-                      <circle cx="50" cy="90" r="1" fill="currentColor" opacity="0.25" />
-                    </pattern>
-                    <linearGradient id="connectionGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="rgb(148 163 184)" stopOpacity="0.2" />
-                      <stop offset="50%" stopColor="rgb(99 102 241)" stopOpacity="0.1" />
-                      <stop offset="100%" stopColor="rgb(168 85 247)" stopOpacity="0.2" />
-                    </linearGradient>
-                  </defs>
-                  <rect width="100%" height="100%" fill="url(#constellation)" />
-                  {/* Connecting lines */}
-                  <path d="M100,150 Q200,100 300,200 T500,180 Q600,220 700,160" stroke="url(#connectionGradient)" strokeWidth="2" fill="none" />
-                  <path d="M150,300 Q250,250 350,350 T550,330 Q650,370 750,310" stroke="url(#connectionGradient)" strokeWidth="1.5" fill="none" />
-                  <path d="M80,450 Q180,400 280,500 T480,480 Q580,520 680,460" stroke="url(#connectionGradient)" strokeWidth="1" fill="none" />
-                </svg>
-              </div>
-              
-              {/* Foundation Skills - Top Area (Entry Level) */}
-              <div className="relative z-10 mb-16">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-8 justify-items-center">
-                  {achievements.filter(a => a.rarity === 'common').map((achievement, index) => (
-                    <div 
-                      key={achievement.id} 
-                      className="transform" 
-                      style={{
-                        transform: `translate(${(index % 2) * 20 - 10}px, ${Math.sin(index * 0.5) * 15}px)`
-                      }}
-                    >
-                      <SkillNode 
-                        achievement={achievement} 
-                        isUnlocked={unlockedAchievements.has(achievement.id)} 
-                        onClick={() => setSelectedAchievement(achievement)} 
-                        rarity="common" 
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Rare Skills - Middle-Upper Area */}
-              <div className="relative z-10 mb-16">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-12 justify-items-center max-w-6xl mx-auto">
-                  {achievements.filter(a => a.rarity === 'rare').map((achievement, index) => (
-                    <div 
-                      key={achievement.id} 
-                      className="transform" 
-                      style={{
-                        transform: `translate(${(index % 3) * 30 - 30}px, ${Math.cos(index * 0.7) * 20}px)`
-                      }}
-                    >
-                      <SkillNode 
-                        achievement={achievement} 
-                        isUnlocked={unlockedAchievements.has(achievement.id)} 
-                        onClick={() => setSelectedAchievement(achievement)} 
-                        rarity="rare" 
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Epic Skills - Lower Area (Advanced) */}
-              <div className="relative z-10 mb-16">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-16 justify-items-center max-w-4xl mx-auto">
-                  {achievements.filter(a => a.rarity === 'epic').map((achievement, index) => (
-                    <div 
-                      key={achievement.id} 
-                      className="transform" 
-                      style={{
-                        transform: `translate(${(index % 2) * 40 - 20}px, ${Math.sin(index * 1.2) * 25}px)`
-                      }}
-                    >
-                      <SkillNode 
-                        achievement={achievement} 
-                        isUnlocked={unlockedAchievements.has(achievement.id)} 
-                        onClick={() => setSelectedAchievement(achievement)} 
-                        rarity="epic" 
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Legendary Skills - Bottom Area (Master Level) */}
-              <div className="relative z-10">
-                <div className="flex justify-center gap-20">
-                  {achievements.filter(a => a.rarity === 'legendary').map((achievement, index) => (
-                    <div 
-                      key={achievement.id} 
-                      className="transform" 
-                      style={{
-                        transform: `translate(${index * 10 - 5}px, ${Math.cos(index * 2) * 15}px)`
-                      }}
-                    >
-                      <SkillNode 
-                        achievement={achievement} 
-                        isUnlocked={unlockedAchievements.has(achievement.id)} 
-                        onClick={() => setSelectedAchievement(achievement)} 
-                        rarity="legendary" 
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Constellation Progress Indicator */}
-              <div className="absolute top-4 right-4 bg-white/80 backdrop-blur-sm rounded-lg p-3 border border-slate-200">
-                <div className="text-sm font-medium text-slate-700 mb-1">Progress</div>
-                <div className="flex gap-1">
-                  {['common', 'rare', 'epic', 'legendary'].map((rarity) => {
-                    const rarityAchievements = achievements.filter(a => a.rarity === rarity);
-                    const unlockedCount = rarityAchievements.filter(a => unlockedAchievements.has(a.id)).length;
-                    const total = rarityAchievements.length;
-                    const colors = {
-                      common: 'bg-slate-400',
-                      rare: 'bg-emerald-400', 
-                      epic: 'bg-amber-400',
-                      legendary: 'bg-violet-400'
-                    };
-                    return (
-                      <div key={rarity} className={`w-3 h-3 rounded-full ${colors[rarity as keyof typeof colors]} ${unlockedCount === total ? 'opacity-100' : 'opacity-30'}`} title={`${rarity}: ${unlockedCount}/${total}`} />
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
+            {/* Interactive Draggable Skill Tree */}
+            <DraggableSkillTree 
+              achievements={achievements} 
+              unlockedAchievements={unlockedAchievements} 
+              onNodeClick={setSelectedAchievement} 
+            />
 
             {/* Achievement Detail Modal */}
             {selectedAchievement && (

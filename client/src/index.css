@@ -144,3 +144,77 @@
     text-wrap: balance;
   }
 }
+
+/* Video Game Style Skill Node Borders */
+.skill-border-common {
+  border: 2px solid #64748b;
+  box-shadow: 0 2px 4px rgba(100, 116, 139, 0.3);
+}
+
+.skill-border-rare {
+  border: 3px solid #10b981;
+  box-shadow: 
+    0 0 8px rgba(16, 185, 129, 0.4),
+    inset 0 1px 2px rgba(255, 255, 255, 0.2);
+  position: relative;
+}
+
+.skill-border-rare::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: inherit;
+}
+
+.skill-border-epic {
+  border: 4px solid #f59e0b;
+  box-shadow: 
+    0 0 12px rgba(245, 158, 11, 0.6),
+    inset 0 2px 4px rgba(255, 255, 255, 0.3),
+    0 0 20px rgba(245, 158, 11, 0.2);
+  position: relative;
+}
+
+.skill-border-epic::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 2px solid rgba(245, 158, 11, 0.4);
+  border-radius: inherit;
+}
+
+.skill-border-epic::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: calc(inherit - 4px);
+}
+
+.skill-border-legendary {
+  border: 6px solid #8b5cf6;
+  box-shadow: 
+    0 0 20px rgba(139, 92, 246, 0.8),
+    inset 0 3px 6px rgba(255, 255, 255, 0.4),
+    0 0 40px rgba(139, 92, 246, 0.3),
+    inset 0 0 12px rgba(139, 92, 246, 0.1);
+  position: relative;
+}
+
+.skill-border-legendary::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border: 3px solid rgba(139, 92, 246, 0.5);
+  border-radius: inherit;
+  background: linear-gradient(45deg, transparent 30%, rgba(139, 92, 246, 0.1) 50%, transparent 70%);
+}
+
+.skill-border-legendary::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  border-radius: calc(inherit - 6px);
+}
