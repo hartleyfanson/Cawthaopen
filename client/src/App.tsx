@@ -22,7 +22,24 @@ function Router() {
 
   return (
     <Switch>
-      {isLoading || !isAuthenticated ? (
+      {isLoading ? (
+        // Show all routes during loading to prevent 404 flash, but components will handle auth
+        <>
+          <Route path="/" component={isAuthenticated ? Dashboard : Landing} />
+          <Route path="/tournaments/:id/leaderboard" component={TournamentLeaderboard} />
+          <Route path="/tournaments/:id/scoring" component={LiveScoring} />
+          <Route path="/tournaments" component={TournamentHistory} />
+          <Route path="/tournaments/history" component={TournamentHistory} />
+          <Route path="/tournaments/:id/gallery" component={Gallery} />
+          <Route path="/tournaments/create" component={CreateTournament} />
+          <Route path="/profile" component={Profile} />
+          <Route path="/profile/edit" component={EditProfile} />
+          <Route path="/players/:playerId" component={PlayerProfile} />
+          <Route path="/achievements" component={PlayerProfile} />
+          <Route path="/statistics" component={PlayerProfile} />
+          <Route path="/admin" component={Admin} />
+        </>
+      ) : !isAuthenticated ? (
         <Route path="/" component={Landing} />
       ) : (
         <>
