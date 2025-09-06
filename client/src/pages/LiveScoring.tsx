@@ -199,12 +199,14 @@ export default function LiveScoring() {
       if (!id || !(user as any)?.id) return {};
       
       const completionChecks = [];
-      // Check completion for all rounds up to the selected round
-      for (let i = 1; i < selectedRound; i++) {
+      // Check completion for all rounds (including current round for unlocking next rounds)
+      const maxRounds = Array.isArray(tournamentRounds) ? tournamentRounds.length : 2;
+      for (let i = 1; i <= maxRounds; i++) {
         completionChecks.push(
           fetch(`/api/rounds/${id}/${i}/completed`)
             .then(res => res.json())
             .then(data => ({ round: i, isCompleted: data.isCompleted }))
+            .catch(() => ({ round: i, isCompleted: false })) // Handle errors gracefully
         );
       }
       
@@ -214,7 +216,7 @@ export default function LiveScoring() {
         return acc;
       }, {} as Record<number, boolean>);
     },
-    enabled: !!id && !!(user as any)?.id && selectedRound > 1,
+    enabled: !!id && !!(user as any)?.id,
   });
 
   const createRoundMutation = useMutation({
