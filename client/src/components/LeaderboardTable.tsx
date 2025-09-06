@@ -329,7 +329,16 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
   };
 
   // Sort leaderboard by total score (lowest first)
-  const sortedLeaderboard = [...leaderboard].sort((a, b) => {
+  // Deduplicate leaderboard by playerId first, then sort
+  const uniqueLeaderboard = leaderboard.reduce((acc: any[], current: any) => {
+    const existingPlayer = acc.find(player => player.playerId === current.playerId);
+    if (!existingPlayer) {
+      acc.push(current);
+    }
+    return acc;
+  }, []);
+
+  const sortedLeaderboard = [...uniqueLeaderboard].sort((a, b) => {
     const playerDataA = processedPlayerData[a.playerId];
     const playerDataB = processedPlayerData[b.playerId];
     
