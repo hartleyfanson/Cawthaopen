@@ -317,87 +317,147 @@ function PlayerProfile() {
             </Card>
           </TabsContent>
 
-          {/* Achievements Tab */}
+          {/* Achievements Tab - Skill Tree Layout */}
           <TabsContent value="achievements" className="space-y-6">
-            {Object.entries(achievementsByCategory).map(([category, categoryAchievements]) => {
-              const currentIndex = categoryIndices[category] || 0;
-              const visibleCount = 5; // Show 5 badges at a time
-              const totalPages = Math.ceil(categoryAchievements.length / visibleCount);
-              const currentAchievements = categoryAchievements.slice(
-                currentIndex * visibleCount,
-                (currentIndex * visibleCount) + visibleCount
-              );
+            {/* Achievement Overview */}
+            <Card className="bg-gradient-to-r from-green-50 to-gold-50 border-2 border-green-200">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-center justify-center">
+                  <Trophy className="h-6 w-6 text-gold" />
+                  Achievement Progress
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center space-y-2">
+                  <div className="text-3xl font-bold text-gold">{totalAchievements}</div>
+                  <div className="text-sm text-muted-foreground">Achievements Unlocked</div>
+                  <div className="w-full bg-muted rounded-full h-2 mt-2">
+                    <div 
+                      className="bg-gradient-to-r from-green-500 to-gold-500 h-2 rounded-full transition-all duration-500"
+                      style={{ width: `${achievementProgress}%` }}
+                    />
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {achievementProgress.toFixed(1)}% Complete
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-              const updateCategoryIndex = (newIndex: number) => {
-                setCategoryIndices(prev => ({
-                  ...prev,
-                  [category]: newIndex
-                }));
+            {/* Skill Tree Layout by Rarity */}
+            {['legendary', 'epic', 'rare', 'common'].map((rarity) => {
+              const rarityAchievements = achievements.filter(a => a.rarity === rarity);
+              if (rarityAchievements.length === 0) return null;
+              
+              const rarityConfig = {
+                legendary: { color: 'from-purple-500 to-pink-500', icon: '👑', bgColor: 'bg-purple-50 border-purple-200', textColor: 'text-purple-700' },
+                epic: { color: 'from-orange-500 to-red-500', icon: '🔥', bgColor: 'bg-orange-50 border-orange-200', textColor: 'text-orange-700' },
+                rare: { color: 'from-blue-500 to-cyan-500', icon: '💎', bgColor: 'bg-blue-50 border-blue-200', textColor: 'text-blue-700' },
+                common: { color: 'from-gray-400 to-gray-600', icon: '⭐', bgColor: 'bg-gray-50 border-gray-200', textColor: 'text-gray-700' }
               };
-
+              const config = rarityConfig[rarity as keyof typeof rarityConfig];
+              
               return (
-                <Card key={category}>
+                <Card key={rarity} className={`${config.bgColor} border-2`}>
                   <CardHeader>
-                    <div className="flex justify-between items-center">
-                      <CardTitle className="capitalize">{category} Achievements</CardTitle>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">
-                          {currentIndex + 1} of {totalPages}
-                        </span>
-                        <div className="flex gap-1">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateCategoryIndex(Math.max(0, currentIndex - 1))}
-                            disabled={currentIndex === 0}
-                            className="h-7 w-7 p-0"
-                            data-testid={`prev-${category}`}
-                          >
-                            ←
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateCategoryIndex(Math.min(totalPages - 1, currentIndex + 1))}
-                            disabled={currentIndex === totalPages - 1}
-                            className="h-7 w-7 p-0"
-                            data-testid={`next-${category}`}
-                          >
-                            →
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
+                    <CardTitle className={`capitalize ${config.textColor} flex items-center gap-2 text-center justify-center`}>
+                      <span className="text-2xl">{config.icon}</span>
+                      {rarity} Achievements
+                      <span className="text-sm font-normal">({rarityAchievements.filter(a => unlockedAchievements.has(a.id)).length}/{rarityAchievements.length})</span>
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex justify-center gap-2 sm:gap-3 md:gap-4 min-h-[120px] items-center">
-                      {currentAchievements.map((achievement) => (
-                        <AchievementBadge
-                          key={achievement.id}
-                          achievement={achievement}
-                          isUnlocked={unlockedAchievements.has(achievement.id)}
-                          unlockedAt={playerAchievements.find(pa => pa.achievementId === achievement.id)?.unlockedAt?.toString()}
-                          size="md"
-                        />
-                      ))}
-                    </div>
-                    {/* Page dots */}
-                    <div className="flex justify-center mt-4 gap-1">
-                      {Array.from({ length: totalPages }).map((_, index) => (
-                        <button
-                          key={index}
-                          onClick={() => updateCategoryIndex(index)}
-                          className={`w-2 h-2 rounded-full transition-colors ${
-                            index === currentIndex ? 'bg-primary' : 'bg-muted'
-                          }`}
-                          data-testid={`page-dot-${category}-${index}`}
-                        />
-                      ))}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                      {rarityAchievements.map((achievement) => {
+                        const isUnlocked = unlockedAchievements.has(achievement.id);
+                        const iconMap = {
+                          'Trophy': '🏆', 'Target': '🎯', 'Zap': '⚡', 'Star': '⭐', 'Crown': '👑', 'Award': '🏅',
+                          'Eye': '👁️', 'CheckCircle': '✅', 'Navigation': '🧭', 'TrendingUp': '📈', 'Cog': '⚙️',
+                          'CloudRain': '🌧️', 'SmileIcon': '😎'
+                        };
+                        const icon = iconMap[achievement.badgeIcon as keyof typeof iconMap] || '🏆';
+                        
+                        return (
+                          <div 
+                            key={achievement.id}
+                            className={`group relative flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all duration-300 cursor-pointer ${
+                              isUnlocked 
+                                ? `bg-white ${config.bgColor.replace('bg-', 'border-').replace('-50', '-300')} shadow-lg hover:shadow-xl transform hover:-translate-y-1` 
+                                : 'bg-gray-100 border-gray-300 opacity-50 hover:opacity-70'
+                            }`}
+                            data-testid={`achievement-${achievement.id}`}
+                            title={achievement.description}
+                          >
+                            {/* Rarity Glow Effect for Unlocked */}
+                            {isUnlocked && (
+                              <div className={`absolute inset-0 rounded-lg bg-gradient-to-r ${config.color} opacity-20 group-hover:opacity-30 transition-opacity`} />
+                            )}
+                            
+                            {/* Achievement Icon */}
+                            <div className={`relative z-10 text-4xl transform transition-transform duration-200 ${
+                              isUnlocked ? 'group-hover:scale-110' : 'grayscale'
+                            }`}>
+                              {icon}
+                            </div>
+                            
+                            {/* Achievement Name */}
+                            <div className={`relative z-10 text-sm font-bold text-center leading-tight ${
+                              isUnlocked ? config.textColor : 'text-gray-500'
+                            }`}>
+                              {achievement.name}
+                            </div>
+                            
+                            {/* Points Badge */}
+                            <div className={`relative z-10 text-xs px-2 py-1 rounded-full font-semibold ${
+                              isUnlocked 
+                                ? `bg-gradient-to-r ${config.color} text-white shadow-sm` 
+                                : 'bg-gray-200 text-gray-600'
+                            }`}>
+                              +{achievement.points}pts
+                            </div>
+                            
+                            {/* Lock Overlay for Locked Achievements */}
+                            {!isUnlocked && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/10 rounded-lg">
+                                <div className="text-2xl opacity-60">🔒</div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </CardContent>
                 </Card>
               );
             })}
+            
+            {/* Achievement Legend */}
+            <Card className="bg-muted/30">
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-2xl">👑</span>
+                    <span className="text-sm font-semibold text-purple-700">Legendary</span>
+                    <span className="text-xs text-muted-foreground">Epic feats</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-2xl">🔥</span>
+                    <span className="text-sm font-semibold text-orange-700">Epic</span>
+                    <span className="text-xs text-muted-foreground">Remarkable</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-2xl">💎</span>
+                    <span className="text-sm font-semibold text-blue-700">Rare</span>
+                    <span className="text-xs text-muted-foreground">Impressive</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-2xl">⭐</span>
+                    <span className="text-sm font-semibold text-gray-700">Common</span>
+                    <span className="text-xs text-muted-foreground">Foundation</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Statistics Tab */}
