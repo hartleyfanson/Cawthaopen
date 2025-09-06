@@ -801,7 +801,7 @@ export class DatabaseStorage implements IStorage {
         description: 'Hit fairways on 8 consecutive holes (excluding par 3s)',
         badgeIcon: 'Navigation',
         badgeColor: 'green',
-        category: 'driving',
+        category: 'consistency',
         condition: 'fairway_streak',
         value: 8,
         rarity: 'common',
@@ -870,6 +870,173 @@ export class DatabaseStorage implements IStorage {
         condition: 'weather_round',
         rarity: 'rare',
         points: 30
+      },
+      // Additional achievements for better scoring progression
+      {
+        name: 'Breaking the Century',
+        description: 'Score under 120 strokes in an 18-hole round',
+        badgeIcon: 'TrendingDown',
+        badgeColor: 'bronze',
+        category: 'scoring',
+        condition: 'score_under_threshold',
+        value: 120,
+        rarity: 'common',
+        points: 5
+      },
+      {
+        name: 'Double Digit Down',
+        description: 'Score under 110 strokes in an 18-hole round',
+        badgeIcon: 'TrendingDown',
+        badgeColor: 'bronze',
+        category: 'scoring',
+        condition: 'score_under_threshold',
+        value: 110,
+        rarity: 'common',
+        points: 10
+      },
+      {
+        name: 'Century Breaker',
+        description: 'Score under 100 strokes in an 18-hole round',
+        badgeIcon: 'Trophy',
+        badgeColor: 'silver',
+        category: 'scoring',
+        condition: 'score_under_threshold',
+        value: 100,
+        rarity: 'common',
+        points: 15
+      },
+      {
+        name: 'Into the 80s',
+        description: 'Score in the 80s (80-89) in an 18-hole round',
+        badgeIcon: 'Trophy',
+        badgeColor: 'gold',
+        category: 'scoring',
+        condition: 'score_under_threshold',
+        value: 90,
+        rarity: 'rare',
+        points: 25
+      },
+      {
+        name: 'Scratch Approaching',
+        description: 'Score in the 70s (70-79) in an 18-hole round',
+        badgeIcon: 'Crown',
+        badgeColor: 'purple',
+        category: 'scoring',
+        condition: 'score_under_threshold',
+        value: 80,
+        rarity: 'epic',
+        points: 50
+      },
+      {
+        name: 'Under Par Pioneer',
+        description: 'Break 70 strokes in an 18-hole round',
+        badgeIcon: 'Star',
+        badgeColor: 'gold',
+        category: 'scoring',
+        condition: 'score_under_threshold',
+        value: 70,
+        rarity: 'legendary',
+        points: 100
+      },
+      // Consistency achievements
+      {
+        name: 'One Putt Wonder',
+        description: 'One-putt 3 or more holes in a single round',
+        badgeIcon: 'Target',
+        badgeColor: 'blue',
+        category: 'consistency',
+        condition: 'one_putt_master',
+        value: 3,
+        rarity: 'common',
+        points: 15
+      },
+      {
+        name: 'Two Putt Master',
+        description: 'Two-putt or better on 14+ holes in a round',
+        badgeIcon: 'CheckCircle',
+        badgeColor: 'green',
+        category: 'consistency',
+        condition: 'two_putt_master',
+        value: 14,
+        rarity: 'rare',
+        points: 25
+      },
+      {
+        name: 'Consistent Carl',
+        description: 'Score bogey or better on 12+ holes in a round',
+        badgeIcon: 'Target',
+        badgeColor: 'blue',
+        category: 'consistency',
+        condition: 'consistent_performance',
+        value: 12,
+        rarity: 'rare',
+        points: 30
+      },
+      // Strategy achievements
+      {
+        name: 'Green Hunter',
+        description: 'Hit 10+ greens in regulation during a round',
+        badgeIcon: 'Crosshair',
+        badgeColor: 'green',
+        category: 'strategy',
+        condition: 'greens_in_regulation',
+        value: 10,
+        rarity: 'common',
+        points: 20
+      },
+      // Special achievements
+      {
+        name: 'Albatross',
+        description: 'Score an albatross (3 under par) on any hole',
+        badgeIcon: 'Zap',
+        badgeColor: 'rainbow',
+        category: 'scoring',
+        condition: 'albatross',
+        rarity: 'legendary',
+        points: 150
+      },
+      {
+        name: 'Hole-in-One Hero',
+        description: 'Score a hole-in-one on any par 3',
+        badgeIcon: 'Crosshair',
+        badgeColor: 'gold',
+        category: 'scoring',
+        condition: 'hole_in_one',
+        rarity: 'legendary',
+        points: 100
+      },
+      {
+        name: 'Birdie Bonanza',
+        description: 'Score 5+ birdies in a single tournament',
+        badgeIcon: 'Star',
+        badgeColor: 'yellow',
+        category: 'scoring',
+        condition: 'multiple_birdies_tournament',
+        value: 5,
+        rarity: 'epic',
+        points: 40
+      },
+      {
+        name: 'Tournament Titan',
+        description: 'Complete 25 tournaments',
+        badgeIcon: 'Trophy',
+        badgeColor: 'gold',
+        category: 'tournament',
+        condition: 'tournament_count',
+        value: 25,
+        rarity: 'epic',
+        points: 75
+      },
+      {
+        name: 'Veteran Player',
+        description: 'Complete 50 tournaments',
+        badgeIcon: 'Crown',
+        badgeColor: 'purple',
+        category: 'tournament',
+        condition: 'tournament_count',
+        value: 50,
+        rarity: 'legendary',
+        points: 150
       }
     ];
 

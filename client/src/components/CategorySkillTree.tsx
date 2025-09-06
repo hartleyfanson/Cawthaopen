@@ -18,8 +18,17 @@ export function CategorySkillTree({ category, playerAchievements, playerId }: Ca
 
   const unlockedAchievementIds = new Set(playerAchievements.map(pa => pa.achievementId));
 
+  // For scoring progression, organize by threshold values instead of rarity
+  const isScoreProgression = category.id === "score-progression";
+  
   // Organize achievements by rarity following Creately's hierarchical structure
-  const achievementsByRarity = {
+  const achievementsByRarity = isScoreProgression ? {
+    // Score progression ordered by difficulty (higher scores = easier)
+    common: category.achievements.filter(a => a.value && a.value >= 100).sort((a, b) => (b.value || 0) - (a.value || 0)),
+    rare: category.achievements.filter(a => a.value && a.value >= 80 && a.value < 100).sort((a, b) => (b.value || 0) - (a.value || 0)),
+    epic: category.achievements.filter(a => a.value && a.value >= 70 && a.value < 80).sort((a, b) => (b.value || 0) - (a.value || 0)),
+    legendary: category.achievements.filter(a => a.value && a.value < 70 || ['eagle', 'hole_in_one', 'albatross'].includes(a.condition)).sort((a, b) => (b.value || 0) - (a.value || 0)),
+  } : {
     common: category.achievements.filter(a => a.rarity === 'common'),
     rare: category.achievements.filter(a => a.rarity === 'rare'), 
     epic: category.achievements.filter(a => a.rarity === 'epic'),
@@ -182,7 +191,9 @@ export function CategorySkillTree({ category, playerAchievements, playerId }: Ca
         {/* Foundation Level - Common Achievements */}
         {achievementsByRarity.common.length > 0 && (
           <div className="space-y-6 mb-10">
-            <h3 className="text-lg font-semibold text-green-800 dark:text-green-400 text-center">Foundation Skills</h3>
+            <h3 className="text-lg font-semibold text-green-800 dark:text-green-400 text-center">
+              {isScoreProgression ? "Breaking Barriers" : "Foundation Skills"}
+            </h3>
             <div className={`grid gap-6 justify-items-center ${
               achievementsByRarity.common.length === 1 ? 'grid-cols-1' :
               achievementsByRarity.common.length === 2 ? 'grid-cols-1 sm:grid-cols-2' :
@@ -197,8 +208,16 @@ export function CategorySkillTree({ category, playerAchievements, playerId }: Ca
                     rarity={achievement.rarity || 'common'}
                     position={{x: 0, y: 0}}
                   />
-                  {/* Connection to next tier from middle achievement */}
-                  {index === Math.floor(achievementsByRarity.common.length / 2) && achievementsByRarity.rare.length > 0 && (
+                  {/* Connection lines for scoring progression */}
+                  {isScoreProgression && index < achievementsByRarity.common.length - 1 && (
+                    <div className="absolute top-1/2 -right-3 w-6 h-0.5 bg-gradient-to-r from-emerald-500 to-emerald-300"></div>
+                  )}
+                  {/* Connection to next tier from last achievement in scoring progression */}
+                  {isScoreProgression && index === achievementsByRarity.common.length - 1 && achievementsByRarity.rare.length > 0 && (
+                    <div className="absolute top-full left-1/2 transform -translate-x-0.5 w-1 h-12 bg-gradient-to-b from-emerald-500 to-blue-300"></div>
+                  )}
+                  {/* Connection to next tier from middle achievement for other categories */}
+                  {!isScoreProgression && index === Math.floor(achievementsByRarity.common.length / 2) && achievementsByRarity.rare.length > 0 && (
                     <div className="absolute top-full left-1/2 transform -translate-x-0.5 w-1 h-12 bg-gradient-to-b from-emerald-500 to-emerald-300"></div>
                   )}
                 </div>
@@ -210,7 +229,9 @@ export function CategorySkillTree({ category, playerAchievements, playerId }: Ca
         {/* Advanced Level - Rare Achievements */}
         {achievementsByRarity.rare.length > 0 && (
           <div className="space-y-6 mb-10">
-            <h3 className="text-lg font-semibold text-green-700 dark:text-green-300 text-center">Advanced Mastery</h3>
+            <h3 className="text-lg font-semibold text-green-700 dark:text-green-300 text-center">
+              {isScoreProgression ? "Solid Scores" : "Advanced Mastery"}
+            </h3>
             <div className={`grid gap-8 justify-items-center ${
               achievementsByRarity.rare.length === 1 ? 'grid-cols-1' :
               'grid-cols-1 sm:grid-cols-2'
@@ -237,7 +258,9 @@ export function CategorySkillTree({ category, playerAchievements, playerId }: Ca
         {/* Expert Level - Epic Achievements */}
         {achievementsByRarity.epic.length > 0 && (
           <div className="space-y-6 mb-10">
-            <h3 className="text-lg font-semibold text-amber-700 dark:text-amber-400 text-center">Expert Excellence</h3>
+            <h3 className="text-lg font-semibold text-amber-700 dark:text-amber-400 text-center">
+              {isScoreProgression ? "Breaking Par" : "Expert Excellence"}
+            </h3>
             <div className={`grid gap-10 justify-items-center ${
               achievementsByRarity.epic.length === 1 ? 'grid-cols-1' :
               'grid-cols-1 sm:grid-cols-2'
@@ -264,7 +287,9 @@ export function CategorySkillTree({ category, playerAchievements, playerId }: Ca
         {/* Master Level - Legendary Achievements */}
         {achievementsByRarity.legendary.length > 0 && (
           <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-violet-700 dark:text-violet-400 text-center">Legendary Mastery</h3>
+            <h3 className="text-lg font-semibold text-violet-700 dark:text-violet-400 text-center">
+              {isScoreProgression ? "Elite Performance" : "Legendary Mastery"}
+            </h3>
             <div className={`grid gap-12 justify-items-center ${
               achievementsByRarity.legendary.length === 1 ? 'grid-cols-1' :
               'grid-cols-1 sm:grid-cols-2'

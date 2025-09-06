@@ -55,7 +55,16 @@ export function MultiSkillTreeManager({ playerId }: MultiSkillTreeManagerProps) 
         a.condition === 'no_triple_bogey_streak' ||
         a.condition === 'consistent_performance' ||
         a.condition === 'par_streak' ||
+        a.condition === 'fairway_streak' ||
+        a.condition === 'fairways_in_regulation' ||
+        a.condition === 'two_putt_master' ||
+        a.condition === 'one_putt_master' ||
+        a.category === 'consistency' ||
         a.name.toLowerCase().includes('consistency') ||
+        a.name.toLowerCase().includes('fairway finder') ||
+        a.name.toLowerCase().includes('one putt wonder') ||
+        a.name.toLowerCase().includes('consistent carl') ||
+        a.name.toLowerCase().includes('two putt master') ||
         a.description.toLowerCase().includes('consistent')
       )
     },
@@ -76,15 +85,16 @@ export function MultiSkillTreeManager({ playerId }: MultiSkillTreeManagerProps) 
     },
     {
       id: "accuracy",
-      name: "Accuracy & Course Management", 
+      name: "Course Strategy", 
       icon: Crosshair,
       color: "from-purple-600 to-purple-400",
       description: "Strategic play and precision shot making",
       achievements: achievements.filter(a =>
-        a.condition === 'fairways_in_regulation' ||
-        a.condition === 'fairway_streak' ||
-        a.name.toLowerCase().includes('fairway') ||
-        a.name.toLowerCase().includes('accuracy')
+        a.condition === 'greens_in_regulation' ||
+        a.condition === 'approach_accuracy' ||
+        a.category === 'strategy' ||
+        a.name.toLowerCase().includes('strategy') ||
+        a.name.toLowerCase().includes('course management')
       )
     },
     {
