@@ -286,17 +286,13 @@ export class DatabaseStorage implements IStorage {
 
   // Scoring operations
   async createRound(round: InsertRound): Promise<Round> {
-    console.log(`[DEBUG] Creating round:`, round);
-    
     // Check if a round already exists for this tournament, player, and round number
     const existingRound = await this.getRound(round.tournamentId, round.playerId, round.roundNumber);
     if (existingRound) {
-      console.log(`[DEBUG] Round already exists for tournament ${round.tournamentId}, player ${round.playerId}, round ${round.roundNumber}:`, existingRound);
       return existingRound; // Return existing round instead of creating duplicate
     }
     
     const [newRound] = await db.insert(rounds).values(round).returning();
-    console.log(`[DEBUG] Created new round:`, newRound);
     return newRound;
   }
 
@@ -340,16 +336,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createScore(score: InsertScore): Promise<Score> {
-    console.log(`[DEBUG] Creating score:`, score);
-    
-    // Get round info for debugging
-    const round = await this.getRoundById(score.roundId);
-    if (round) {
-      console.log(`[DEBUG] Score being saved to round:`, round);
-    }
-    
     const [newScore] = await db.insert(scores).values(score).returning();
-    console.log(`[DEBUG] Created score:`, newScore);
     return newScore;
   }
 
