@@ -14,49 +14,63 @@ export function DraggableSkillTree({ achievements, unlockedAchievements, onNodeC
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Define node positions for constellation layout
+  // Define node positions for tree layout branching from "join tournament" root
   const getNodePositions = () => {
     const positions: Record<string, { x: number; y: number }> = {};
     
-    // Foundation tier - top area
-    const commonAchievements = achievements.filter(a => a.rarity === 'common');
+    // Find the "join tournament" or first tournament achievement as root
+    const rootAchievement = achievements.find(a => 
+      a.name.toLowerCase().includes('tournament') || 
+      a.condition === 'tournament_count' ||
+      a.category === 'tournament'
+    ) || achievements[0];
+    
+    // Root node - center
+    if (rootAchievement) {
+      positions[rootAchievement.id] = { x: 500, y: 300 };
+    }
+    
+    // Branch common achievements (foundation skills) - close to root
+    const commonAchievements = achievements.filter(a => a.rarity === 'common' && a.id !== rootAchievement?.id);
     commonAchievements.forEach((achievement, index) => {
-      const angle = (index / commonAchievements.length) * Math.PI * 2;
-      const radius = 200;
+      const angle = (index / Math.max(commonAchievements.length, 1)) * Math.PI * 2;
+      const radius = 150;
       positions[achievement.id] = {
-        x: 400 + Math.cos(angle) * radius,
-        y: 150 + Math.sin(angle) * radius * 0.5
+        x: 500 + Math.cos(angle) * radius,
+        y: 300 + Math.sin(angle) * radius * 0.8
       };
     });
 
-    // Rare tier - middle area
+    // Branch rare achievements - intermediate distance
     const rareAchievements = achievements.filter(a => a.rarity === 'rare');
     rareAchievements.forEach((achievement, index) => {
-      const angle = (index / rareAchievements.length) * Math.PI * 2;
-      const radius = 280;
+      const angle = (index / Math.max(rareAchievements.length, 1)) * Math.PI * 2 + Math.PI / 6;
+      const radius = 250;
       positions[achievement.id] = {
-        x: 400 + Math.cos(angle + Math.PI / 4) * radius,
-        y: 350 + Math.sin(angle + Math.PI / 4) * radius * 0.6
+        x: 500 + Math.cos(angle) * radius,
+        y: 300 + Math.sin(angle) * radius * 0.9
       };
     });
 
-    // Epic tier - lower area
+    // Branch epic achievements - further out
     const epicAchievements = achievements.filter(a => a.rarity === 'epic');
     epicAchievements.forEach((achievement, index) => {
-      const angle = (index / epicAchievements.length) * Math.PI * 2;
-      const radius = 220;
+      const angle = (index / Math.max(epicAchievements.length, 1)) * Math.PI * 2 + Math.PI / 4;
+      const radius = 350;
       positions[achievement.id] = {
-        x: 400 + Math.cos(angle + Math.PI / 2) * radius,
-        y: 580 + Math.sin(angle + Math.PI / 2) * radius * 0.4
+        x: 500 + Math.cos(angle) * radius,
+        y: 300 + Math.sin(angle) * radius
       };
     });
 
-    // Legendary tier - bottom center
+    // Branch legendary achievements - outermost
     const legendaryAchievements = achievements.filter(a => a.rarity === 'legendary');
     legendaryAchievements.forEach((achievement, index) => {
+      const angle = (index / Math.max(legendaryAchievements.length, 1)) * Math.PI * 2 + Math.PI / 3;
+      const radius = 450;
       positions[achievement.id] = {
-        x: 350 + index * 100,
-        y: 750
+        x: 500 + Math.cos(angle) * radius,
+        y: 300 + Math.sin(angle) * radius
       };
     });
 
@@ -65,23 +79,60 @@ export function DraggableSkillTree({ achievements, unlockedAchievements, onNodeC
 
   const nodePositions = getNodePositions();
 
-  // Connection lines between related achievements
+  // Connection lines creating tree branches from root
   const getConnections = () => {
     const connections: Array<{ from: string; to: string }> = [];
     
-    // Connect achievements based on categories and dependencies
-    achievements.forEach(achievement => {
-      const relatedAchievements = achievements.filter(other => 
-        other.id !== achievement.id && 
-        (other.category === achievement.category || 
-         (achievement.condition === 'eagle' && other.condition === 'birdie') ||
-         (achievement.name.includes('Putting') && other.name.includes('Par')) ||
-         (achievement.condition === 'tournament_count' && other.name.includes('Champion')))
-      );
+    const rootAchievement = achievements.find(a => 
+      a.name.toLowerCase().includes('tournament') || 
+      a.condition === 'tournament_count' ||
+      a.category === 'tournament'
+    ) || achievements[0];
+    
+    if (!rootAchievement) return connections;
+    
+    // Connect root to all common achievements
+    const commonAchievements = achievements.filter(a => a.rarity === 'common' && a.id !== rootAchievement.id);
+    commonAchievements.forEach(achievement => {
+      connections.push({ from: rootAchievement.id, to: achievement.id });
+    });
+    
+    // Connect common achievements to rare achievements of similar category
+    const rareAchievements = achievements.filter(a => a.rarity === 'rare');
+    rareAchievements.forEach(rareAchievement => {
+      const parentCommon = commonAchievements.find(common => 
+        common.category === rareAchievement.category ||
+        common.condition.includes(rareAchievement.condition.split('_')[0])
+      ) || commonAchievements[0];
       
-      relatedAchievements.slice(0, 2).forEach(related => {
-        connections.push({ from: achievement.id, to: related.id });
-      });
+      if (parentCommon) {
+        connections.push({ from: parentCommon.id, to: rareAchievement.id });
+      }
+    });
+    
+    // Connect rare to epic achievements
+    const epicAchievements = achievements.filter(a => a.rarity === 'epic');
+    epicAchievements.forEach(epicAchievement => {
+      const parentRare = rareAchievements.find(rare => 
+        rare.category === epicAchievement.category ||
+        rare.condition.includes(epicAchievement.condition.split('_')[0])
+      ) || rareAchievements[0];
+      
+      if (parentRare) {
+        connections.push({ from: parentRare.id, to: epicAchievement.id });
+      }
+    });
+    
+    // Connect epic to legendary achievements
+    const legendaryAchievements = achievements.filter(a => a.rarity === 'legendary');
+    legendaryAchievements.forEach(legendaryAchievement => {
+      const parentEpic = epicAchievements.find(epic => 
+        epic.category === legendaryAchievement.category
+      ) || epicAchievements[0];
+      
+      if (parentEpic) {
+        connections.push({ from: parentEpic.id, to: legendaryAchievement.id });
+      }
     });
 
     return connections;
@@ -89,49 +140,61 @@ export function DraggableSkillTree({ achievements, unlockedAchievements, onNodeC
 
   const connections = getConnections();
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+  const getEventPosition = (e: React.MouseEvent | React.TouchEvent) => {
+    if ('touches' in e) {
+      return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+    return { x: e.clientX, y: e.clientY };
+  };
+
+  const handleStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
     setIsDragging(true);
-    setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+    const pos = getEventPosition(e);
+    setDragStart({ x: pos.x - pan.x, y: pos.y - pan.y });
   }, [pan]);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+  const handleMove = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (!isDragging) return;
+    e.preventDefault();
     
+    const pos = getEventPosition(e);
     const newPan = {
-      x: e.clientX - dragStart.x,
-      y: e.clientY - dragStart.y
+      x: pos.x - dragStart.x,
+      y: pos.y - dragStart.y
     };
     
     // Constrain panning
-    newPan.x = Math.max(-600, Math.min(200, newPan.x));
-    newPan.y = Math.max(-400, Math.min(100, newPan.y));
+    newPan.x = Math.max(-800, Math.min(300, newPan.x));
+    newPan.y = Math.max(-600, Math.min(200, newPan.y));
     
     setPan(newPan);
   }, [isDragging, dragStart]);
 
-  const handleMouseUp = useCallback(() => {
+  const handleEnd = useCallback(() => {
     setIsDragging(false);
   }, []);
 
   return (
-    <div className="relative w-full h-[800px] overflow-hidden bg-gradient-to-b from-slate-900 via-indigo-900 to-purple-900 rounded-2xl border border-slate-700 shadow-2xl">
-      {/* Background stars */}
-      <div className="absolute inset-0 opacity-30">
-        <div className="absolute w-1 h-1 bg-white rounded-full animate-pulse" style={{ top: '20%', left: '15%' }}></div>
-        <div className="absolute w-1 h-1 bg-white rounded-full animate-pulse" style={{ top: '40%', left: '80%', animationDelay: '1s' }}></div>
-        <div className="absolute w-1 h-1 bg-white rounded-full animate-pulse" style={{ top: '70%', left: '25%', animationDelay: '2s' }}></div>
-        <div className="absolute w-1 h-1 bg-white rounded-full animate-pulse" style={{ top: '85%', left: '75%', animationDelay: '3s' }}></div>
-        <div className="absolute w-1 h-1 bg-white rounded-full animate-pulse" style={{ top: '60%', left: '60%', animationDelay: '4s' }}></div>
+    <div className="relative w-full h-[800px] overflow-hidden bg-gradient-to-b from-green-50 via-emerald-100 to-green-200 rounded-2xl border border-green-300 shadow-2xl">
+      {/* Golf course pattern background */}
+      <div className="absolute inset-0 opacity-20">
+        <div className="absolute inset-0" style={{
+          backgroundImage: `radial-gradient(circle at 25% 25%, rgba(34, 197, 94, 0.3) 2px, transparent 2px),
+                           radial-gradient(circle at 75% 75%, rgba(34, 197, 94, 0.2) 1px, transparent 1px)`,
+          backgroundSize: '50px 50px, 30px 30px'
+        }}></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-green-200/30 to-emerald-300/20"></div>
       </div>
 
       {/* Navigation hint */}
-      <div className="absolute top-4 left-4 bg-black/60 text-white px-3 py-2 rounded-lg text-sm backdrop-blur-sm">
-        Click and drag to explore the skill constellation
+      <div className="absolute top-4 left-4 bg-green-800/90 text-green-50 px-3 py-2 rounded-lg text-sm backdrop-blur-sm">
+        Click and drag to explore the achievement tree
       </div>
       
       {/* Progress indicator */}
-      <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-sm rounded-lg p-3">
-        <div className="text-white text-sm font-medium mb-2">Mastery Progress</div>
+      <div className="absolute top-4 right-4 bg-green-800/90 backdrop-blur-sm rounded-lg p-3">
+        <div className="text-green-50 text-sm font-medium mb-2">Mastery Progress</div>
         <div className="flex gap-1">
           {['common', 'rare', 'epic', 'legendary'].map((rarity) => {
             const rarityAchievements = achievements.filter(a => a.rarity === rarity);
@@ -146,7 +209,7 @@ export function DraggableSkillTree({ achievements, unlockedAchievements, onNodeC
             return (
               <div key={rarity} className="flex flex-col items-center">
                 <div className={`w-4 h-4 rounded-full ${colors[rarity as keyof typeof colors]} ${unlockedCount === total ? 'opacity-100 shadow-lg' : 'opacity-30'} transition-all duration-300`} />
-                <div className="text-xs text-white/70 mt-1">{unlockedCount}/{total}</div>
+                <div className="text-xs text-green-100/70 mt-1">{unlockedCount}/{total}</div>
               </div>
             );
           })}\n        </div>
@@ -160,18 +223,21 @@ export function DraggableSkillTree({ achievements, unlockedAchievements, onNodeC
           transform: `translate(${pan.x}px, ${pan.y}px)`,
           transition: isDragging ? 'none' : 'transform 0.2s ease-out'
         }}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        onMouseDown={handleStart}
+        onMouseMove={handleMove}
+        onMouseUp={handleEnd}
+        onMouseLeave={handleEnd}
+        onTouchStart={handleStart}
+        onTouchMove={handleMove}
+        onTouchEnd={handleEnd}
       >
         {/* Connection lines */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ width: '1000px', height: '1000px' }}>
           <defs>
             <linearGradient id="connectionGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="rgba(148, 163, 184, 0.4)" />
-              <stop offset="50%" stopColor="rgba(99, 102, 241, 0.6)" />
-              <stop offset="100%" stopColor="rgba(168, 85, 247, 0.4)" />
+              <stop offset="0%" stopColor="rgba(34, 197, 94, 0.6)" />
+              <stop offset="50%" stopColor="rgba(16, 185, 129, 0.8)" />
+              <stop offset="100%" stopColor="rgba(5, 150, 105, 0.6)" />
             </linearGradient>
             <filter id="glow">
               <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
@@ -198,7 +264,7 @@ export function DraggableSkillTree({ achievements, unlockedAchievements, onNodeC
                 y1={fromPos.y + 50}
                 x2={toPos.x + 50}
                 y2={toPos.y + 50}
-                stroke={isActive ? "url(#connectionGradient)" : "rgba(148, 163, 184, 0.2)"}
+                stroke={isActive ? "url(#connectionGradient)" : "rgba(34, 197, 94, 0.3)"}
                 strokeWidth={isActive ? "2" : "1"}
                 filter={isActive ? "url(#glow)" : "none"}
                 className="transition-all duration-500"
