@@ -417,23 +417,12 @@ export default function TournamentLeaderboard() {
             <>
               <LeaderboardTable 
                 leaderboard={leaderboard} 
-                courseId={(tournament as any)?.courseId || ''}
+                courseId={currentCourseId || (tournament as any)?.courseId || ''}
                 tournamentId={id}
                 tournament={tournament}
                 selectedRound={selectedRound}
                 tournamentRounds={tournamentRounds as any[]}
               />
-              
-              {/* Show detailed round scorecard for specific rounds in multi-round tournaments */}
-              {selectedRound !== 'all' && typeof selectedRound === 'number' && (
-                <div className="mt-8">
-                  <RoundScorecard 
-                    tournamentId={id || ''}
-                    selectedRound={selectedRound}
-                    courseId={currentCourseId}
-                  />
-                </div>
-              )}
               
               <PowerupComments 
                 tournamentId={id || ''}
