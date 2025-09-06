@@ -308,10 +308,10 @@ export default function LiveScoring() {
 
   // Auto-create round when entering live scoring (to fix first-hole save issue)
   useEffect(() => {
-    if (!id || !(user as any)?.id || isLoading || !isAuthenticated) return;
+    if (!id || !(user as any)?.id || isLoading || !isAuthenticated || !tournament) return;
     
-    // Only auto-create if we don't have a current round already
-    if (!currentRoundData && tournament && user) {
+    // Only auto-create if we don't have a current round already and we're not currently creating one
+    if (!currentRoundData && !createRoundMutation.isPending) {
       const autoCreateRound = async () => {
         try {
           await createRoundMutation.mutateAsync({
@@ -325,7 +325,7 @@ export default function LiveScoring() {
       
       autoCreateRound();
     }
-  }, [id, (user as any)?.id, currentRoundData, tournament, user, selectedRound, isLoading, isAuthenticated, createRoundMutation]);
+  }, [id, (user as any)?.id, currentRoundData, tournament, selectedRound, isLoading, isAuthenticated, createRoundMutation.isPending]);
 
   const currentHoleData = (holes as any[])?.find((hole: any) => hole.holeNumber === currentHole);
   
@@ -467,21 +467,14 @@ export default function LiveScoring() {
     if (!currentHoleData || strokes === null || strokes < 1) return;
     
     try {
-      let roundToUse = currentRoundData;
-      
-      if (!roundToUse) {
-        // Create round first and wait for it to complete
-        try {
-          roundToUse = await createRoundMutation.mutateAsync({
-            tournamentId: id,
-            roundNumber: selectedRound,
-          });
-          
-          // Round created successfully, no need to wait
-        } catch (error) {
-          console.error("Error creating round:", error);
-          throw error;
-        }
+      // Round should already be created when entering live scoring
+      if (!currentRoundData) {
+        toast({
+          title: "Error",
+          description: "Round not found. Please refresh the page.",
+          variant: "destructive",
+        });
+        return;
       }
 
       const scoreData = {
@@ -505,14 +498,9 @@ export default function LiveScoring() {
           data: scoreData,
         });
       } else {
-        // Create new score - ensure roundId is properly set
-        const roundId = (roundToUse as any)?.id;
-        if (!roundId) {
-          throw new Error("Round ID is missing after round creation");
-        }
-        
+        // Create new score
         await createScoreMutation.mutateAsync({
-          roundId: roundId,
+          roundId: (currentRoundData as any).id,
           holeId: currentHoleData.id,
           ...scoreData,
         });
