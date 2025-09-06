@@ -636,15 +636,17 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
           ))}
         </div>
 
-        {/* HANDICAP row */}
-        <div className="grid text-center text-xs text-muted-foreground mt-1" style={{gridTemplateColumns: "1.5fr " + "1fr ".repeat(9), gap: "2px"}}>
-          <div className="text-left">HDCP</div>
-          {displayHoles.map((hole: any) => (
-            <div key={`hdcp-${hole.id}`} data-testid={`header-hdcp-${hole.holeNumber}`}>
-              {hole.handicap || '-'}
-            </div>
-          ))}
-        </div>
+        {/* HANDICAP row - only show for handicap tournaments */}
+        {tournament?.scoringFormat === 'handicap' && (
+          <div className="grid text-center text-xs text-muted-foreground mt-1" style={{gridTemplateColumns: "1.5fr " + "1fr ".repeat(9), gap: "2px"}}>
+            <div className="text-left">HDCP</div>
+            {displayHoles.map((hole: any) => (
+              <div key={`hdcp-${hole.id}`} data-testid={`header-hdcp-${hole.holeNumber}`}>
+                {hole.handicap || '-'}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* TEE COLORS row */}
         {Array.isArray(teeSelections) && teeSelections.length > 0 && (

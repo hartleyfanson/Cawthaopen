@@ -192,6 +192,31 @@ export default function LiveScoring() {
     enabled: !!id,
   });
 
+  // Check round completion status for validation
+  const { data: roundCompletionData } = useQuery({
+    queryKey: ["/api/rounds", id, "completion-status"],
+    queryFn: async () => {
+      if (!id || !(user as any)?.id) return {};
+      
+      const completionChecks = [];
+      // Check completion for all rounds up to the selected round
+      for (let i = 1; i < selectedRound; i++) {
+        completionChecks.push(
+          fetch(`/api/rounds/${id}/${i}/completed`)
+            .then(res => res.json())
+            .then(data => ({ round: i, isCompleted: data.isCompleted }))
+        );
+      }
+      
+      const results = await Promise.all(completionChecks);
+      return results.reduce((acc, result) => {
+        acc[result.round] = result.isCompleted;
+        return acc;
+      }, {} as Record<number, boolean>);
+    },
+    enabled: !!id && !!(user as any)?.id && selectedRound > 1,
+  });
+
   const createRoundMutation = useMutation({
     mutationFn: async (data: any) => {
       return await apiRequest("POST", "/api/rounds", data);
@@ -603,22 +628,36 @@ export default function LiveScoring() {
             {Array.isArray(tournamentRounds) && tournamentRounds.length > 1 && (
               <div className="flex justify-center mt-4">
                 <div className="flex bg-background rounded-lg p-1 shadow-sm">
-                  {tournamentRounds.map((round: any) => (
-                    <Button
-                      key={round.id}
-                      onClick={() => setSelectedRound(round.roundNumber)}
-                      variant={selectedRound === round.roundNumber ? "default" : "ghost"}
-                      size="sm"
-                      className={`px-4 py-2 text-sm transition-all ${
-                        selectedRound === round.roundNumber
-                          ? "bg-primary text-primary-foreground shadow-sm" 
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                      }`}
-                      data-testid={`button-round-${round.roundNumber}`}
-                    >
-                      Round {round.roundNumber}
-                    </Button>
-                  ))}
+                  {tournamentRounds.map((round: any) => {
+                    // Check if previous rounds are completed
+                    const isPreviousRoundCompleted = round.roundNumber === 1 || 
+                      (roundCompletionData && roundCompletionData[round.roundNumber - 1]);
+                    const canAccessRound = isPreviousRoundCompleted;
+                    
+                    return (
+                      <Button
+                        key={round.id}
+                        onClick={() => canAccessRound && setSelectedRound(round.roundNumber)}
+                        variant={selectedRound === round.roundNumber ? "default" : "ghost"}
+                        size="sm"
+                        disabled={!canAccessRound}
+                        className={`px-4 py-2 text-sm transition-all ${
+                          selectedRound === round.roundNumber
+                            ? "bg-primary text-primary-foreground shadow-sm" 
+                            : canAccessRound 
+                              ? "text-muted-foreground hover:text-foreground hover:bg-muted"
+                              : "text-muted-foreground/50 cursor-not-allowed"
+                        }`}
+                        data-testid={`button-round-${round.roundNumber}`}
+                        title={!canAccessRound ? `Complete Round ${round.roundNumber - 1} first` : undefined}
+                      >
+                        Round {round.roundNumber}
+                        {!canAccessRound && round.roundNumber > 1 && (
+                          <span className="ml-1 text-xs">🔒</span>
+                        )}
+                      </Button>
+                    );
+                  })}
                 </div>
               </div>
             )}
