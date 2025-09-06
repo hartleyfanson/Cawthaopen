@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { AchievementBadge } from "@/components/AchievementBadge";
-import { VerticalAchievementTree } from "@/components/VerticalAchievementTree";
+import { MultiSkillTreeManager } from "@/components/MultiSkillTreeManager";
 import { Trophy, Award, Target, TrendingUp, Calendar, BarChart3, Star, ArrowLeft, Users, Info, X } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
@@ -346,11 +346,9 @@ function PlayerProfile() {
               </CardContent>
             </Card>
 
-            {/* Vertical Achievement Tree */}
-            <VerticalAchievementTree 
-              achievements={achievements} 
-              unlockedAchievements={unlockedAchievements} 
-              playerAchievements={playerAchievements}
+            {/* Multi-Category Skill Trees */}
+            <MultiSkillTreeManager 
+              playerId={selectedPlayerId}
             />
 
             {/* Achievement Detail Modal */}
