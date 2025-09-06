@@ -646,7 +646,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/tournaments/:id/tee-selections", async (req, res) => {
     try {
-      const holeTees = await storage.getTournamentHoleTees(req.params.id);
+      const roundNumber = req.query.round ? parseInt(req.query.round as string) : undefined;
+      const holeTees = await storage.getTournamentHoleTees(req.params.id, roundNumber);
       res.json(holeTees);
     } catch (error) {
       console.error("Error fetching tournament tee selections:", error);
@@ -693,7 +694,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/tournaments", isAuthenticated, async (req, res) => {
     try {
       const userId = (req.user as any)?.claims?.sub;
-      const { teeSelections, roundDates, roundCourses, ...restBody } = req.body;
+      const { teeSelections, roundDates, roundCourses, roundConfigs, ...restBody } = req.body;
       
       // For multi-round tournaments with no main courseId, use first round's course
       let courseId = restBody.courseId;
@@ -724,8 +725,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
             await storage.createTournamentHoleTee({
               tournamentId: tournament.id,
               holeId: hole.id,
+              roundNumber: 1, // Default to round 1 for single round tournaments
               teeColor: teeSelection.teeColor,
             });
+          }
+        }
+      }
+
+      // Create per-round tee selections for multi-round tournaments if provided
+      if (roundConfigs && Array.isArray(roundConfigs) && roundConfigs.length > 0) {
+        for (const roundConfig of roundConfigs) {
+          if (roundConfig.holeTeeMappings && Array.isArray(roundConfig.holeTeeMappings)) {
+            // Get course holes for this round
+            const roundCourseId = (roundCourses && Array.isArray(roundCourses) && roundCourses[roundConfig.roundNumber - 1]?.id)
+              ? roundCourses[roundConfig.roundNumber - 1].id
+              : tournament.courseId;
+            
+            const courseHoles = await storage.getCourseHoles(roundCourseId);
+            
+            for (const teeMapping of roundConfig.holeTeeMappings) {
+              const hole = courseHoles.find(h => h.holeNumber === teeMapping.holeNumber);
+              if (hole) {
+                await storage.createTournamentHoleTee({
+                  tournamentId: tournament.id,
+                  holeId: hole.id,
+                  roundNumber: roundConfig.roundNumber,
+                  teeColor: teeMapping.teeColor,
+                });
+              }
+            }
           }
         }
       }

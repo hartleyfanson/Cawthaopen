@@ -132,6 +132,7 @@ export const tournamentHoleTees = pgTable("tournament_hole_tees", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tournamentId: varchar("tournament_id").references(() => tournaments.id).notNull(),
   holeId: varchar("hole_id").references(() => holes.id).notNull(),
+  roundNumber: integer("round_number").notNull().default(1), // Support per-round tees
   teeColor: varchar("tee_color").notNull(), // white, blue, red, gold
   createdAt: timestamp("created_at").defaultNow(),
 });

@@ -121,6 +121,18 @@ export default function TournamentLeaderboard() {
     enabled: !!user && !!id,
   });
 
+  // Fetch round-specific tee selections based on selected round
+  const { data: teeSelections } = useQuery({
+    queryKey: ["/api/tournaments", id, "tee-selections", selectedRound !== 'all' ? `round-${selectedRound}` : "all-rounds"],
+    queryFn: async () => {
+      const roundParam = selectedRound !== 'all' ? `?round=${selectedRound}` : '';
+      const response = await fetch(`/api/tournaments/${id}/tee-selections${roundParam}`);
+      if (!response.ok) throw new Error('Failed to fetch tee selections');
+      return response.json();
+    },
+    enabled: !!user && !!id,
+  });
+
   const queryClient = useQueryClient();
   
   const joinTournamentMutation = useMutation({
@@ -228,50 +240,42 @@ export default function TournamentLeaderboard() {
               {(tournament as any)?.name || 'Tournament Leaderboard'}
             </h2>
             {/* Tournament Info with All Courses and Date Range */}
-            {(() => {
-              if (selectedRound === 'all' && tournamentRounds && Array.isArray(tournamentRounds) && tournamentRounds.length > 1) {
-                return (
-                  <AllRoundsInfo 
-                    tournament={tournament} 
-                    tournamentRounds={tournamentRounds as any[]} 
-                  />
-                );
-              } else if (selectedRound !== 'all' && tournamentRounds && Array.isArray(tournamentRounds)) {
-                return (
-                  <div className="text-xl text-secondary space-y-1">
-                    <p>{(course as any)?.name || 'Course'} • {(course as any)?.location || 'Location'}</p>
-                    <p className="text-lg">
-                      Round {selectedRound} • {(tournamentRounds as any[]).find((r: any) => r.roundNumber === selectedRound)?.roundDate 
-                        ? new Date((tournamentRounds as any[]).find((r: any) => r.roundNumber === selectedRound)?.roundDate).toLocaleDateString('en-US', { 
-                            weekday: 'long',
-                            year: 'numeric', 
-                            month: 'long', 
-                            day: 'numeric' 
-                          })
-                        : 'Date TBD'
-                      }
-                    </p>
-                  </div>
-                );
-              } else {
-                return (
-                  <div className="text-xl text-secondary space-y-1">
-                    <p>{(course as any)?.name || 'Course'} • {(course as any)?.location || 'Location'}</p>
-                    <p className="text-lg">
-                      {selectedRound === 'all' ? 'All Rounds Combined' : (tournament as any)?.startDate 
-                        ? new Date((tournament as any).startDate).toLocaleDateString('en-US', { 
-                            weekday: 'long',
-                            year: 'numeric', 
-                            month: 'long', 
-                            day: 'numeric' 
-                          })
-                        : 'Date TBD'
-                      }
-                    </p>
-                  </div>
-                );
-              }
-            })()}
+            {selectedRound === 'all' && tournamentRounds && Array.isArray(tournamentRounds) && tournamentRounds.length > 1 ? (
+              <AllRoundsInfo 
+                tournament={tournament} 
+                tournamentRounds={tournamentRounds as any[]} 
+              />
+            ) : selectedRound !== 'all' && tournamentRounds && Array.isArray(tournamentRounds) ? (
+              <div className="text-xl text-secondary space-y-1">
+                <p>{(course as any)?.name || 'Course'} • {(course as any)?.location || 'Location'}</p>
+                <p className="text-lg">
+                  Round {selectedRound} • {(tournamentRounds as any[]).find((r: any) => r.roundNumber === selectedRound)?.roundDate 
+                    ? new Date((tournamentRounds as any[]).find((r: any) => r.roundNumber === selectedRound)?.roundDate).toLocaleDateString('en-US', { 
+                        weekday: 'long',
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })
+                    : 'Date TBD'
+                  }
+                </p>
+              </div>
+            ) : (
+              <div className="text-xl text-secondary space-y-1">
+                <p>{(course as any)?.name || 'Course'} • {(course as any)?.location || 'Location'}</p>
+                <p className="text-lg">
+                  {selectedRound === 'all' ? 'All Rounds Combined' : (tournament as any)?.startDate 
+                    ? new Date((tournament as any).startDate).toLocaleDateString('en-US', { 
+                        weekday: 'long',
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })
+                    : 'Date TBD'
+                  }
+                </p>
+              </div>
+            )}
             
             {/* Round Selection - show only if tournament has multiple rounds */}
             {tournamentRounds && Array.isArray(tournamentRounds) && tournamentRounds.length > 1 && (
@@ -422,6 +426,7 @@ export default function TournamentLeaderboard() {
                 tournament={tournament}
                 selectedRound={selectedRound}
                 tournamentRounds={tournamentRounds as any[]}
+                teeSelections={teeSelections as any[]}
               />
               
               <PowerupComments 

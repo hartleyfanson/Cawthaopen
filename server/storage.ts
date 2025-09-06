@@ -492,20 +492,28 @@ export class DatabaseStorage implements IStorage {
     return newHoleTee;
   }
 
-  async getTournamentHoleTees(tournamentId: string): Promise<any[]> {
+  async getTournamentHoleTees(tournamentId: string, roundNumber?: number): Promise<any[]> {
+    const conditions = [eq(tournamentHoleTees.tournamentId, tournamentId)];
+    
+    // If roundNumber is specified, filter by it; otherwise get all rounds
+    if (roundNumber !== undefined) {
+      conditions.push(eq(tournamentHoleTees.roundNumber, roundNumber));
+    }
+
     return await db
       .select({
         id: tournamentHoleTees.id,
         tournamentId: tournamentHoleTees.tournamentId,
         holeId: tournamentHoleTees.holeId,
+        roundNumber: tournamentHoleTees.roundNumber,
         teeColor: tournamentHoleTees.teeColor,
         holeNumber: holes.holeNumber, // Include hole number for frontend matching
         createdAt: tournamentHoleTees.createdAt,
       })
       .from(tournamentHoleTees)
       .innerJoin(holes, eq(tournamentHoleTees.holeId, holes.id))
-      .where(eq(tournamentHoleTees.tournamentId, tournamentId))
-      .orderBy(asc(holes.holeNumber));
+      .where(and(...conditions))
+      .orderBy(asc(tournamentHoleTees.roundNumber), asc(holes.holeNumber));
   }
 
   async createTournamentRound(round: InsertTournamentRound): Promise<TournamentRound> {

@@ -11,6 +11,7 @@ interface LeaderboardTableProps {
   tournament?: any;
   selectedRound?: 'all' | number;
   tournamentRounds?: any[];
+  teeSelections?: any[];
 }
 
 // Helper function to format player name as "first initial. last name" with truncation for alignment
@@ -35,8 +36,16 @@ function formatPlayerName(playerName: string, maxLength: number = 12): string {
   return formatted;
 }
 
-export function LeaderboardTable({ leaderboard, courseId, tournamentId, tournament, selectedRound = 'all', tournamentRounds = [] }: LeaderboardTableProps) {
+export function LeaderboardTable({ leaderboard, courseId, tournamentId, tournament, selectedRound = 'all', tournamentRounds = [], teeSelections = [] }: LeaderboardTableProps) {
   const [showingFrontNine, setShowingFrontNine] = useState(true);
+  
+  // Helper function to get tee color for a hole in the current round
+  const getHoleTeeColor = (hole: any) => {
+    const teeSelection = Array.isArray(teeSelections) 
+      ? teeSelections.find((ts: any) => ts.holeId === hole.id)
+      : null;
+    return teeSelection?.teeColor || 'white';
+  };
 
   // Fetch course holes
   const { data: holes } = useQuery({
@@ -44,11 +53,6 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
     enabled: !!courseId,
   });
 
-  // Fetch tee selections for this tournament
-  const { data: teeSelections } = useQuery({
-    queryKey: ["/api/tournaments", tournamentId, "tee-selections"],
-    enabled: !!tournamentId,
-  });
 
   // Fetch all player scores for the tournament
   const { data: playerScores, refetch: refetchScores } = useQuery({
