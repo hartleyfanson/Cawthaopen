@@ -633,31 +633,6 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
           ))}
         </div>
 
-        {/* TEE COLORS row */}
-        {Array.isArray(teeSelections) && teeSelections.length > 0 && (
-          <div className="grid gap-1 text-center text-xs mt-1" style={{gridTemplateColumns: "2fr " + "1fr ".repeat(9)}}>
-            <div className="text-left text-muted-foreground">TEES</div>
-            {displayHoles.map((hole: any) => {
-              const teeSelection = teeSelections.find((tee: any) => tee.holeNumber === hole.holeNumber);
-              const teeColor = teeSelection?.teeColor || 'white';
-              const teeColorClasses: Record<string, string> = {
-                white: 'bg-gray-100 text-gray-800 border-gray-300',
-                blue: 'bg-blue-100 text-blue-800 border-blue-300',
-                red: 'bg-red-100 text-red-800 border-red-300', 
-                gold: 'bg-yellow-100 text-yellow-800 border-yellow-300'
-              };
-              const teeColorClass = teeColorClasses[teeColor] || teeColorClasses.white;
-              
-              return (
-                <div key={`tee-${hole.id}`} className="flex justify-center">
-                  <div className={`px-1 py-0.5 rounded text-xs border ${teeColorClass}`}>
-                    {teeColor.charAt(0).toUpperCase()}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
 
         {/* YARDAGE row */}
         {Array.isArray(teeSelections) && teeSelections.length > 0 && (

@@ -141,7 +141,7 @@ export function CourseSearch({ onCourseSelect, isLoading = false }: CourseSearch
             <ScrollArea className="h-96">
               <div className="space-y-3">
                 {searchResults.map((course) => (
-                  <div key={course.id} className="p-4 border rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                  <div key={course.id} className="p-4 border rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
                     <div className="flex justify-between items-start">
                       <div className="space-y-2 flex-1">
                         <h3 className="font-semibold text-lg">{course.name}</h3>
