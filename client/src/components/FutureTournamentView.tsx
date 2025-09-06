@@ -30,6 +30,28 @@ export function FutureTournamentView({ tournament, tournamentId, course, selecte
     enabled: !!tournamentId,
   });
 
+
+  // Format tee color for display
+  const formatTeeColor = (teeColor: string) => {
+    return teeColor.charAt(0).toUpperCase() + teeColor.slice(1).toLowerCase();
+  };
+
+  // Get predominant tee color (most common selection)
+  const getPredominantTeeColor = () => {
+    if (!Array.isArray(teeSelections) || teeSelections.length === 0) return 'White';
+    
+    const colorCounts: Record<string, number> = {};
+    teeSelections.forEach((tee: any) => {
+      colorCounts[tee.teeColor] = (colorCounts[tee.teeColor] || 0) + 1;
+    });
+    
+    const predominantColor = Object.keys(colorCounts).reduce((a, b) => 
+      colorCounts[a] > colorCounts[b] ? a : b
+    );
+    
+    return formatTeeColor(predominantColor);
+  };
+
   // Helper function to get yardage based on tee selection
   const getHoleYardage = (hole: any) => {
     const teeSelection = Array.isArray(teeSelections) 
@@ -395,7 +417,7 @@ export function FutureTournamentView({ tournament, tournamentId, course, selecte
                         {player.player?.firstName || 'Player'} {player.player?.lastName || ''}
                       </h4>
                       <p className="text-sm text-muted-foreground">
-                        Joined {new Date(player.joinedAt || Date.now()).toLocaleDateString()}
+                        Joined {new Date(player.joinedAt || Date.now()).toLocaleDateString()} • Playing {getPredominantTeeColor()} Tees
                       </p>
                     </div>
                     <Badge variant="outline" className="text-xs">

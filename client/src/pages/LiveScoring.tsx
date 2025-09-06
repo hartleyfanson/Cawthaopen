@@ -27,6 +27,7 @@ export default function LiveScoring() {
   const [powerupUsed, setPowerupUsed] = useState(false);
   const [powerupNotes, setPowerupNotes] = useState("");
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
+  const [puttsShakeAnimation, setPuttsShakeAnimation] = useState(false);
   
   
   // Cache all hole scores until completion
@@ -44,11 +45,11 @@ export default function LiveScoring() {
   const [, setLocation] = useLocation();
 
   // Local storage key for persisting scoring state (includes round number)
-  const storageKey = `live-scoring-${id}-${user?.id}-round-${selectedRound}`;
+  const storageKey = `live-scoring-${id}-${(user as any)?.id}-round-${selectedRound}`;
 
   // Load scoring state from local storage on mount
   useEffect(() => {
-    if (!id || !user?.id) return;
+    if (!id || !(user as any)?.id) return;
     
     try {
       const savedState = localStorage.getItem(storageKey);
@@ -71,7 +72,7 @@ export default function LiveScoring() {
 
   // Save scoring state to local storage whenever it changes
   useEffect(() => {
-    if (!id || !user?.id) return;
+    if (!id || !(user as any)?.id) return;
     
     const stateToSave = {
       selectedRound,
@@ -90,7 +91,7 @@ export default function LiveScoring() {
     } catch (error) {
       console.log('Could not save scoring state:', error);
     }
-  }, [selectedRound, currentHole, strokes, putts, fairwayHit, greenInRegulation, powerupUsed, powerupNotes, cachedScores, storageKey, id, user?.id]);
+  }, [selectedRound, currentHole, strokes, putts, fairwayHit, greenInRegulation, powerupUsed, powerupNotes, cachedScores, storageKey, id, (user as any)?.id]);
 
 
   // Clear local storage when round is completed
@@ -380,11 +381,19 @@ export default function LiveScoring() {
       let roundToUse = currentRoundData;
       
       if (!roundToUse) {
-        // Create round first
-        roundToUse = await createRoundMutation.mutateAsync({
-          tournamentId: id,
-          roundNumber: selectedRound,
-        });
+        // Create round first and wait for it to complete
+        try {
+          roundToUse = await createRoundMutation.mutateAsync({
+            tournamentId: id,
+            roundNumber: selectedRound,
+          });
+          
+          // Wait a moment for the round to be fully created
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (error) {
+          console.error("Error creating round:", error);
+          throw error;
+        }
       }
 
       const scoreData = {
@@ -409,7 +418,7 @@ export default function LiveScoring() {
         });
       } else {
         // Create new score - ensure roundId is properly set
-        const roundId = roundToUse?.id || (roundToUse as any)?.id;
+        const roundId = (roundToUse as any)?.id;
         if (!roundId) {
           throw new Error("Round ID is missing after round creation");
         }
@@ -636,7 +645,7 @@ export default function LiveScoring() {
                     <label className="block text-sm font-medium text-foreground mb-2">
                       Putts
                     </label>
-                    <div className="flex items-center justify-center space-x-4 bg-muted rounded-lg p-4">
+                    <div className={`flex items-center justify-center space-x-4 bg-muted rounded-lg p-4 ${puttsShakeAnimation ? 'shake-animation' : ''}`}>
                       <Button
                         onClick={() => {
                           if (putts === null) {
@@ -662,7 +671,14 @@ export default function LiveScoring() {
                           if (putts === null) {
                             setPutts(2);
                           } else {
-                            setPutts(putts + 1);
+                            const maxPutts = Math.max(1, (strokes || 1) - 1); // Max putts = strokes - 1
+                            if (putts >= maxPutts) {
+                              // Trigger shake animation when trying to exceed max
+                              setPuttsShakeAnimation(true);
+                              setTimeout(() => setPuttsShakeAnimation(false), 500);
+                            } else {
+                              setPutts(putts + 1);
+                            }
                           }
                         }}
                         size="icon"
