@@ -284,19 +284,25 @@ export function ShareScorecard({ tournamentId, roundData, playerData, selectedRo
       const holesCompleted = completedScores.length;
       
       const scoreToPar = totalStrokes > 0 && holesCompleted > 0 ? totalStrokes - completedHolesTotalPar : 0;
-      const scoreText = scoreToPar === 0 ? 'EVEN' : 
-                       scoreToPar > 0 ? `+${scoreToPar}` : 
-                       `${scoreToPar}`;
+      const scoreToParText = scoreToPar === 0 ? 'EVEN' : 
+                            scoreToPar > 0 ? `+${scoreToPar}` : 
+                            `${scoreToPar}`;
 
+      // Main score display - total strokes
       ctx.fillStyle = '#D4AF37';
       ctx.font = 'bold 64px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(scoreText, canvas.width / 2, playerY + 70);
+      ctx.fillText(`${totalStrokes}`, canvas.width / 2, playerY + 70);
 
-      // Total score and holes played (centered below main score)
+      // Score relative to par (centered below main score)
       ctx.fillStyle = '#666666';
-      ctx.font = '28px sans-serif';
-      ctx.fillText(`Total: ${totalStrokes} (${holesCompleted} holes)`, canvas.width / 2, playerY + 105);
+      ctx.font = 'bold 32px sans-serif';
+      ctx.fillText(scoreToParText, canvas.width / 2, playerY + 110);
+
+      // Holes played (centered below par score)
+      ctx.fillStyle = '#666666';
+      ctx.font = '24px sans-serif';
+      ctx.fillText(`(${holesCompleted} holes)`, canvas.width / 2, playerY + 140);
 
       // Calculate fairway stats (only par 4s and 5s count)
       const par4And5Holes = Array.isArray(holes) ? holes.filter((hole: any) => (hole.par || hole.holes?.par) === 4 || (hole.par || hole.holes?.par) === 5) : [];
