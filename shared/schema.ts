@@ -9,6 +9,7 @@ import {
   decimal,
   jsonb,
   index,
+  unique,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -101,7 +102,10 @@ export const rounds = pgTable("rounds", {
   greensInRegulation: integer("greens_in_regulation"),
   isCompleted: boolean("is_completed").default(false),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  // Ensure unique combination of tournament + player + round number
+  unique("unique_tournament_player_round").on(table.tournamentId, table.playerId, table.roundNumber),
+]);
 
 // Individual hole scores
 export const scores = pgTable("scores", {
