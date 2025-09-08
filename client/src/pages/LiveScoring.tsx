@@ -256,7 +256,6 @@ export default function LiveScoring() {
   const createRoundMutation = useMutation({
     mutationFn: async (data: any) => {
       return await apiRequest("POST", "/api/rounds", data);
-    },
     onSuccess: () => {
       // Broad list refresh is fine, but also refresh the specific round you’re on
       queryClient.invalidateQueries({ queryKey: ["/api/rounds"] });
