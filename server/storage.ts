@@ -418,11 +418,13 @@ export class DatabaseStorage implements IStorage {
         fairwaysHit: sql<number>`SUM(${rounds.fairwaysHit})`.as('fairwaysHit'),
         greensInRegulation: sql<number>`SUM(${rounds.greensInRegulation})`.as('greensInRegulation'),
         roundsPlayed: sql<number>`COUNT(*)`.as('roundsPlayed'),
+        tournamentId: rounds.tournamentId,
+        roundNumbers: sql<string>`STRING_AGG(CAST(${rounds.roundNumber} AS TEXT), ',' ORDER BY ${rounds.roundNumber})`.as('roundNumbers'),
       })
       .from(rounds)
       .innerJoin(users, eq(rounds.playerId, users.id))
       .where(eq(rounds.tournamentId, tournamentId))
-      .groupBy(rounds.playerId, users.firstName, users.lastName, users.profileImageUrl)
+      .groupBy(rounds.playerId, users.firstName, users.lastName, users.profileImageUrl, rounds.tournamentId)
       .orderBy(asc(sql`SUM(${rounds.totalStrokes})`));
 
     return result;
