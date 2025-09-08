@@ -195,25 +195,58 @@ export default function LiveScoring() {
     enabled: !!user && !!id,
   });
 
+  // Initialize all rounds for this player when first accessing live scoring
+  const initializeRoundsMutation = useMutation({
+    mutationFn: async (tournamentId: string) => {
+      const res = await apiRequest("POST", `/api/tournaments/${tournamentId}/initialize-rounds`, {});
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
+    onSuccess: (data) => {
+      console.log(`Initialized ${data.rounds?.length || 0} rounds for tournament`);
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ["/api/rounds"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tournaments", id, "rounds"] });
+    },
+    onError: (error: any) => {
+      console.error("Failed to initialize rounds:", error);
+      // Don't show error toast as this is a background operation
+      // The user can still proceed if rounds already exist or will be created on-demand
+    },
+  });
+
+  // Auto-initialize rounds when component loads (only once per tournament per user)
+  useEffect(() => {
+    if (!user || !id || initializeRoundsMutation.isPending) return;
+    
+    // Only initialize if we haven't done so yet for this tournament
+    const storageKey = `rounds-initialized-${id}-${(user as any)?.id}`;
+    const alreadyInitialized = localStorage.getItem(storageKey);
+    
+    if (!alreadyInitialized) {
+      initializeRoundsMutation.mutate(String(id));
+      localStorage.setItem(storageKey, "true");
+    }
+  }, [user, id, initializeRoundsMutation]);
+
   const { data: holes } = useQuery({
     queryKey: ["/api/courses", (tournament as any)?.courseId, "holes"],
     enabled: !!(tournament as any)?.courseId,
   });
 
   const { data: currentRoundData } = useQuery({
-    // include "ensure" so we know this query performs creation if missing
-    queryKey: ["/api/rounds", String(id), String(selectedRound), "ensure"],
+    queryKey: ["/api/rounds", String(id), String(selectedRound)],
     enabled: !!user && !!id && !!selectedRound,
-    retry: false,
+    retry: 1, // Retry once in case round is still being created
     queryFn: async () => {
-      // 1) Try to load the round for this tournament+roundNumber
-      const res = await fetch(`/api/tournaments/${id}/rounds/${selectedRound}`);
+      // Try to load the round (should exist after initialization)
+      const res = await fetch(`/api/rounds/${id}/${selectedRound}`);
       if (res.status === 404) {
-        // 2) Not found → create it
+        // Fallback: create the round if it somehow doesn't exist
+        console.log(`Round ${selectedRound} not found, creating it...`);
         const createRes = await apiRequest("POST", "/api/rounds", {
-          tournamentId: Number(id),
+          tournamentId: String(id),
           roundNumber: Number(selectedRound),
-          playerId: (user as any).id, // only if your API expects this
         });
 
         if (!createRes.ok) {

@@ -865,6 +865,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Initialize all rounds for a player in a tournament (for live scoring setup)
+  app.post("/api/tournaments/:id/initialize-rounds", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      const tournamentId = req.params.id;
+
+      // Verify the player is registered for this tournament
+      const players = await storage.getTournamentPlayers(tournamentId);
+      const isRegistered = players.some(p => p.playerId === userId);
+      
+      if (!isRegistered) {
+        return res.status(403).json({ message: "You are not registered for this tournament" });
+      }
+
+      const rounds = await storage.initializePlayerRounds(tournamentId, userId);
+      res.status(201).json({ rounds, message: `Initialized ${rounds.length} rounds` });
+    } catch (error) {
+      console.error("Error initializing player rounds:", error);
+      res.status(500).json({ message: "Failed to initialize rounds" });
+    }
+  });
+
   // Scoring routes
   app.post("/api/rounds", isAuthenticated, async (req, res) => {
     try {

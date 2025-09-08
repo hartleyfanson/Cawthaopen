@@ -296,6 +296,37 @@ export class DatabaseStorage implements IStorage {
     return newRound;
   }
 
+  async initializePlayerRounds(tournamentId: string, playerId: string): Promise<Round[]> {
+    // Get all tournament rounds to determine which rounds need to be created
+    const tournamentRounds = await this.getTournamentRounds(tournamentId);
+    const createdRounds: Round[] = [];
+
+    // Create a round record for each tournament round that doesn't already exist
+    for (const tournamentRound of tournamentRounds) {
+      try {
+        const existingRound = await this.getRound(tournamentId, playerId, tournamentRound.roundNumber);
+        
+        if (!existingRound) {
+          // Create new round record
+          const newRound = await this.createRound({
+            tournamentId,
+            playerId,
+            roundNumber: tournamentRound.roundNumber
+          });
+          createdRounds.push(newRound);
+        } else {
+          // Include existing round in the response
+          createdRounds.push(existingRound);
+        }
+      } catch (error) {
+        console.error(`Error creating round ${tournamentRound.roundNumber} for player ${playerId}:`, error);
+        // Continue with other rounds even if one fails
+      }
+    }
+
+    return createdRounds;
+  }
+
   async getRound(
     tournamentId: string,
     playerId: string,
