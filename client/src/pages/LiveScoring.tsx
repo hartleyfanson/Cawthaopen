@@ -234,8 +234,6 @@ export default function LiveScoring() {
       localStorage.setItem(storageKey, "true");
     } else {
       console.log("Rounds already initialized for tournament:", id);
-      // Force invalidation to ensure all rounds are properly loaded
-      queryClient.invalidateQueries({ queryKey: ["/api/rounds"] });
     }
   }, [user, id, initializeRoundsMutation]);
 
