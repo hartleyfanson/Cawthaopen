@@ -620,47 +620,6 @@ export default function LiveScoring() {
         }
       };
 
-        // Invalidate caches to trigger real-time leaderboard updates and round completion status
-        await Promise.all([
-          // Leaderboards & player aggregates scoped to the current round
-          queryClient.invalidateQueries({ queryKey: ["/api/tournaments", id, "leaderboard", selectedRound] }),
-          queryClient.invalidateQueries({ queryKey: ["/api/tournaments", id, "player-scores", selectedRound] }),
-
-          // The current round’s record and its scores
-          queryClient.invalidateQueries({ queryKey: ["/api/rounds", id, selectedRound] }),
-          roundId
-          ? queryClient.invalidateQueries({ queryKey: ["/api/rounds", String(roundId), "scores"] })
-          : Promise.resolve(),
-
-
-          // Broader round lists and completion checks
-          queryClient.invalidateQueries({ queryKey: ["/api/rounds"] }),
-          queryClient.invalidateQueries({ queryKey: ["/api/rounds", id, "completion-status"] }),
-        ]);
-
-
-        // Navigate back to leaderboard
-        setLocation(`/tournaments/${id}/leaderboard`);
-      } else {
-        toast({
-          title: "Score Saved",
-          description: `Hole ${currentHole} score saved successfully`,
-        });
-
-        // Move to next hole
-        if (currentHole < 18) {
-          setCurrentHole(currentHole + 1);
-        }
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save score. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
   const nextHole = () => {
     if (currentHole < 18) {
       setCurrentHole(currentHole + 1);
