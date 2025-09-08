@@ -351,10 +351,30 @@ export class DatabaseStorage implements IStorage {
 
   async getRoundScores(roundId: string): Promise<any[]> {
     return await db
-      .select()
+      .select({
+        // Score data
+        id: scores.id,
+        roundId: scores.roundId,
+        holeId: scores.holeId,
+        strokes: scores.strokes,
+        putts: scores.putts,
+        fairwayHit: scores.fairwayHit,
+        greenInRegulation: scores.greenInRegulation,
+        powerupUsed: scores.powerupUsed,
+        powerupNotes: scores.powerupNotes,
+        createdAt: scores.createdAt,
+        // Hole data
+        holeNumber: holes.holeNumber,
+        holePar: holes.par,
+        // Round metadata for composite key context
+        tournamentId: rounds.tournamentId,
+        playerId: rounds.playerId,
+        roundNumber: rounds.roundNumber,
+      })
       .from(scores)
-      .where(eq(scores.roundId, roundId))
       .innerJoin(holes, eq(scores.holeId, holes.id))
+      .innerJoin(rounds, eq(scores.roundId, rounds.id))
+      .where(eq(scores.roundId, roundId))
       .orderBy(asc(holes.holeNumber));
   }
 
@@ -399,10 +419,30 @@ export class DatabaseStorage implements IStorage {
     return hole;
   }
 
-  async getRoundById(roundId: string): Promise<Round | undefined> {
+  async getRoundById(roundId: string): Promise<any> {
     const [round] = await db
-      .select()
+      .select({
+        // Round data
+        id: rounds.id,
+        tournamentId: rounds.tournamentId,
+        playerId: rounds.playerId,
+        roundNumber: rounds.roundNumber,
+        totalStrokes: rounds.totalStrokes,
+        totalPutts: rounds.totalPutts,
+        fairwaysHit: rounds.fairwaysHit,
+        greensInRegulation: rounds.greensInRegulation,
+        isCompleted: rounds.isCompleted,
+        createdAt: rounds.createdAt,
+        // Tournament metadata
+        tournamentName: tournaments.name,
+        tournamentStatus: tournaments.status,
+        // Player metadata  
+        playerName: sql<string>`${users.firstName} || ' ' || ${users.lastName}`.as('playerName'),
+        playerHandicap: users.handicap,
+      })
       .from(rounds)
+      .innerJoin(tournaments, eq(rounds.tournamentId, tournaments.id))
+      .innerJoin(users, eq(rounds.playerId, users.id))
       .where(eq(rounds.id, roundId));
     return round;
   }
