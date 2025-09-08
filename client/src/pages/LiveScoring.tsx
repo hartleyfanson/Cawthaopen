@@ -553,11 +553,13 @@ export default function LiveScoring() {
 
   // Save individual hole score
       const saveHoleScore = async () => {
+        console.log("saveHoleScore called", { currentHoleData, strokes, roundId, roundReady });
         if (!currentHoleData || strokes === null || strokes < 1) return;
 
         try {
           // Round should already be created when entering live scoring
           if (!roundId) {
+            console.log("No roundId available");
             toast({
               title: "Please wait…",
               description: "Setting up your round. Try again in a moment.",
