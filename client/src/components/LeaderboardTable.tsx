@@ -94,18 +94,21 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
     queryKey: ["/api/tournaments", tournamentId, "leaderboard", "round", safeRounds[1]?.roundNumber],
     enabled: shouldFetchRounds && !!tournamentId && safeRounds.length >= 2,
     refetchInterval: 5000,
+    placeholderData: [], // Ensure empty array when no data
   });
   
   const roundQuery3 = useQuery({
     queryKey: ["/api/tournaments", tournamentId, "leaderboard", "round", safeRounds[2]?.roundNumber],
     enabled: shouldFetchRounds && !!tournamentId && safeRounds.length >= 3,
     refetchInterval: 5000,
+    placeholderData: [], // Ensure empty array when no data
   });
   
   const roundQuery4 = useQuery({
     queryKey: ["/api/tournaments", tournamentId, "leaderboard", "round", safeRounds[3]?.roundNumber],
     enabled: shouldFetchRounds && !!tournamentId && safeRounds.length >= 4,
     refetchInterval: 5000,
+    placeholderData: [], // Ensure empty array when no data
   });
 
   // Collect active round queries
@@ -475,25 +478,24 @@ export function LeaderboardTable({ leaderboard, courseId, tournamentId, tourname
   // Helper functions for multi-round scoring
   const getRoundGrossScore = (playerId: string, roundNumber: number) => {
     const roundData = combinedRoundData[roundNumber];
-    if (!roundData) return null;
+    if (!roundData || !Array.isArray(roundData) || roundData.length === 0) return null;
     
     const playerRoundData = roundData.find((p: any) => p.playerId === playerId);
     if (!playerRoundData) return null;
     
-    // Calculate total score from round data
-    const playerScoreData = processedPlayerData[playerId];
-    return playerScoreData?.totalScore > 0 ? playerScoreData.totalScore : null;
+    // Use the totalStrokes from the specific round data
+    return playerRoundData.totalStrokes > 0 ? playerRoundData.totalStrokes : null;
   };
 
   const getRoundNetScore = (playerId: string, roundNumber: number) => {
     const roundData = combinedRoundData[roundNumber];
-    if (!roundData) return null;
+    if (!roundData || !Array.isArray(roundData) || roundData.length === 0) return null;
     
     const playerRoundData = roundData.find((p: any) => p.playerId === playerId);
     if (!playerRoundData) return null;
     
-    const roundGross = getRoundGrossScore(playerId, roundNumber);
-    if (!roundGross) return null;
+    const roundGross = playerRoundData.totalStrokes;
+    if (!roundGross || roundGross <= 0) return null;
     
     return calculateNetScore(roundGross, playerId);
   };
