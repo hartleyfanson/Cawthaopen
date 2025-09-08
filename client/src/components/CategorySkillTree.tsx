@@ -127,6 +127,27 @@ export function CategorySkillTree({ category, playerAchievements, playerId }: Ca
 
     const strokeColor = categoryColors[category.id] || '#000000';
 
+    // Helper function to create paths that avoid text headers
+    const createSafeConnection = (startPos: {x: number, y: number}, endPos: {x: number, y: number}, avoidCenter = true) => {
+      if (!avoidCenter) {
+        // Simple direct connection for cases where we don't need to avoid text
+        return `M ${startPos.x} ${startPos.y} Q ${(startPos.x + endPos.x) / 2} ${(startPos.y + endPos.y) / 2 - 20} ${endPos.x} ${endPos.y}`;
+      }
+
+      // For connections that might cross text, route them around the sides
+      const midX = (startPos.x + endPos.x) / 2;
+      const isLeftToRight = startPos.x < endPos.x;
+      const routeOffset = isLeftToRight ? -50 : 50;
+      
+      if (startPos.y < endPos.y) {
+        // Going down - route under the text area
+        return `M ${startPos.x} ${startPos.y} Q ${startPos.x} ${startPos.y + 40} ${midX + routeOffset} ${(startPos.y + endPos.y) / 2 + 30} Q ${endPos.x} ${endPos.y - 40} ${endPos.x} ${endPos.y}`;
+      } else {
+        // Going up or sideways - route around the sides
+        return `M ${startPos.x} ${startPos.y} Q ${midX + routeOffset} ${startPos.y - 30} ${endPos.x} ${endPos.y}`;
+      }
+    };
+
     switch (category.id) {
       case 'score-progression':
         // Score Progression: Horizontal flow with branching
@@ -142,7 +163,7 @@ export function CategorySkillTree({ category, playerAchievements, playerId }: Ca
             connections.push(
               <path
                 key={`common-${i}`}
-                d={`M ${current.x} ${current.y} Q ${(current.x + next.x) / 2} ${current.y - 20} ${next.x} ${next.y}`}
+                d={createSafeConnection(current, next, false)}
                 stroke={strokeColor}
                 strokeWidth={strokeWidth}
                 fill="none"
@@ -160,7 +181,7 @@ export function CategorySkillTree({ category, playerAchievements, playerId }: Ca
             connections.push(
               <path
                 key="common-to-rare"
-                d={`M ${lastCommon.x} ${lastCommon.y} Q ${lastCommon.x + 50} ${(lastCommon.y + firstRare.y) / 2} ${firstRare.x} ${firstRare.y}`}
+                d={createSafeConnection(lastCommon, firstRare, true)}
                 stroke={strokeColor}
                 strokeWidth={strokeWidth}
                 fill="none"
@@ -178,7 +199,7 @@ export function CategorySkillTree({ category, playerAchievements, playerId }: Ca
             connections.push(
               <path
                 key={`rare-${i}`}
-                d={`M ${current.x} ${current.y} Q ${(current.x + next.x) / 2} ${current.y - 20} ${next.x} ${next.y}`}
+                d={createSafeConnection(current, next, false)}
                 stroke={strokeColor}
                 strokeWidth={strokeWidth}
                 fill="none"
@@ -196,7 +217,7 @@ export function CategorySkillTree({ category, playerAchievements, playerId }: Ca
             connections.push(
               <path
                 key="rare-to-epic-branch"
-                d={`M ${firstRare.x} ${firstRare.y} L ${firstRare.x} ${firstRare.y + 60} Q ${firstRare.x} ${firstRare.y + 80} ${firstEpic.x} ${firstEpic.y}`}
+                d={createSafeConnection(firstRare, firstEpic, true)}
                 stroke={strokeColor}
                 strokeWidth={strokeWidth}
                 fill="none"
@@ -222,7 +243,7 @@ export function CategorySkillTree({ category, playerAchievements, playerId }: Ca
             connections.push(
               <path
                 key="foundation-cross"
-                d={`M ${pos1.x} ${pos1.y} Q ${(pos1.x + pos2.x) / 2} ${pos1.y - 40} ${pos2.x} ${pos2.y}`}
+                d={createSafeConnection(pos1, pos2, false)}
                 stroke={strokeColor}
                 strokeWidth={strokeWidth}
                 fill="none"
@@ -241,7 +262,7 @@ export function CategorySkillTree({ category, playerAchievements, playerId }: Ca
               connections.push(
                 <path
                   key={`common-${i}-rare-${j}`}
-                  d={`M ${commonPos.x} ${commonPos.y} Q ${(commonPos.x + rarePos.x) / 2} ${(commonPos.y + rarePos.y) / 2 - 30} ${rarePos.x} ${rarePos.y}`}
+                  d={createSafeConnection(commonPos, rarePos, true)}
                   stroke={strokeColor}
                   strokeWidth={strokeWidth}
                   fill="none"
@@ -261,7 +282,7 @@ export function CategorySkillTree({ category, playerAchievements, playerId }: Ca
               connections.push(
                 <path
                   key={`rare-${i}-epic-${j}`}
-                  d={`M ${rarePos.x} ${rarePos.y} Q ${(rarePos.x + epicPos.x) / 2} ${(rarePos.y + epicPos.y) / 2 - 20} ${epicPos.x} ${epicPos.y}`}
+                  d={createSafeConnection(rarePos, epicPos, true)}
                   stroke={strokeColor}
                   strokeWidth={strokeWidth}
                   fill="none"
@@ -283,7 +304,7 @@ export function CategorySkillTree({ category, playerAchievements, playerId }: Ca
             connections.push(
               <path
                 key="putting-connection"
-                d={`M ${pos1.x} ${pos1.y} Q ${(pos1.x + pos2.x) / 2} ${pos1.y - 20} ${pos2.x} ${pos2.y}`}
+                d={createSafeConnection(pos1, pos2, false)}
                 stroke={strokeColor}
                 strokeWidth={strokeWidth}
                 fill="none"
@@ -311,7 +332,7 @@ export function CategorySkillTree({ category, playerAchievements, playerId }: Ca
             connections.push(
               <path
                 key="root-to-foundation"
-                d={`M ${rootPos.x} ${rootPos.y} L ${rootPos.x} ${rootPos.y + 40} Q ${rootPos.x} ${rootPos.y + 60} ${middlePos.x} ${middlePos.y}`}
+                d={createSafeConnection(rootPos, middlePos, true)}
                 stroke={strokeColor}
                 strokeWidth={strokeWidth}
                 fill="none"
@@ -329,7 +350,7 @@ export function CategorySkillTree({ category, playerAchievements, playerId }: Ca
             connections.push(
               <path
                 key={`foundation-${i}`}
-                d={`M ${current.x} ${current.y} Q ${(current.x + next.x) / 2} ${current.y - 20} ${next.x} ${next.y}`}
+                d={createSafeConnection(current, next, false)}
                 stroke={strokeColor}
                 strokeWidth={strokeWidth}
                 fill="none"
@@ -350,7 +371,7 @@ export function CategorySkillTree({ category, playerAchievements, playerId }: Ca
             connections.push(
               <path
                 key="left-branch"
-                d={`M ${leftCommon.x} ${leftCommon.y} L ${leftCommon.x} ${leftCommon.y + 60} Q ${leftCommon.x} ${leftCommon.y + 80} ${leftRare.x} ${leftRare.y}`}
+                d={createSafeConnection(leftCommon, leftRare, true)}
                 stroke={strokeColor}
                 strokeWidth={strokeWidth}
                 fill="none"
@@ -363,7 +384,7 @@ export function CategorySkillTree({ category, playerAchievements, playerId }: Ca
             connections.push(
               <path
                 key="right-branch"
-                d={`M ${rightCommon.x} ${rightCommon.y} L ${rightCommon.x} ${rightCommon.y + 60} Q ${rightCommon.x} ${rightCommon.y + 80} ${rightRare.x} ${rightRare.y}`}
+                d={createSafeConnection(rightCommon, rightRare, true)}
                 stroke={strokeColor}
                 strokeWidth={strokeWidth}
                 fill="none"
@@ -381,7 +402,7 @@ export function CategorySkillTree({ category, playerAchievements, playerId }: Ca
             connections.push(
               <path
                 key="advanced-connection"
-                d={`M ${pos1.x} ${pos1.y} Q ${(pos1.x + pos2.x) / 2} ${pos1.y - 20} ${pos2.x} ${pos2.y}`}
+                d={createSafeConnection(pos1, pos2, false)}
                 stroke={strokeColor}
                 strokeWidth={strokeWidth}
                 fill="none"
@@ -400,7 +421,7 @@ export function CategorySkillTree({ category, playerAchievements, playerId }: Ca
             connections.push(
               <path
                 key="legendary-branch"
-                d={`M ${rarePos.x} ${rarePos.y} L ${rarePos.x} ${rarePos.y + 60} Q ${rarePos.x} ${rarePos.y + 80} ${legendaryPos.x} ${legendaryPos.y}`}
+                d={createSafeConnection(rarePos, legendaryPos, true)}
                 stroke={strokeColor}
                 strokeWidth={strokeWidth}
                 fill="none"
@@ -428,7 +449,7 @@ export function CategorySkillTree({ category, playerAchievements, playerId }: Ca
             connections.push(
               <path
                 key="t-horizontal"
-                d={`M ${leftAdvanced.x} ${leftAdvanced.y} Q ${(leftAdvanced.x + rightAdvanced.x) / 2} ${leftAdvanced.y - 20} ${rightAdvanced.x} ${rightAdvanced.y}`}
+                d={createSafeConnection(leftAdvanced, rightAdvanced, false)}
                 stroke={strokeColor}
                 strokeWidth={strokeWidth}
                 fill="none"
@@ -439,7 +460,7 @@ export function CategorySkillTree({ category, playerAchievements, playerId }: Ca
             connections.push(
               <path
                 key="t-vertical"
-                d={`M ${foundation.x} ${foundation.y} L ${foundation.x} ${foundation.y - 40} Q ${foundation.x} ${foundation.y - 60} ${(leftAdvanced.x + rightAdvanced.x) / 2} ${leftAdvanced.y - 20}`}
+                d={createSafeConnection(foundation, {x: (leftAdvanced.x + rightAdvanced.x) / 2, y: leftAdvanced.y}, true)}
                 stroke={strokeColor}
                 strokeWidth={strokeWidth}
                 fill="none"
@@ -460,7 +481,7 @@ export function CategorySkillTree({ category, playerAchievements, playerId }: Ca
             connections.push(
               <path
                 key="left-legendary-branch"
-                d={`M ${leftRare.x} ${leftRare.y} L ${leftRare.x} ${leftRare.y + 60} Q ${leftRare.x} ${leftRare.y + 80} ${leftLegendary.x} ${leftLegendary.y}`}
+                d={createSafeConnection(leftRare, leftLegendary, true)}
                 stroke={strokeColor}
                 strokeWidth={strokeWidth}
                 fill="none"
@@ -473,7 +494,7 @@ export function CategorySkillTree({ category, playerAchievements, playerId }: Ca
             connections.push(
               <path
                 key="right-legendary-branch"
-                d={`M ${rightRare.x} ${rightRare.y} L ${rightRare.x} ${rightRare.y + 60} Q ${rightRare.x} ${rightRare.y + 80} ${rightLegendary.x} ${rightLegendary.y}`}
+                d={createSafeConnection(rightRare, rightLegendary, true)}
                 stroke={strokeColor}
                 strokeWidth={strokeWidth}
                 fill="none"
@@ -494,7 +515,7 @@ export function CategorySkillTree({ category, playerAchievements, playerId }: Ca
             connections.push(
               <path
                 key={`default-${i}`}
-                d={`M ${current.x} ${current.y} Q ${(current.x + next.x) / 2} ${(current.y + next.y) / 2 - 20} ${next.x} ${next.y}`}
+                d={createSafeConnection(current, next, true)}
                 stroke={strokeColor}
                 strokeWidth={strokeWidth}
                 fill="none"
