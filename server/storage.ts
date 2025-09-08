@@ -407,6 +407,85 @@ export class DatabaseStorage implements IStorage {
     return round;
   }
 
+  // Get all rounds for a specific player with tournament metadata
+  async getPlayerRounds(playerId: string): Promise<any[]> {
+    const result = await db
+      .select({
+        id: rounds.id,
+        tournamentId: rounds.tournamentId,
+        playerId: rounds.playerId,
+        roundNumber: rounds.roundNumber,
+        totalStrokes: rounds.totalStrokes,
+        totalPutts: rounds.totalPutts,
+        fairwaysHit: rounds.fairwaysHit,
+        greensInRegulation: rounds.greensInRegulation,
+        isCompleted: rounds.isCompleted,
+        createdAt: rounds.createdAt,
+        tournamentName: tournaments.name,
+        courseName: courses.name,
+      })
+      .from(rounds)
+      .innerJoin(tournaments, eq(rounds.tournamentId, tournaments.id))
+      .innerJoin(courses, eq(tournaments.courseId, courses.id))
+      .where(eq(rounds.playerId, playerId))
+      .orderBy(desc(rounds.createdAt), asc(rounds.roundNumber));
+
+    return result;
+  }
+
+  // Get round with full metadata including tournament and course information
+  async getRoundWithMetadata(
+    tournamentId: string,
+    playerId: string,
+    roundNumber: number
+  ): Promise<any> {
+    const [result] = await db
+      .select({
+        id: rounds.id,
+        tournamentId: rounds.tournamentId,
+        playerId: rounds.playerId,
+        roundNumber: rounds.roundNumber,
+        totalStrokes: rounds.totalStrokes,
+        totalPutts: rounds.totalPutts,
+        fairwaysHit: rounds.fairwaysHit,
+        greensInRegulation: rounds.greensInRegulation,
+        isCompleted: rounds.isCompleted,
+        createdAt: rounds.createdAt,
+        tournament: {
+          id: tournaments.id,
+          name: tournaments.name,
+          status: tournaments.status,
+          numberOfRounds: tournaments.numberOfRounds,
+        },
+        course: {
+          id: courses.id,
+          name: courses.name,
+          location: courses.location,
+          totalHoles: courses.totalHoles,
+        },
+        player: {
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          profileImageUrl: users.profileImageUrl,
+          handicap: users.handicap,
+        },
+      })
+      .from(rounds)
+      .innerJoin(tournaments, eq(rounds.tournamentId, tournaments.id))
+      .innerJoin(courses, eq(tournaments.courseId, courses.id))
+      .innerJoin(users, eq(rounds.playerId, users.id))
+      .where(
+        and(
+          eq(rounds.tournamentId, tournamentId),
+          eq(rounds.playerId, playerId),
+          eq(rounds.roundNumber, roundNumber)
+        )
+      );
+
+    return result;
+  }
+
   async getTournamentLeaderboard(tournamentId: string): Promise<any[]> {
     const result = await db
       .select({

@@ -948,6 +948,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all rounds for the authenticated player with tournament and round metadata
+  app.get("/api/player/rounds", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      const rounds = await storage.getPlayerRounds(userId);
+      res.json(rounds);
+    } catch (error) {
+      console.error("Error fetching player rounds:", error);
+      res.status(500).json({ message: "Failed to fetch player rounds" });
+    }
+  });
+
+  // Get round with full metadata by composite key (tournament + player + round)
+  app.get("/api/rounds/:tournamentId/:roundNumber/metadata", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      const roundNumber = parseInt(req.params.roundNumber);
+      if (isNaN(roundNumber)) {
+        return res.status(400).json({ message: "Invalid round number" });
+      }
+      const roundMetadata = await storage.getRoundWithMetadata(
+        req.params.tournamentId,
+        userId,
+        roundNumber
+      );
+      res.json(roundMetadata);
+    } catch (error) {
+      console.error("Error fetching round metadata:", error);
+      res.status(500).json({ message: "Failed to fetch round metadata" });
+    }
+  });
+
   app.post("/api/scores", isAuthenticated, async (req, res) => {
     try {
       const userId = (req.user as any)?.claims?.sub;
