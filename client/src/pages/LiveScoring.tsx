@@ -7,7 +7,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Minus, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
+import {
+  Plus,
+  Minus,
+  ChevronLeft,
+  ChevronRight,
+  ArrowLeft,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -17,7 +23,7 @@ export default function LiveScoring() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   const [selectedRound, setSelectedRound] = useState(1);
   const [currentHole, setCurrentHole] = useState(1);
   const [strokes, setStrokes] = useState<number | null>(null);
@@ -28,20 +34,21 @@ export default function LiveScoring() {
   const [powerupNotes, setPowerupNotes] = useState("");
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
   const [puttsShakeAnimation, setPuttsShakeAnimation] = useState(false);
-  
-  
+
   // Cache all hole scores until completion
-  const [cachedScores, setCachedScores] = useState<Array<{
-    holeNumber: number;
-    holeId: string;
-    strokes: number | null;
-    putts: number | null;
-    fairwayHit: boolean;
-    greenInRegulation: boolean;
-    powerupUsed: boolean;
-    powerupNotes: string;
-  }>>([]);
-  
+  const [cachedScores, setCachedScores] = useState<
+    Array<{
+      holeNumber: number;
+      holeId: string;
+      strokes: number | null;
+      putts: number | null;
+      fairwayHit: boolean;
+      greenInRegulation: boolean;
+      powerupUsed: boolean;
+      powerupNotes: string;
+    }>
+  >([]);
+
   const [, setLocation] = useLocation();
 
   // Local storage key for persisting scoring state (includes round number)
@@ -50,7 +57,7 @@ export default function LiveScoring() {
   // Load scoring state from local storage on mount
   useEffect(() => {
     if (!id || !(user as any)?.id) return;
-    
+
     try {
       const savedState = localStorage.getItem(storageKey);
       if (savedState) {
@@ -61,8 +68,10 @@ export default function LiveScoring() {
           if (parsed.strokes) setStrokes(parsed.strokes);
           if (parsed.putts) setPutts(parsed.putts);
           if (parsed.fairwayHit !== undefined) setFairwayHit(parsed.fairwayHit);
-          if (parsed.greenInRegulation !== undefined) setGreenInRegulation(parsed.greenInRegulation);
-          if (parsed.powerupUsed !== undefined) setPowerupUsed(parsed.powerupUsed);
+          if (parsed.greenInRegulation !== undefined)
+            setGreenInRegulation(parsed.greenInRegulation);
+          if (parsed.powerupUsed !== undefined)
+            setPowerupUsed(parsed.powerupUsed);
           if (parsed.powerupNotes) setPowerupNotes(parsed.powerupNotes);
           if (parsed.cachedScores) setCachedScores(parsed.cachedScores);
         } else {
@@ -73,7 +82,7 @@ export default function LiveScoring() {
           setFairwayHit(false);
           setGreenInRegulation(false);
           setPowerupUsed(false);
-          setPowerupNotes('');
+          setPowerupNotes("");
           setCachedScores([]);
         }
       } else {
@@ -84,11 +93,11 @@ export default function LiveScoring() {
         setFairwayHit(false);
         setGreenInRegulation(false);
         setPowerupUsed(false);
-        setPowerupNotes('');
+        setPowerupNotes("");
         setCachedScores([]);
       }
     } catch (error) {
-      console.log('Could not load saved scoring state:', error);
+      console.log("Could not load saved scoring state:", error);
       // Fallback to fresh state on error
       setCurrentHole(1);
       setStrokes(null);
@@ -96,7 +105,7 @@ export default function LiveScoring() {
       setFairwayHit(false);
       setGreenInRegulation(false);
       setPowerupUsed(false);
-      setPowerupNotes('');
+      setPowerupNotes("");
       setCachedScores([]);
     }
   }, [id, (user as any)?.id, storageKey, selectedRound]);
@@ -109,14 +118,14 @@ export default function LiveScoring() {
     setFairwayHit(false);
     setGreenInRegulation(false);
     setPowerupUsed(false);
-    setPowerupNotes('');
+    setPowerupNotes("");
     // Don't clear cached scores immediately - let the storage loading logic handle it
   }, [selectedRound]);
 
   // Save scoring state to local storage whenever it changes
   useEffect(() => {
     if (!id || !(user as any)?.id) return;
-    
+
     const stateToSave = {
       selectedRound,
       currentHole,
@@ -128,21 +137,33 @@ export default function LiveScoring() {
       powerupNotes,
       cachedScores,
     };
-    
+
     try {
       localStorage.setItem(storageKey, JSON.stringify(stateToSave));
     } catch (error) {
-      console.log('Could not save scoring state:', error);
+      console.log("Could not save scoring state:", error);
     }
-  }, [selectedRound, currentHole, strokes, putts, fairwayHit, greenInRegulation, powerupUsed, powerupNotes, cachedScores, storageKey, id, (user as any)?.id]);
-
+  }, [
+    selectedRound,
+    currentHole,
+    strokes,
+    putts,
+    fairwayHit,
+    greenInRegulation,
+    powerupUsed,
+    powerupNotes,
+    cachedScores,
+    storageKey,
+    id,
+    (user as any)?.id,
+  ]);
 
   // Clear local storage when round is completed
   const clearSavedState = () => {
     try {
       localStorage.removeItem(storageKey);
     } catch (error) {
-      console.log('Could not clear saved state:', error);
+      console.log("Could not clear saved state:", error);
     }
   };
 
@@ -177,14 +198,22 @@ export default function LiveScoring() {
   });
 
   const { data: currentRoundData } = useQuery({
-    queryKey: ["/api/rounds", id, selectedRound.toString()],
-    enabled: !!user && !!id,
+    queryKey: ["/api/rounds", id, selectedRound],
+    enabled: !!user && !!id && !!selectedRound,
+    queryFn: async () => {
+      const res = await fetch(`/api/tournaments/${id}/rounds/${selectedRound}`);
+      if (!res.ok) throw new Error("Failed to load current round");
+      return res.json();
+    },
   });
 
   const { data: existingScores } = useQuery({
     queryKey: ["/api/rounds", (currentRoundData as any)?.id, "scores"],
     enabled: !!(currentRoundData as any)?.id,
-    queryFn: () => fetch(`/api/rounds/${(currentRoundData as any)?.id}/scores`).then(res => res.json()),
+    queryFn: () =>
+      fetch(`/api/rounds/${(currentRoundData as any)?.id}/scores`).then((res) =>
+        res.json(),
+      ),
   });
 
   const { data: teeSelections } = useQuery({
@@ -197,24 +226,29 @@ export default function LiveScoring() {
     queryKey: ["/api/rounds", id, "completion-status"],
     queryFn: async () => {
       if (!id || !(user as any)?.id) return {};
-      
+
       const completionChecks = [];
       // Check completion for all rounds (including current round for unlocking next rounds)
-      const maxRounds = Array.isArray(tournamentRounds) ? tournamentRounds.length : 2;
+      const maxRounds = Array.isArray(tournamentRounds)
+        ? tournamentRounds.length
+        : 2;
       for (let i = 1; i <= maxRounds; i++) {
         completionChecks.push(
           fetch(`/api/rounds/${id}/${i}/completed`)
-            .then(res => res.json())
-            .then(data => ({ round: i, isCompleted: data.isCompleted }))
-            .catch(() => ({ round: i, isCompleted: false })) // Handle errors gracefully
+            .then((res) => res.json())
+            .then((data) => ({ round: i, isCompleted: data.isCompleted }))
+            .catch(() => ({ round: i, isCompleted: false })), // Handle errors gracefully
         );
       }
-      
+
       const results = await Promise.all(completionChecks);
-      return results.reduce((acc, result) => {
-        acc[result.round] = result.isCompleted;
-        return acc;
-      }, {} as Record<number, boolean>);
+      return results.reduce(
+        (acc, result) => {
+          acc[result.round] = result.isCompleted;
+          return acc;
+        },
+        {} as Record<number, boolean>,
+      );
     },
     enabled: !!id && !!(user as any)?.id,
   });
@@ -222,10 +256,12 @@ export default function LiveScoring() {
   const createRoundMutation = useMutation({
     mutationFn: async (data: any) => {
       return await apiRequest("POST", "/api/rounds", data);
-    },
     onSuccess: () => {
+      // Broad list refresh is fine, but also refresh the specific round you’re on
       queryClient.invalidateQueries({ queryKey: ["/api/rounds"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rounds", id, selectedRound] });
     },
+
     onError: (error) => {
       if (isUnauthorizedError(error)) {
         toast({
@@ -252,7 +288,9 @@ export default function LiveScoring() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rounds"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/rounds", id, "completion-status"] });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/rounds", id, "completion-status"],
+      });
       toast({
         title: "Score Saved",
         description: `Hole ${currentHole} score saved successfully`,
@@ -284,7 +322,9 @@ export default function LiveScoring() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rounds"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/rounds", id, "completion-status"] });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/rounds", id, "completion-status"],
+      });
       toast({
         title: "Score Updated",
         description: `Hole ${currentHole} score updated successfully`,
@@ -312,8 +352,15 @@ export default function LiveScoring() {
 
   // Auto-create round when entering live scoring (to fix first-hole save issue)
   useEffect(() => {
-    if (!id || !(user as any)?.id || isLoading || !isAuthenticated || !tournament) return;
-    
+    if (
+      !id ||
+      !(user as any)?.id ||
+      isLoading ||
+      !isAuthenticated ||
+      !tournament
+    )
+      return;
+
     // Only auto-create if we don't have a current round already and we're not currently creating one
     if (!currentRoundData && !createRoundMutation.isPending) {
       const autoCreateRound = async () => {
@@ -323,16 +370,27 @@ export default function LiveScoring() {
             roundNumber: selectedRound,
           });
         } catch (error) {
-          console.log('Could not auto-create round:', error);
+          console.log("Could not auto-create round:", error);
         }
       };
-      
+
       autoCreateRound();
     }
-  }, [id, (user as any)?.id, currentRoundData, tournament, selectedRound, isLoading, isAuthenticated, createRoundMutation.isPending]);
+  }, [
+    id,
+    (user as any)?.id,
+    currentRoundData,
+    tournament,
+    selectedRound,
+    isLoading,
+    isAuthenticated,
+    createRoundMutation.isPending,
+  ]);
 
-  const currentHoleData = (holes as any[])?.find((hole: any) => hole.holeNumber === currentHole);
-  
+  const currentHoleData = (holes as any[])?.find(
+    (hole: any) => hole.holeNumber === currentHole,
+  );
+
   // Auto-correct golf scores based on professional rules
   useEffect(() => {
     if (strokes !== null && putts !== null && currentHoleData) {
@@ -340,54 +398,62 @@ export default function LiveScoring() {
       const shotsToGreen = strokes - putts;
       const girRequired = currentHoleData.par - 2; // Par 3: 1 shot, Par 4: 2 shots, Par 5: 3 shots
       const shouldBeGIR = shotsToGreen <= girRequired;
-      
+
       if (shouldBeGIR !== greenInRegulation) {
         setGreenInRegulation(shouldBeGIR);
       }
-      
+
       // Auto-correct putts if they exceed total strokes
       if (putts > strokes) {
         setPutts(Math.max(0, strokes - 1)); // Leave at least 1 stroke for approach
       }
-      
+
       // Professional rule: if no GIR but made par, you can't have 2+ putts
       if (!shouldBeGIR && strokes === currentHoleData.par && putts >= 2) {
         setPutts(1); // Must be 1 putt after chip/pitch
       }
-      
+
       // If GIR with 0 putts, you likely holed out (not GIR)
       if (shouldBeGIR && putts === 0 && strokes < currentHoleData.par) {
         setGreenInRegulation(false); // Holed out from off the green
       }
-      
+
       setValidationWarnings([]); // Clear warnings since we auto-correct
     } else {
       setValidationWarnings([]);
     }
   }, [strokes, putts, currentHoleData]);
-  
+
   // Get tee selection for current hole
-  const currentTeeSelection = Array.isArray(teeSelections) 
+  const currentTeeSelection = Array.isArray(teeSelections)
     ? teeSelections.find((tee: any) => tee.holeNumber === currentHole)
     : null;
-  const currentTeeColor = currentTeeSelection?.teeColor || 'white';
-  
+  const currentTeeColor = currentTeeSelection?.teeColor || "white";
+
   // Get yardage based on tee selection
   const getHoleYardage = (hole: any, teeColor: string) => {
     if (!hole) return 0;
     switch (teeColor.toLowerCase()) {
-      case 'blue': return hole.yardageBlue || hole.yardageWhite || 0;
-      case 'red': return hole.yardageRed || hole.yardageWhite || 0;
-      case 'gold': return hole.yardageGold || hole.yardageWhite || 0;
-      default: return hole.yardageWhite || 0;
+      case "blue":
+        return hole.yardageBlue || hole.yardageWhite || 0;
+      case "red":
+        return hole.yardageRed || hole.yardageWhite || 0;
+      case "gold":
+        return hole.yardageGold || hole.yardageWhite || 0;
+      default:
+        return hole.yardageWhite || 0;
     }
   };
-  
+
   const currentYardage = getHoleYardage(currentHoleData, currentTeeColor);
-  
+
   // Format tee color for display
   const formatTeeColor = (teeColor: string) => {
-    return teeColor.charAt(0).toUpperCase() + teeColor.slice(1).toLowerCase() + ' Tees';
+    return (
+      teeColor.charAt(0).toUpperCase() +
+      teeColor.slice(1).toLowerCase() +
+      " Tees"
+    );
   };
 
   // Calculate round progress (score-to-par for holes completed so far)
@@ -400,7 +466,7 @@ export default function LiveScoring() {
     let totalPar = 0;
     let holesCompleted = 0;
 
-    cachedScores.forEach(score => {
+    cachedScores.forEach((score) => {
       if (score.strokes !== null && score.strokes > 0) {
         const hole = holes.find((h: any) => h.holeNumber === score.holeNumber);
         if (hole) {
@@ -421,8 +487,10 @@ export default function LiveScoring() {
   useEffect(() => {
     if (currentHoleData) {
       // Check if there's an existing score for this hole
-      const existingScore = cachedScores.find(score => score.holeNumber === currentHole);
-      
+      const existingScore = cachedScores.find(
+        (score) => score.holeNumber === currentHole,
+      );
+
       if (existingScore) {
         // Pre-populate with existing score data
         setStrokes(existingScore.strokes);
@@ -445,31 +513,36 @@ export default function LiveScoring() {
 
   // Load existing scores into cache when component mounts (for editing mode)
   useEffect(() => {
-    if (Array.isArray(existingScores) && Array.isArray(holes) && existingScores.length > 0) {
-      const loadedScores = existingScores.map((score: any) => {
-        const hole = (holes as any[]).find((h: any) => h.id === score.holeId);
-        return {
-          holeNumber: hole?.holeNumber || 1,
-          holeId: score.holeId,
-          strokes: score.strokes,
-          putts: score.putts,
-          fairwayHit: score.fairwayHit,
-          greenInRegulation: score.greenInRegulation,
-          powerupUsed: score.powerupUsed,
-          powerupNotes: score.powerupNotes || "",
-        };
-      }).filter(score => score.holeNumber).sort((a: any, b: any) => a.holeNumber - b.holeNumber);
-      
+    if (
+      Array.isArray(existingScores) &&
+      Array.isArray(holes) &&
+      existingScores.length > 0
+    ) {
+      const loadedScores = existingScores
+        .map((score: any) => {
+          const hole = (holes as any[]).find((h: any) => h.id === score.holeId);
+          return {
+            holeNumber: hole?.holeNumber || 1,
+            holeId: score.holeId,
+            strokes: score.strokes,
+            putts: score.putts,
+            fairwayHit: score.fairwayHit,
+            greenInRegulation: score.greenInRegulation,
+            powerupUsed: score.powerupUsed,
+            powerupNotes: score.powerupNotes || "",
+          };
+        })
+        .filter((score) => score.holeNumber)
+        .sort((a: any, b: any) => a.holeNumber - b.holeNumber);
+
       setCachedScores(loadedScores);
     }
   }, [existingScores, holes]);
 
-  
-
   // Save individual hole score
   const saveHoleScore = async () => {
     if (!currentHoleData || strokes === null || strokes < 1) return;
-    
+
     try {
       // Round should already be created when entering live scoring
       if (!currentRoundData) {
@@ -491,7 +564,7 @@ export default function LiveScoring() {
       };
 
       // Check if a score already exists for this hole
-      const existingScore = Array.isArray(existingScores) 
+      const existingScore = Array.isArray(existingScores)
         ? existingScores.find((s: any) => s.holeId === currentHoleData.id)
         : null;
 
@@ -521,27 +594,35 @@ export default function LiveScoring() {
         powerupUsed,
         powerupNotes: powerupUsed ? powerupNotes : "",
       };
-      
-      setCachedScores(prev => {
-        const filtered = prev.filter(score => score.holeNumber !== currentHole);
-        return [...filtered, holeScore].sort((a, b) => a.holeNumber - b.holeNumber);
+
+      setCachedScores((prev) => {
+        const filtered = prev.filter(
+          (score) => score.holeNumber !== currentHole,
+        );
+        return [...filtered, holeScore].sort(
+          (a, b) => a.holeNumber - b.holeNumber,
+        );
       });
-      
+
       if (currentHole === 18) {
         toast({
           title: "Round Complete!",
           description: "All scores have been saved. Returning to leaderboard.",
         });
-        
+
         // Clear saved scoring state since round is complete
         clearSavedState();
-        
+
         // Invalidate caches to trigger real-time leaderboard updates and round completion status
-        queryClient.invalidateQueries({ queryKey: ["/api/tournaments", id, "leaderboard"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/tournaments", id, "player-scores"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/tournaments", id, "leaderboard", selectedRound] });
+        queryClient.invalidateQueries({ queryKey: ["/api/tournaments", id, "player-scores", selectedRound] });
+        queryClient.invalidateQueries({ queryKey: ["/api/rounds", id, selectedRound] });
+        queryClient.invalidateQueries({ queryKey: ["/api/rounds", (currentRoundData as any)?.id, "scores"] });
         queryClient.invalidateQueries({ queryKey: ["/api/rounds"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/rounds", id, "completion-status"] });
-        
+        queryClient.invalidateQueries({
+          queryKey: ["/api/rounds", id, "completion-status"],
+        });
+
         // Navigate back to leaderboard
         setLocation(`/tournaments/${id}/leaderboard`);
       } else {
@@ -549,13 +630,12 @@ export default function LiveScoring() {
           title: "Score Saved",
           description: `Hole ${currentHole} score saved successfully`,
         });
-        
+
         // Move to next hole
         if (currentHole < 18) {
           setCurrentHole(currentHole + 1);
         }
       }
-      
     } catch (error) {
       toast({
         title: "Error",
@@ -592,7 +672,7 @@ export default function LiveScoring() {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      
+
       {/* Header */}
       <section className="py-12 bg-muted">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -610,27 +690,34 @@ export default function LiveScoring() {
                   <span className="sm:hidden">Back</span>
                 </Button>
               </Link>
-              <h2 className="text-3xl font-serif font-bold text-accent">Live Scoring</h2>
+              <h2 className="text-3xl font-serif font-bold text-accent">
+                Live Scoring
+              </h2>
             </div>
             <p className="text-xl text-muted-foreground">
               {(tournament as any)?.name} • Round {selectedRound}
             </p>
-            
+
             {/* Round Selection - show only if tournament has multiple rounds */}
             {Array.isArray(tournamentRounds) && tournamentRounds.length > 1 && (
               <div className="flex justify-center mt-4">
                 <div className="flex bg-background rounded-lg p-1 shadow-sm">
                   {tournamentRounds.map((round: any) => {
                     // Check if previous rounds are completed
-                    const isPreviousRoundCompleted = round.roundNumber === 1 || 
-                      (roundCompletionData && roundCompletionData[round.roundNumber - 1]);
-                    
+                    const isPreviousRoundCompleted =
+                      round.roundNumber === 1 ||
+                      (roundCompletionData &&
+                        roundCompletionData[round.roundNumber - 1]);
+
                     // Check if this round itself is completed (should be locked for editing)
-                    const isThisRoundCompleted = roundCompletionData && roundCompletionData[round.roundNumber];
-                    
+                    const isThisRoundCompleted =
+                      roundCompletionData &&
+                      roundCompletionData[round.roundNumber];
+
                     // Can access round if: previous rounds are complete AND this round is not yet completed
-                    const canAccessRound = isPreviousRoundCompleted && !isThisRoundCompleted;
-                    
+                    const canAccessRound =
+                      isPreviousRoundCompleted && !isThisRoundCompleted;
+
                     // Show reason for lock
                     let lockReason = "";
                     if (!isPreviousRoundCompleted) {
@@ -638,18 +725,24 @@ export default function LiveScoring() {
                     } else if (isThisRoundCompleted) {
                       lockReason = `Round ${round.roundNumber} is completed and locked`;
                     }
-                    
+
                     return (
                       <Button
                         key={round.id}
-                        onClick={() => canAccessRound && setSelectedRound(round.roundNumber)}
-                        variant={selectedRound === round.roundNumber ? "default" : "ghost"}
+                        onClick={() =>
+                          canAccessRound && setSelectedRound(round.roundNumber)
+                        }
+                        variant={
+                          selectedRound === round.roundNumber
+                            ? "default"
+                            : "ghost"
+                        }
                         size="sm"
                         disabled={!canAccessRound}
                         className={`px-4 py-2 text-sm transition-all ${
                           selectedRound === round.roundNumber
-                            ? "bg-primary text-primary-foreground shadow-sm" 
-                            : canAccessRound 
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : canAccessRound
                               ? "text-muted-foreground hover:text-foreground hover:bg-muted"
                               : "text-muted-foreground/50 cursor-not-allowed"
                         }`}
@@ -669,7 +762,7 @@ export default function LiveScoring() {
               </div>
             )}
           </div>
-          
+
           {/* Check if current round is completed and locked */}
           {roundCompletionData && roundCompletionData[selectedRound] ? (
             <Card className="bg-background card-shadow">
@@ -681,7 +774,8 @@ export default function LiveScoring() {
                   Round {selectedRound} Complete
                 </h3>
                 <p className="text-muted-foreground mb-4">
-                  You have completed all 18 holes for Round {selectedRound}. This round is now locked and cannot be edited.
+                  You have completed all 18 holes for Round {selectedRound}.
+                  This round is now locked and cannot be edited.
                 </p>
                 <Link href={`/tournaments/${id}/leaderboard`}>
                   <Button variant="outline" className="flex items-center gap-2">
@@ -696,221 +790,261 @@ export default function LiveScoring() {
               {/* Hole Header */}
               <div className="flex justify-between items-center mb-6 p-4 bg-primary rounded-t-lg">
                 <div>
-                  <h3 className="text-2xl font-bold text-accent" data-testid="text-hole-number">
+                  <h3
+                    className="text-2xl font-bold text-accent"
+                    data-testid="text-hole-number"
+                  >
                     Hole {currentHole}
                   </h3>
                   <p className="text-muted-foreground">
-                    Par {currentHoleData?.par} • {currentYardage} yards • {formatTeeColor(currentTeeColor)}
+                    Par {currentHoleData?.par} • {currentYardage} yards •{" "}
+                    {formatTeeColor(currentTeeColor)}
                   </p>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm text-muted-foreground">Your Score</div>
-                  <div className="text-3xl font-bold text-accent" data-testid="text-current-score">
+                  <div className="text-sm text-muted-foreground">
+                    Your Score
+                  </div>
+                  <div
+                    className="text-3xl font-bold text-accent"
+                    data-testid="text-current-score"
+                  >
                     {strokes}
                   </div>
                   {/* Round Progress */}
                   {roundProgress.holesCompleted > 0 && (
                     <div className="text-xs text-muted-foreground mt-1">
-                      After {roundProgress.holesCompleted} holes: {' '}
-                      <span className={`font-medium ${
-                        roundProgress.scoreToPar === 0 ? 'text-gray-400' :
-                        roundProgress.scoreToPar < 0 ? 'text-green-400' : 'text-red-400'
-                      }`}>
-                        {roundProgress.scoreToPar === 0 ? 'E' : 
-                         roundProgress.scoreToPar > 0 ? `+${roundProgress.scoreToPar}` : 
-                         roundProgress.scoreToPar}
+                      After {roundProgress.holesCompleted} holes:{" "}
+                      <span
+                        className={`font-medium ${
+                          roundProgress.scoreToPar === 0
+                            ? "text-gray-400"
+                            : roundProgress.scoreToPar < 0
+                              ? "text-green-400"
+                              : "text-red-400"
+                        }`}
+                      >
+                        {roundProgress.scoreToPar === 0
+                          ? "E"
+                          : roundProgress.scoreToPar > 0
+                            ? `+${roundProgress.scoreToPar}`
+                            : roundProgress.scoreToPar}
                       </span>
                     </div>
                   )}
                 </div>
               </div>
-              
+
               <CardContent>
-              {/* Score Input */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Strokes
-                    </label>
-                    <div className="flex items-center justify-center space-x-4 bg-muted rounded-lg p-4">
-                      <Button
-                        onClick={() => {
-                          if (strokes === null) {
-                            // First press sets to par
-                            setStrokes(currentHoleData?.par || 4);
-                          } else {
-                            setStrokes(Math.max(1, strokes - 1));
-                          }
-                        }}
-                        size="icon"
-                        className="w-12 h-12 bg-primary text-accent rounded-full hover:bg-primary/80"
-                        data-testid="button-strokes-minus"
-                      >
-                        <Minus className="h-4 w-4" />
-                      </Button>
-                      <span 
-                        className="text-4xl font-bold text-accent w-16 text-center"
-                        data-testid="text-strokes"
-                      >
-                        {strokes ?? '-'}
-                      </span>
-                      <Button
-                        onClick={() => {
-                          if (strokes === null) {
-                            // First press sets to par
-                            setStrokes(currentHoleData?.par || 4);
-                          } else {
-                            setStrokes(strokes + 1);
-                          }
-                        }}
-                        size="icon"
-                        className="w-12 h-12 bg-primary text-accent rounded-full hover:bg-primary/80"
-                        data-testid="button-strokes-plus"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Putts
-                    </label>
-                    <div className={`flex items-center justify-center space-x-4 bg-muted rounded-lg p-4 ${puttsShakeAnimation ? 'shake-animation' : ''}`}>
-                      <Button
-                        onClick={() => {
-                          if (putts === null) {
-                            setPutts(1);
-                          } else {
-                            setPutts(Math.max(0, putts - 1));
-                          }
-                        }}
-                        size="icon"
-                        className="w-12 h-12 bg-primary text-accent rounded-full hover:bg-primary/80"
-                        data-testid="button-putts-minus"
-                      >
-                        <Minus className="h-4 w-4" />
-                      </Button>
-                      <span 
-                        className="text-2xl font-bold text-accent w-16 text-center"
-                        data-testid="text-putts"
-                      >
-                        {putts ?? '-'}
-                      </span>
-                      <Button
-                        onClick={() => {
-                          if (putts === null) {
-                            setPutts(2);
-                          } else {
-                            const maxPutts = Math.max(1, (strokes || 1) - 1); // Max putts = strokes - 1
-                            if (putts >= maxPutts) {
-                              // Trigger shake animation when trying to exceed max
-                              setPuttsShakeAnimation(true);
-                              setTimeout(() => setPuttsShakeAnimation(false), 500);
+                {/* Score Input */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">
+                        Strokes
+                      </label>
+                      <div className="flex items-center justify-center space-x-4 bg-muted rounded-lg p-4">
+                        <Button
+                          onClick={() => {
+                            if (strokes === null) {
+                              // First press sets to par
+                              setStrokes(currentHoleData?.par || 4);
                             } else {
-                              setPutts(putts + 1);
+                              setStrokes(Math.max(1, strokes - 1));
                             }
-                          }
-                        }}
-                        size="icon"
-                        className="w-12 h-12 bg-primary text-accent rounded-full hover:bg-primary/80"
-                        data-testid="button-putts-plus"
+                          }}
+                          size="icon"
+                          className="w-12 h-12 bg-primary text-accent rounded-full hover:bg-primary/80"
+                          data-testid="button-strokes-minus"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </Button>
+                        <span
+                          className="text-4xl font-bold text-accent w-16 text-center"
+                          data-testid="text-strokes"
+                        >
+                          {strokes ?? "-"}
+                        </span>
+                        <Button
+                          onClick={() => {
+                            if (strokes === null) {
+                              // First press sets to par
+                              setStrokes(currentHoleData?.par || 4);
+                            } else {
+                              setStrokes(strokes + 1);
+                            }
+                          }}
+                          size="icon"
+                          className="w-12 h-12 bg-primary text-accent rounded-full hover:bg-primary/80"
+                          data-testid="button-strokes-plus"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">
+                        Putts
+                      </label>
+                      <div
+                        className={`flex items-center justify-center space-x-4 bg-muted rounded-lg p-4 ${puttsShakeAnimation ? "shake-animation" : ""}`}
                       >
-                        <Plus className="h-4 w-4" />
-                      </Button>
+                        <Button
+                          onClick={() => {
+                            if (putts === null) {
+                              setPutts(1);
+                            } else {
+                              setPutts(Math.max(0, putts - 1));
+                            }
+                          }}
+                          size="icon"
+                          className="w-12 h-12 bg-primary text-accent rounded-full hover:bg-primary/80"
+                          data-testid="button-putts-minus"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </Button>
+                        <span
+                          className="text-2xl font-bold text-accent w-16 text-center"
+                          data-testid="text-putts"
+                        >
+                          {putts ?? "-"}
+                        </span>
+                        <Button
+                          onClick={() => {
+                            if (putts === null) {
+                              setPutts(2);
+                            } else {
+                              const maxPutts = Math.max(1, (strokes || 1) - 1); // Max putts = strokes - 1
+                              if (putts >= maxPutts) {
+                                // Trigger shake animation when trying to exceed max
+                                setPuttsShakeAnimation(true);
+                                setTimeout(
+                                  () => setPuttsShakeAnimation(false),
+                                  500,
+                                );
+                              } else {
+                                setPutts(putts + 1);
+                              }
+                            }
+                          }}
+                          size="icon"
+                          className="w-12 h-12 bg-primary text-accent rounded-full hover:bg-primary/80"
+                          data-testid="button-putts-plus"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-                
-                <div className="space-y-4">
-                  {/* Hide Fairway Hit for Par 3s */}
-                  {currentHoleData?.par !== 3 && (
+
+                  <div className="space-y-4">
+                    {/* Hide Fairway Hit for Par 3s */}
+                    {currentHoleData?.par !== 3 && (
+                      <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                        <span className="font-medium text-foreground">
+                          Fairway Hit
+                        </span>
+                        <Switch
+                          checked={fairwayHit}
+                          onCheckedChange={setFairwayHit}
+                          data-testid="switch-fairway-hit"
+                        />
+                      </div>
+                    )}
+
+                    {/* GIR toggle now available for all holes including par 3s */}
                     <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                      <span className="font-medium text-foreground">Fairway Hit</span>
+                      <span className="font-medium text-foreground">
+                        Green in Regulation
+                      </span>
                       <Switch
-                        checked={fairwayHit}
-                        onCheckedChange={setFairwayHit}
-                        data-testid="switch-fairway-hit"
+                        checked={greenInRegulation}
+                        onCheckedChange={(checked) => {
+                          // Only allow GIR if putts > 0 (or if unchecking)
+                          if (!checked || (putts !== null && putts > 0)) {
+                            setGreenInRegulation(checked);
+                          }
+                        }}
+                        disabled={putts === 0}
+                        data-testid="switch-gir"
                       />
                     </div>
-                  )}
-                  
-                  {/* GIR toggle now available for all holes including par 3s */}
-                  <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                    <span className="font-medium text-foreground">Green in Regulation</span>
-                    <Switch
-                      checked={greenInRegulation}
-                      onCheckedChange={(checked) => {
-                        // Only allow GIR if putts > 0 (or if unchecking)
-                        if (!checked || (putts !== null && putts > 0)) {
-                          setGreenInRegulation(checked);
-                        }
-                      }}
-                      disabled={putts === 0}
-                      data-testid="switch-gir"
-                    />
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                    <span className="font-medium text-foreground">Powerup Used</span>
-                    <Switch
-                      checked={powerupUsed}
-                      onCheckedChange={setPowerupUsed}
-                      data-testid="switch-powerup"
-                    />
-                  </div>
-                </div>
-              </div>
-              
 
-              {/* Powerup Notes */}
-              {powerupUsed && (
-                <div className="mt-6">
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Powerup Description
-                  </label>
-                  <Textarea
-                    value={powerupNotes}
-                    onChange={(e) => setPowerupNotes(e.target.value)}
-                    rows={3}
-                    placeholder="Describe the powerup used and its result..."
-                    className="w-full bg-muted border-border"
-                    data-testid="textarea-powerup-notes"
-                  />
+                    <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                      <span className="font-medium text-foreground">
+                        Powerup Used
+                      </span>
+                      <Switch
+                        checked={powerupUsed}
+                        onCheckedChange={setPowerupUsed}
+                        data-testid="switch-powerup"
+                      />
+                    </div>
+                  </div>
                 </div>
-              )}
-              
-              {/* Navigation */}
-              <div className="flex justify-between items-center mt-8">
-                <Button
-                  onClick={previousHole}
-                  disabled={currentHole === 1}
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm"
-                  data-testid="button-previous-hole"
-                >
-                  <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="hidden sm:inline">Previous Hole</span>
-                  <span className="sm:hidden">Prev</span>
-                </Button>
-                
-                <div className="text-center text-sm text-muted-foreground">
-                  {Array.isArray(existingScores) && existingScores.length > 0 ? 'Editing Mode' : `Hole ${cachedScores.length}/18 scored`}
+
+                {/* Powerup Notes */}
+                {powerupUsed && (
+                  <div className="mt-6">
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      Powerup Description
+                    </label>
+                    <Textarea
+                      value={powerupNotes}
+                      onChange={(e) => setPowerupNotes(e.target.value)}
+                      rows={3}
+                      placeholder="Describe the powerup used and its result..."
+                      className="w-full bg-muted border-border"
+                      data-testid="textarea-powerup-notes"
+                    />
+                  </div>
+                )}
+
+                {/* Navigation */}
+                <div className="flex justify-between items-center mt-8">
+                  <Button
+                    onClick={previousHole}
+                    disabled={currentHole === 1}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm"
+                    data-testid="button-previous-hole"
+                  >
+                    <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="hidden sm:inline">Previous Hole</span>
+                    <span className="sm:hidden">Prev</span>
+                  </Button>
+
+                  <div className="text-center text-sm text-muted-foreground">
+                    {Array.isArray(existingScores) && existingScores.length > 0
+                      ? "Editing Mode"
+                      : `Hole ${cachedScores.length}/18 scored`}
+                  </div>
+
+                  <Button
+                    onClick={saveHoleScore}
+                    disabled={
+                      createScoreMutation.isPending ||
+                      strokes === null ||
+                      strokes < 1
+                    }
+                    className="bg-accent text-accent-foreground hover:bg-accent/90 font-semibold"
+                    data-testid={
+                      currentHole === 18
+                        ? "button-submit-round"
+                        : "button-save-hole"
+                    }
+                  >
+                    {createScoreMutation.isPending
+                      ? "Saving..."
+                      : currentHole === 18
+                        ? "Submit Round"
+                        : "Save Hole"}
+                  </Button>
                 </div>
-                
-                <Button
-                  onClick={saveHoleScore}
-                  disabled={createScoreMutation.isPending || strokes === null || strokes < 1}
-                  className="bg-accent text-accent-foreground hover:bg-accent/90 font-semibold"
-                  data-testid={currentHole === 18 ? "button-submit-round" : "button-save-hole"}
-                >
-                  {createScoreMutation.isPending ? "Saving..." : (currentHole === 18 ? "Submit Round" : "Save Hole")}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
           )}
         </div>
       </section>
