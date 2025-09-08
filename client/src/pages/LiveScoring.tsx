@@ -237,8 +237,10 @@ export default function LiveScoring() {
   const { data: currentRoundData } = useQuery({
     queryKey: ["/api/rounds", String(id), String(selectedRound)],
     enabled: !!user && !!id && !!selectedRound,
-    retry: 1, // Retry once in case round is still being created
+    retry: 3, // Retry more times in case round is still being created
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 3000),
     queryFn: async () => {
+      console.log(`Loading round ${selectedRound} for tournament ${id}...`);
       // Try to load the round (should exist after initialization)
       const res = await fetch(`/api/rounds/${id}/${selectedRound}`);
       if (res.status === 404) {
@@ -250,16 +252,21 @@ export default function LiveScoring() {
         });
 
         if (!createRes.ok) {
-          throw new Error(await createRes.text());
+          const errorText = await createRes.text();
+          console.error("Failed to create round:", errorText);
+          throw new Error(errorText);
         }
         const created = await createRes.json();
+        console.log("Round created successfully:", created);
         setRoundId(created.id);
         return created;
       }
       if (!res.ok) {
+        console.error("Failed to load round:", res.status, res.statusText);
         throw new Error("Failed to load current round");
       }
       const data = await res.json();
+      console.log("Round loaded successfully:", data);
       setRoundId(data.id);
       return data;
     },
@@ -467,6 +474,11 @@ export default function LiveScoring() {
   };
   
   const roundReady = !!roundId && Array.isArray(holes) && holes.length > 0;
+  
+  // Debug logging for roundReady state
+  useEffect(() => {
+    console.log("roundReady state:", { roundReady, roundId, holesAvailable: Array.isArray(holes) && holes.length > 0 });
+  }, [roundReady, roundId, holes]);
 
   // Calculate round progress (score-to-par for holes completed so far)
   const calculateRoundProgress = () => {
