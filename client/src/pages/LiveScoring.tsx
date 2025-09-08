@@ -122,6 +122,8 @@ export default function LiveScoring() {
     setGreenInRegulation(false);
     setPowerupUsed(false);
     setPowerupNotes("");
+    // Reset roundId so it gets reloaded for the new round
+    setRoundId(null);
     // Don't clear cached scores immediately - let the storage loading logic handle it
   }, [selectedRound]);
 
@@ -203,10 +205,13 @@ export default function LiveScoring() {
       return res.json();
     },
     onSuccess: (data) => {
-      console.log(`Initialized ${data.rounds?.length || 0} rounds for tournament`);
+      console.log(`Initialized ${data.rounds?.length || 0} rounds for tournament:`, data.rounds);
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ["/api/rounds"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tournaments", id, "rounds"] });
+      
+      // Trigger a refetch of current round data to ensure roundId gets set
+      queryClient.invalidateQueries({ queryKey: ["/api/rounds", String(id), String(selectedRound)] });
     },
     onError: (error: any) => {
       console.error("Failed to initialize rounds:", error);
@@ -224,8 +229,11 @@ export default function LiveScoring() {
     const alreadyInitialized = localStorage.getItem(storageKey);
     
     if (!alreadyInitialized) {
+      console.log("Initializing rounds for tournament:", id);
       initializeRoundsMutation.mutate(String(id));
       localStorage.setItem(storageKey, "true");
+    } else {
+      console.log("Rounds already initialized for tournament:", id);
     }
   }, [user, id, initializeRoundsMutation]);
 
@@ -475,10 +483,6 @@ export default function LiveScoring() {
   
   const roundReady = !!roundId && Array.isArray(holes) && holes.length > 0;
   
-  // Debug logging for roundReady state
-  useEffect(() => {
-    console.log("roundReady state:", { roundReady, roundId, holesAvailable: Array.isArray(holes) && holes.length > 0 });
-  }, [roundReady, roundId, holes]);
 
   // Calculate round progress (score-to-par for holes completed so far)
   const calculateRoundProgress = () => {
@@ -565,13 +569,11 @@ export default function LiveScoring() {
 
   // Save individual hole score
       const saveHoleScore = async () => {
-        console.log("saveHoleScore called", { currentHoleData, strokes, roundId, roundReady });
         if (!currentHoleData || strokes === null || strokes < 1) return;
 
         try {
           // Round should already be created when entering live scoring
           if (!roundId) {
-            console.log("No roundId available");
             toast({
               title: "Please wait…",
               description: "Setting up your round. Try again in a moment.",

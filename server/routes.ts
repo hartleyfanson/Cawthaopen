@@ -915,6 +915,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId,
         roundNumber
       );
+      
+      if (!round) {
+        return res.status(404).json({ message: "Round not found" });
+      }
+      
       res.json(round);
     } catch (error) {
       console.error("Error fetching round:", error);

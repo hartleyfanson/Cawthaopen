@@ -301,6 +301,8 @@ export class DatabaseStorage implements IStorage {
     const tournamentRounds = await this.getTournamentRounds(tournamentId);
     const createdRounds: Round[] = [];
 
+    console.log(`Initializing ${tournamentRounds.length} rounds for player ${playerId} in tournament ${tournamentId}`);
+
     // Create a round record for each tournament round that doesn't already exist
     for (const tournamentRound of tournamentRounds) {
       try {
@@ -308,14 +310,17 @@ export class DatabaseStorage implements IStorage {
         
         if (!existingRound) {
           // Create new round record
+          console.log(`Creating round ${tournamentRound.roundNumber} for player ${playerId}`);
           const newRound = await this.createRound({
             tournamentId,
             playerId,
             roundNumber: tournamentRound.roundNumber
           });
           createdRounds.push(newRound);
+          console.log(`Successfully created round ${tournamentRound.roundNumber} with ID: ${newRound.id}`);
         } else {
           // Include existing round in the response
+          console.log(`Round ${tournamentRound.roundNumber} already exists for player ${playerId}`);
           createdRounds.push(existingRound);
         }
       } catch (error) {
@@ -324,6 +329,7 @@ export class DatabaseStorage implements IStorage {
       }
     }
 
+    console.log(`Initialized ${createdRounds.length} rounds for player ${playerId}`);
     return createdRounds;
   }
 
