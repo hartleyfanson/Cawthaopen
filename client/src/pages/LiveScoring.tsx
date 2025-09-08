@@ -11,8 +11,8 @@ import {
   Plus,
   Minus,
   ChevronLeft,
-  ChevronRight,
   ArrowLeft,
+
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -34,6 +34,9 @@ export default function LiveScoring() {
   const [powerupNotes, setPowerupNotes] = useState("");
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
   const [puttsShakeAnimation, setPuttsShakeAnimation] = useState(false);
+
+  // holds the DB id of the round we’re scoring (string when ready, null while loading/creating)
+  const [roundId, setRoundId] = useState<string | null>(null);
 
   // Cache all hole scores until completion
   const [cachedScores, setCachedScores] = useState<
@@ -198,22 +201,42 @@ export default function LiveScoring() {
   });
 
   const { data: currentRoundData } = useQuery({
-    queryKey: ["/api/rounds", id, selectedRound],
+    // include "ensure" so we know this query performs creation if missing
+    queryKey: ["/api/rounds", String(id), String(selectedRound), "ensure"],
     enabled: !!user && !!id && !!selectedRound,
+    retry: false,
     queryFn: async () => {
+      // 1) Try to load the round for this tournament+roundNumber
       const res = await fetch(`/api/tournaments/${id}/rounds/${selectedRound}`);
-      if (!res.ok) throw new Error("Failed to load current round");
-      return res.json();
+      if (res.status === 404) {
+        // 2) Not found → create it
+        const createRes = await apiRequest("POST", "/api/rounds", {
+          tournamentId: Number(id),
+          roundNumber: Number(selectedRound),
+          playerId: (user as any).id, // only if your API expects this
+        });
+
+        if (!createRes.ok) {
+          throw new Error(await createRes.text());
+        }
+        const created = await createRes.json();
+        setRoundId(created.id);
+        return created;
+      }
+      if (!res.ok) {
+        throw new Error("Failed to load current round");
+      }
+      const data = await res.json();
+      setRoundId(data.id);
+      return data;
     },
   });
 
   const { data: existingScores } = useQuery({
-    queryKey: ["/api/rounds", (currentRoundData as any)?.id, "scores"],
-    enabled: !!(currentRoundData as any)?.id,
+    queryKey: ["/api/rounds", String(roundId), "scores"],
+    enabled: !!roundId,
     queryFn: () =>
-      fetch(`/api/rounds/${(currentRoundData as any)?.id}/scores`).then((res) =>
-        res.json(),
-      ),
+      fetch(`/api/rounds/${roundId}/scores`).then((res) => res.json()),
   });
 
   const { data: teeSelections } = useQuery({
@@ -253,51 +276,31 @@ export default function LiveScoring() {
     enabled: !!id && !!(user as any)?.id,
   });
 
-  const createRoundMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return await apiRequest("POST", "/api/rounds", data);
-    },
-    onSuccess: () => {
-      // Broad list refresh is fine, but also refresh the specific round you’re on
-      queryClient.invalidateQueries({ queryKey: ["/api/rounds"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/rounds", id, selectedRound] });
-    },
-
-    onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-      toast({
-        title: "Error",
-        description: "Failed to create round",
-        variant: "destructive",
-      });
-    },
-  });
-
   const createScoreMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("POST", "/api/scores", data);
+      const res = await apiRequest("POST", "/api/scores", data);
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/rounds"] });
-      queryClient.invalidateQueries({
-        queryKey: ["/api/rounds", id, "completion-status"],
-      });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/rounds", String(id), String(selectedRound), "ensure"] }),
+        roundId
+        ? queryClient.invalidateQueries({ queryKey: ["/api/rounds", String(roundId), "scores"] })
+        : Promise.resolve(),
+
+        queryClient.invalidateQueries({ queryKey: ["/api/rounds", id, "completion-status"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/tournaments", id, "leaderboard", selectedRound] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/tournaments", id, "player-scores", selectedRound] }),
+      ]);
+
       toast({
         title: "Score Saved",
         description: `Hole ${currentHole} score saved successfully`,
       });
     },
-    onError: (error) => {
+
+    onError: (error: any) => {
       if (isUnauthorizedError(error)) {
         toast({
           title: "Unauthorized",
@@ -319,19 +322,29 @@ export default function LiveScoring() {
 
   const updateScoreMutation = useMutation({
     mutationFn: async ({ scoreId, data }: { scoreId: string; data: any }) => {
-      return await apiRequest("PUT", `/api/scores/${scoreId}`, data);
+      const res = await apiRequest("PUT", `/api/scores/${scoreId}`, data);
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/rounds"] });
-      queryClient.invalidateQueries({
-        queryKey: ["/api/rounds", id, "completion-status"],
-      });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/rounds", String(id), String(selectedRound), "ensure"] }),
+        roundId
+        ? queryClient.invalidateQueries({ queryKey: ["/api/rounds", String(roundId), "scores"] })
+        : Promise.resolve(),
+
+        queryClient.invalidateQueries({ queryKey: ["/api/rounds", id, "completion-status"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/tournaments", id, "leaderboard", selectedRound] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/tournaments", id, "player-scores", selectedRound] }),
+      ]);
+
       toast({
         title: "Score Updated",
         description: `Hole ${currentHole} score updated successfully`,
       });
     },
-    onError: (error) => {
+
+    onError: (error: any) => {
       if (isUnauthorizedError(error)) {
         toast({
           title: "Unauthorized",
@@ -350,43 +363,6 @@ export default function LiveScoring() {
       });
     },
   });
-
-  // Auto-create round when entering live scoring (to fix first-hole save issue)
-  useEffect(() => {
-    if (
-      !id ||
-      !(user as any)?.id ||
-      isLoading ||
-      !isAuthenticated ||
-      !tournament
-    )
-      return;
-
-    // Only auto-create if we don't have a current round already and we're not currently creating one
-    if (!currentRoundData && !createRoundMutation.isPending) {
-      const autoCreateRound = async () => {
-        try {
-          await createRoundMutation.mutateAsync({
-            tournamentId: id,
-            roundNumber: selectedRound,
-          });
-        } catch (error) {
-          console.log("Could not auto-create round:", error);
-        }
-      };
-
-      autoCreateRound();
-    }
-  }, [
-    id,
-    (user as any)?.id,
-    currentRoundData,
-    tournament,
-    selectedRound,
-    isLoading,
-    isAuthenticated,
-    createRoundMutation.isPending,
-  ]);
 
   const currentHoleData = (holes as any[])?.find(
     (hole: any) => hole.holeNumber === currentHole,
@@ -456,6 +432,8 @@ export default function LiveScoring() {
       " Tees"
     );
   };
+  
+  const roundReady = !!roundId && Array.isArray(holes) && holes.length > 0;
 
   // Calculate round progress (score-to-par for holes completed so far)
   const calculateRoundProgress = () => {
@@ -541,88 +519,125 @@ export default function LiveScoring() {
   }, [existingScores, holes]);
 
   // Save individual hole score
-  const saveHoleScore = async () => {
-    if (!currentHoleData || strokes === null || strokes < 1) return;
+      const saveHoleScore = async () => {
+        if (!currentHoleData || strokes === null || strokes < 1) return;
 
-    try {
-      // Round should already be created when entering live scoring
-      if (!currentRoundData) {
-        toast({
-          title: "Error",
-          description: "Round not found. Please refresh the page.",
-          variant: "destructive",
-        });
-        return;
-      }
+        try {
+          // Round should already be created when entering live scoring
+          if (!roundId) {
+            toast({
+              title: "Please wait…",
+              description: "Setting up your round. Try again in a moment.",
+            });
+            return;
+          }
 
-      const scoreData = {
-        strokes,
-        putts: putts || 0, // Default putts to 0 if null
-        fairwayHit: currentHoleData.par === 3 ? false : fairwayHit,
-        greenInRegulation,
-        powerupUsed,
-        powerupNotes: powerupUsed ? powerupNotes : "",
+          const scoreData = {
+            strokes,
+            putts: putts || 0, // Default putts to 0 if null
+            fairwayHit: currentHoleData.par === 3 ? false : fairwayHit,
+            greenInRegulation,
+            powerupUsed,
+            powerupNotes: powerupUsed ? powerupNotes : "",
+          };
+
+          // Check if a score already exists for this hole
+          const existingScore = Array.isArray(existingScores)
+            ? existingScores.find((s: any) => s.holeId === currentHoleData.id)
+            : null;
+
+          if (existingScore) {
+            // Update existing score
+            await updateScoreMutation.mutateAsync({
+              scoreId: existingScore.id,
+              data: scoreData,
+            });
+          } else {
+            // Create new score
+            await createScoreMutation.mutateAsync({
+              roundId,
+              holeId: currentHoleData.id,
+              ...scoreData,
+            });
+          }
+
+          // Cache this score for local navigation
+          const holeScore = {
+            holeNumber: currentHole,
+            holeId: currentHoleData.id,
+            strokes,
+            putts,
+            fairwayHit: currentHoleData.par === 3 ? false : fairwayHit,
+            greenInRegulation,
+            powerupUsed,
+            powerupNotes: powerupUsed ? powerupNotes : "",
+          };
+
+          setCachedScores((prev) => {
+            const filtered = prev.filter((score) => score.holeNumber !== currentHole);
+            return [...filtered, holeScore].sort((a, b) => a.holeNumber - b.holeNumber);
+          });
+
+          if (currentHole === 18) {
+            toast({
+              title: "Round Complete!",
+              description: "All scores have been saved. Returning to leaderboard.",
+            });
+
+            // Clear saved scoring state since round is complete
+            clearSavedState();
+
+            await Promise.all([
+              queryClient.invalidateQueries({ queryKey: ["/api/tournaments", id, "leaderboard", selectedRound] }),
+              queryClient.invalidateQueries({ queryKey: ["/api/tournaments", id, "player-scores", selectedRound] }),
+              queryClient.invalidateQueries({ queryKey: ["/api/rounds", String(id), String(selectedRound), "ensure"] }),
+              roundId
+                ? queryClient.invalidateQueries({ queryKey: ["/api/rounds", String(roundId), "scores"] })
+                : Promise.resolve(),
+              queryClient.invalidateQueries({ queryKey: ["/api/rounds"] }),
+              queryClient.invalidateQueries({ queryKey: ["/api/rounds", id, "completion-status"] }),
+            ]);
+
+            // Navigate back to leaderboard
+            setLocation(`/tournaments/${id}/leaderboard`);
+          } else {
+            toast({
+              title: "Score Saved",
+              description: `Hole ${currentHole} score saved successfully`,
+            });
+
+            // Move to next hole
+            if (currentHole < 18) {
+              setCurrentHole(currentHole + 1);
+            }
+          }
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: "Failed to save score. Please try again.",
+            variant: "destructive",
+          });
+        }
       };
-
-      // Check if a score already exists for this hole
-      const existingScore = Array.isArray(existingScores)
-        ? existingScores.find((s: any) => s.holeId === currentHoleData.id)
-        : null;
-
-      if (existingScore) {
-        // Update existing score
-        await updateScoreMutation.mutateAsync({
-          scoreId: existingScore.id,
-          data: scoreData,
-        });
-      } else {
-        // Create new score
-        await createScoreMutation.mutateAsync({
-          roundId: (currentRoundData as any).id,
-          holeId: currentHoleData.id,
-          ...scoreData,
-        });
-      }
-
-      // Cache this score for local navigation
-      const holeScore = {
-        holeNumber: currentHole,
-        holeId: currentHoleData.id,
-        strokes,
-        putts,
-        fairwayHit: currentHoleData.par === 3 ? false : fairwayHit,
-        greenInRegulation,
-        powerupUsed,
-        powerupNotes: powerupUsed ? powerupNotes : "",
-      };
-
-      setCachedScores((prev) => {
-        const filtered = prev.filter(
-          (score) => score.holeNumber !== currentHole,
-        );
-        return [...filtered, holeScore].sort(
-          (a, b) => a.holeNumber - b.holeNumber,
-        );
-      });
-
-      if (currentHole === 18) {
-        toast({
-          title: "Round Complete!",
-          description: "All scores have been saved. Returning to leaderboard.",
-        });
-
-        // Clear saved scoring state since round is complete
-        clearSavedState();
 
         // Invalidate caches to trigger real-time leaderboard updates and round completion status
-        queryClient.invalidateQueries({ queryKey: ["/api/tournaments", id, "leaderboard", selectedRound] });
-        queryClient.invalidateQueries({ queryKey: ["/api/tournaments", id, "player-scores", selectedRound] });
-        queryClient.invalidateQueries({ queryKey: ["/api/rounds", id, selectedRound] });
-        queryClient.invalidateQueries({ queryKey: ["/api/rounds", (currentRoundData as any)?.id, "scores"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/rounds"] });
-        queryClient.invalidateQueries({
-          queryKey: ["/api/rounds", id, "completion-status"],
-        });
+        await Promise.all([
+          // Leaderboards & player aggregates scoped to the current round
+          queryClient.invalidateQueries({ queryKey: ["/api/tournaments", id, "leaderboard", selectedRound] }),
+          queryClient.invalidateQueries({ queryKey: ["/api/tournaments", id, "player-scores", selectedRound] }),
+
+          // The current round’s record and its scores
+          queryClient.invalidateQueries({ queryKey: ["/api/rounds", id, selectedRound] }),
+          roundId
+          ? queryClient.invalidateQueries({ queryKey: ["/api/rounds", String(roundId), "scores"] })
+          : Promise.resolve(),
+
+
+          // Broader round lists and completion checks
+          queryClient.invalidateQueries({ queryKey: ["/api/rounds"] }),
+          queryClient.invalidateQueries({ queryKey: ["/api/rounds", id, "completion-status"] }),
+        ]);
+
 
         // Navigate back to leaderboard
         setLocation(`/tournaments/${id}/leaderboard`);
@@ -1026,16 +1041,13 @@ export default function LiveScoring() {
                   <Button
                     onClick={saveHoleScore}
                     disabled={
+                      !roundReady ||
                       createScoreMutation.isPending ||
                       strokes === null ||
                       strokes < 1
                     }
                     className="bg-accent text-accent-foreground hover:bg-accent/90 font-semibold"
-                    data-testid={
-                      currentHole === 18
-                        ? "button-submit-round"
-                        : "button-save-hole"
-                    }
+                    data-testid={currentHole === 18 ? "button-submit-round" : "button-save-hole"}
                   >
                     {createScoreMutation.isPending
                       ? "Saving..."
@@ -1043,6 +1055,7 @@ export default function LiveScoring() {
                         ? "Submit Round"
                         : "Save Hole"}
                   </Button>
+
                 </div>
               </CardContent>
             </Card>
